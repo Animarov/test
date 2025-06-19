@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>animarovs</title>
+    <title>Сайт с входом и регистрацией</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -44,15 +44,18 @@
             margin-top: 15px;
             color: red;
         }
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>login</h1>
+    <h1>Добро пожаловать на мой сайт!</h1>
 </header>
 
-<div class="container">
+<div class="container" id="auth-container">
     <h2>Вход</h2>
     <input type="text" id="login-username" placeholder="Имя пользователя">
     <input type="password" id="login-password" placeholder="Пароль">
@@ -66,8 +69,16 @@
     <div class="message" id="register-message"></div>
 </div>
 
+<div class="container hidden" id="user-container">
+    <h2>Добро пожаловать, <span id="welcome-username"></span>!</h2>
+    <button onclick="showProfile()">Профиль</button>
+    <button onclick="showBalance()">Баланс</button>
+    <button onclick="logout()">Выйти</button>
+</div>
+
 <script>
     let users = [];
+    let currentUser = null;
 
     function register() {
         const username = document.getElementById('register-username').value;
@@ -95,10 +106,30 @@
 
         const user = users.find(user => user.username === username && user.password === password);
         if (user) {
-            document.getElementById('login-message').innerText = 'Вход успешен!';
+            currentUser = user; // Сохраняем текущего пользователя
+            document.getElementById('welcome-username').innerText = username;
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('user-container').classList.remove('hidden');
         } else {
             document.getElementById('login-message').innerText = 'Неверное имя пользователя или пароль.';
         }
+    }
+
+    function showProfile() {
+        alert(Профиль пользователя: ${currentUser.username});
+    }
+
+    function showBalance() {
+        alert(Баланс пользователя ${currentUser.username}: 1000 рублей);
+    }
+
+    function logout() {
+        currentUser = null; // Сбрасываем текущего пользователя
+        document.getElementById('auth-container').classList.remove('hidden');
+        document.getElementById('user-container').classList.add('hidden');
+        document.getElementById('login-username').value = '';
+        document.getElementById('login-password').value = '';
+        document.getElementById('login-message').innerText = '';
     }
 </script>
 
