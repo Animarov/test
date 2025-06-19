@@ -75,14 +75,24 @@
             color: red;
             font-size: 14px;
         }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
     </style>
 </head>
 <body>
     <div class="header">animarovs co</div>
     
     <div class="nav" id="nav">
-        <button onclick="showLoginModal()">Вход</button>
-        <button onclick="showRegisterModal()">Регистрация</button>
+        <button id="loginBtn">Вход</button>
+        <button id="registerBtn">Регистрация</button>
     </div>
     
     <div class="content" id="content">
@@ -92,24 +102,24 @@
     <!-- Модальное окно входа -->
     <div id="loginModal" class="modal">
         <div class="modal-content">
-            <span onclick="closeModal('loginModal')" style="float: right; cursor: pointer;">&times;</span>
+            <span class="close" id="closeLogin">&times;</span>
             <h2>Вход</h2>
             <div id="loginError" class="error"></div>
             <input type="text" id="loginUsername" placeholder="Введите логин">
             <input type="password" id="loginPassword" placeholder="Введите пароль">
-            <button onclick="login()">Войти</button>
+            <button id="submitLogin">Войти</button>
         </div>
     </div>
     
     <!-- Модальное окно регистрации -->
     <div id="registerModal" class="modal">
         <div class="modal-content">
-            <span onclick="closeModal('registerModal')" style="float: right; cursor: pointer;">&times;</span>
+            <span class="close" id="closeRegister">&times;</span>
             <h2>Регистрация</h2>
             <div id="registerError" class="error"></div>
             <input type="text" id="registerUsername" placeholder="Придумайте логин">
             <input type="password" id="registerPassword" placeholder="Создайте пароль">
-            <button onclick="register()">Зарегистрироваться</button>
+            <button id="submitRegister">Зарегистрироваться</button>
         </div>
     </div>
     
@@ -117,17 +127,48 @@
         // Хранилище пользователей (в реальном приложении нужно использовать базу данных)
         let users = JSON.parse(localStorage.getItem('animarovsUsers')) || {};
         let currentUser = null;
+        // Получаем элементы DOM
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const loginModal = document.getElementById('loginModal');
+        const registerModal = document.getElementById('registerModal');
+        const closeLogin = document.getElementById('closeLogin');
+        const closeRegister = document.getElementById('closeRegister');
+        const submitLogin = document.getElementById('submitLogin');
+        const submitRegister = document.getElementById('submitRegister');
+        
+        // Обработчики событий для кнопок
+        loginBtn.addEventListener('click', showLoginModal);
+        registerBtn.addEventListener('click', showRegisterModal);
+        closeLogin.addEventListener('click', () => closeModal('loginModal'));
+        closeRegister.addEventListener('click', () => closeModal('registerModal'));
+        submitLogin.addEventListener('click', login);
+        submitRegister.addEventListener('click', register);
+        
+        // Закрытие модального окна при клике вне его
+        window.addEventListener('click', (event) => {
+            if (event.target === loginModal) {
+                closeModal('loginModal');
+            }
+            if (event.target === registerModal) {
+                closeModal('registerModal');
+            }
+        });
         
         // Показать модальное окно входа
         function showLoginModal() {
             document.getElementById('loginError').textContent = '';
-            document.getElementById('loginModal').style.display = 'block';
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            loginModal.style.display = 'block';
         }
         
         // Показать модальное окно регистрации
         function showRegisterModal() {
             document.getElementById('registerError').textContent = '';
-            document.getElementById('registerModal').style.display = 'block';
+            document.getElementById('registerUsername').value = '';
+            document.getElementById('registerPassword').value = '';
+            registerModal.style.display = 'block';
         }
         
         // Закрыть модальное окно
@@ -172,7 +213,7 @@
                 currentUser = username;
                 closeModal('registerModal');
                 updateUI();
-            }
+                }
         }
         
         // Выход пользователя
@@ -197,9 +238,12 @@
             } else {
                 // Пользователь не авторизован
                 nav.innerHTML = 
-                    <button onclick="showLoginModal()">Вход</button>
-                    <button onclick="showRegisterModal()">Регистрация</button>
+                    <button id="loginBtn">Вход</button>
+                    <button id="registerBtn">Регистрация</button>
                 ;
+                // Добавляем обработчики событий для новых кнопок
+                document.getElementById('loginBtn').addEventListener('click', showLoginModal);
+                document.getElementById('registerBtn').addEventListener('click', showRegisterModal);
                 content.innerHTML = '';
             }
         }
@@ -236,4 +280,4 @@
     </script>
 </body>
 </html>
-            
+        
