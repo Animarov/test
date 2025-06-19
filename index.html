@@ -85,12 +85,16 @@
             color: red;
             font-size: 14px;
         }
+        .success {
+            color: green;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="header">animarovs co</div>
     
-    <div class="nav">
+    <div class="nav" id="nav">
         <button id="loginBtn">Вход</button>
         <button id="registerBtn">Регистрация</button>
     </div>
@@ -115,6 +119,7 @@
             <span class="close" id="closeRegister">&times;</span>
             <h2>Регистрация</h2>
             <div id="registerError" class="error"></div>
+            <div id="registerSuccess" class="success"></div>
             <input type="text" id="registerUsername" placeholder="Придумайте логин">
             <input type="password" id="registerPassword" placeholder="Создайте пароль">
             <button id="submitRegister">Зарегистрироваться</button>
@@ -122,47 +127,136 @@
     </div>
 
     <script>
-        // Получаем все необходимые элементы
+        // Хранилище пользователей
+        let users = JSON.parse(localStorage.getItem('users')) || {};
+        let currentUser = null;
+        // Элементы
+        const nav = document.getElementById('nav');
+        const content = document.getElementById('content');
         const loginBtn = document.getElementById('loginBtn');
         const registerBtn = document.getElementById('registerBtn');
         const loginModal = document.getElementById('loginModal');
         const registerModal = document.getElementById('registerModal');
         const closeLogin = document.getElementById('closeLogin');
         const closeRegister = document.getElementById('closeRegister');
-        
-        // Показываем модальное окно входа
-        loginBtn.onclick = function() {
-            console.log("Кнопка Вход нажата"); // Для отладки
+        const submitLogin = document.getElementById('submitLogin');
+        const submitRegister = document.getElementById('submitRegister');
+        const loginError = document.getElementById('loginError');
+        const registerError = document.getElementById('registerError');
+        const registerSuccess = document.getElementById('registerSuccess');
+
+        // Открытие модальных окон
+        loginBtn.onclick = () => {
+            loginError.textContent = '';
             loginModal.style.display = 'block';
-        }
+        };
         
-        // Показываем модальное окно регистрации
-        registerBtn.onclick = function() {
-            console.log("Кнопка Регистрация нажата"); // Для отладки
+        registerBtn.onclick = () => {
+            registerError.textContent = '';
+            registerSuccess.textContent = '';
             registerModal.style.display = 'block';
-        }
+        };
+
+        // Закрытие модальных окон
+        closeLogin.onclick = () => loginModal.style.display = 'none';
+        closeRegister.onclick = () => registerModal.style.display = 'none';
         
-        // Закрываем модальные окна
-        closeLogin.onclick = function() {
-            loginModal.style.display = 'none';
-        }
-        
-        closeRegister.onclick = function() {
-            registerModal.style.display = 'none';
-        }
-        
-        // Закрываем при клике вне окна
-        window.onclick = function(event) {
-            if (event.target === loginModal) {
+        window.onclick = (event) => {
+            if (event.target === loginModal) loginModal.style.display = 'none';
+            if (event.target === registerModal) registerModal.style.display = 'none';
+        };
+
+        // Регистрация
+        submitRegister.onclick = () => {
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+            
+            registerError.textContent = '';
+            registerSuccess.textContent = '';
+            
+            if (!username || !password) {
+                registerError.textContent = 'Заполните все поля';
+                return;
+            }
+            
+            if (users[username]) {
+                registerError.textContent = 'Такой логин уже занят, придумайте новый';
+            } else {
+                users[username] = password;
+                localStorage.setItem('users', JSON.stringify(users));
+                registerSuccess.textContent = 'Аккаунт успешно создан!';
+                
+                // Очищаем поля через 2 секунды и закрываем окно
+                setTimeout(() => {
+                    document.getElementById('registerUsername').value = '';
+                    document.getElementById('registerPassword').value = '';
+                    registerModal.style.display = 'none';
+                }, 2000);
+            }
+        };
+
+        // Вход
+        submitLogin.onclick = () => {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            loginError.textContent = '';
+            
+            if (!username || !password) {
+                loginError.textContent = 'Заполните все поля';
+                return;
+            }
+            
+            if (users[username] && users[username] === password) {
+                currentUser = username;
                 loginModal.style.display = 'none';
+                updateUI();
+            } else {
+                loginError.textContent = 'Неверный логин или пароль';
             }
-            if (event.target === registerModal) {
-                registerModal.style.display = 'none';
+        };
+
+        // Выход
+        function logout() {
+            currentUser = null;
+            updateUI();
+        }
+
+        // Обновление интерфейса
+        function updateUI() {
+            if (currentUser) {
+                nav.innerHTML = 
+                    <button id="profileBtn">Профиль</button>
+                    <button id="logoutBtn">Выйти</button>
+                ;
+                
+                document.getElementById('profileBtn').onclick = showProfile;
+                document.getElementById('logoutBtn').onclick = logout;
+                
+                showProfile();
+            } else {
+                nav.innerHTML = 
+                    <button id="loginBtn">Вход</button>
+                    <button id="registerBtn">Регистрация</button>
+                ;
+                
+                document.getElementById('loginBtn').onclick = () => loginModal.style.display = 'block';
+                document.getElementById('registerBtn').onclick = () => registerModal.style.display = 'block';
+                
+                content.innerHTML = '';
             }
         }
-        
-        // Для проверки - выводим в консоль при нажатии кнопок
-        console.log("Скрипт загружен"); // Должно появиться в консоли при загрузке
+
+        // Показать профиль
+        function showProfile() {
+            content.innerHTML = 
+                <h2>Здравствуйте, ${currentUser}!</h2>
+                <p>Добро пожаловать в ваш профиль.</p>
+            ;
+        }
+
+        // Инициализация
+        updateUI();
     </script>
 </body>
 </html>
