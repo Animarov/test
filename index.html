@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сайт с входом и регистрацией</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #007BFF;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .message {
+            margin-top: 15px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Добро пожаловать на мой сайт!</h1>
+</header>
+
+<div class="container">
+    <h2>Вход</h2>
+    <input type="text" id="login-username" placeholder="Имя пользователя">
+    <input type="password" id="login-password" placeholder="Пароль">
+    <button onclick="login()">Войти</button>
+    <div class="message" id="login-message"></div>
+
+    <h2>Регистрация</h2>
+    <input type="text" id="register-username" placeholder="Имя пользователя">
+    <input type="password" id="register-password" placeholder="Пароль">
+    <button onclick="register()">Зарегистрироваться</button>
+    <div class="message" id="register-message"></div>
+</div>
+
+<script>
+    let users = [];
+
+    function register() {
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+
+        if (username && password) {
+            const userExists = users.find(user => user.username === username);
+            if (userExists) {
+                document.getElementById('register-message').innerText = 'Пользователь уже существует.';
+                return;
+            }
+
+            users.push({ username, password });
+            document.getElementById('register-message').innerText = 'Регистрация успешна!';
+            document.getElementById('register-username').value = '';
+            document.getElementById('register-password').value = '';
+        } else {
+            document.getElementById('register-message').innerText = 'Пожалуйста, заполните все поля.';
+        }
+    }
+
+    function login() {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+
+        const user = users.find(user => user.username === username && user.password === password);
+        if (user) {
+            document.getElementById('login-message').innerText = 'Вход успешен!';
+        } else {
+            document.getElementById('login-message').innerText = 'Неверное имя пользователя или пароль.';
+        }
+    }
+</script>
+
+</body>
+</html>
