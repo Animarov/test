@@ -8,53 +8,79 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
             padding: 20px;
             background-color: #f5f5f5;
+            margin: 0;
         }
         .container {
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .avatar {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            object-fit: cover;
-            margin: 0 auto 15px;
-            display: block;
-            border: 3px solid #0088cc;
-        }
-        .username {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #333;
-        }
-        .user-id {
-            color: #666;
-            font-size: 14px;
+        .user-header {
+            display: flex;
+            align-items: flex-start;
             margin-bottom: 20px;
         }
+        .avatar-container {
+            position: relative;
+            margin-right: 15px;
+        }
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #0088cc;
+        }
         .default-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
             background-color: #0088cc;
             color: white;
-            font-size: 40px;
+            font-size: 24px;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 2px solid #0088cc;
+        }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 60px;
+        }
+        .username {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .user-id {
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="avatar-container"></div>
-        <div class="username" id="username">Загрузка...</div>
-        <div class="user-id" id="user-id"></div>
+        <div class="user-header">
+            <div class="avatar-container">
+                <div id="avatar"></div>
+                <div class="user-id" id="user-id"></div>
+            </div>
+            <div class="user-info">
+                <div class="username" id="username"></div>
+            </div>
+        </div>
+        
+        <!-- Здесь можно добавить дополнительный контент -->
     </div>
 
     <script>
@@ -64,18 +90,17 @@
         // Получаем данные пользователя
         const user = Telegram.WebApp.initDataUnsafe.user;
         
-        // Отображаем информацию о пользователе
         if (user) {
-            // Формируем имя пользователя
+            // Отображаем имя пользователя (только имя, без "Привет")
             const username = user.username || 
-                             `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
-            document.getElementById('username').textContent = `Привет, ${username}!`;
+                           `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
+            document.getElementById('username').textContent = username;
             
-            // Отображаем ID пользователя
+            // Отображаем ID пользователя под аватаркой
             document.getElementById('user-id').textContent = `ID: ${user.id}`;
             
             // Создаем аватар
-            const avatarContainer = document.getElementById('avatar-container');
+            const avatarContainer = document.getElementById('avatar');
             
             if (user.photo_url) {
                 // Если есть URL аватарки
@@ -95,13 +120,13 @@
             // Развернуть приложение на весь экран (опционально)
             Telegram.WebApp.expand();
         } else {
-            document.getElementById('username').textContent = 'Не удалось получить данные пользователя';
+            document.getElementById('username').textContent = 'Гость';
         }
         
         // Функция для отображения дефолтного аватара
         function showDefaultAvatar(container, firstName) {
             const defaultAvatar = document.createElement('div');
-            defaultAvatar.classList.add('avatar', 'default-avatar');
+            defaultAvatar.classList.add('default-avatar');
             
             // Берем первую букву имени или 'T', если имя не доступно
             const firstLetter = firstName ? firstName.charAt(0).toUpperCase() : 'T';
