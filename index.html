@@ -16,35 +16,99 @@
             max-width: 600px;
             margin: 0 auto;
             background: white;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 15px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            display: block;
+            border: 3px solid #0088cc;
+        }
+        .username {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .user-id {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .default-avatar {
+            background-color: #0088cc;
+            color: white;
+            font-size: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Добро пожаловать!</h1>
-        <p id="username">Загрузка...</p>
+        <div id="avatar-container"></div>
+        <div class="username" id="username">Загрузка...</div>
+        <div class="user-id" id="user-id"></div>
     </div>
 
     <script>
-        // Ждем инициализации WebApp Telegram
+        // Инициализация WebApp Telegram
         Telegram.WebApp.ready();
         
         // Получаем данные пользователя
         const user = Telegram.WebApp.initDataUnsafe.user;
         
-        // Отображаем имя пользователя
+        // Отображаем информацию о пользователе
         if (user) {
-            const username = user.username || `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
+            // Формируем имя пользователя
+            const username = user.username || 
+                             `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
             document.getElementById('username').textContent = `Привет, ${username}!`;
+            
+            // Отображаем ID пользователя
+            document.getElementById('user-id').textContent = `ID: ${user.id}`;
+            
+            // Создаем аватар
+            const avatarContainer = document.getElementById('avatar-container');
+            
+            if (user.photo_url) {
+                // Если есть URL аватарки
+                const avatarImg = document.createElement('img');
+                avatarImg.src = user.photo_url;
+                avatarImg.classList.add('avatar');
+                avatarImg.onerror = function() {
+                    // Если загрузка аватарки не удалась, показываем дефолтную
+                    showDefaultAvatar(avatarContainer, user.first_name);
+                };
+                avatarContainer.appendChild(avatarImg);
+            } else {
+                // Если нет аватарки, создаем дефолтную с первой буквой имени
+                showDefaultAvatar(avatarContainer, user.first_name);
+            }
+            
+            // Развернуть приложение на весь экран (опционально)
+            Telegram.WebApp.expand();
         } else {
             document.getElementById('username').textContent = 'Не удалось получить данные пользователя';
         }
         
-        // Можно расширить функционал:
-        // Telegram.WebApp.expand(); // Развернуть приложение на весь экран
+        // Функция для отображения дефолтного аватара
+        function showDefaultAvatar(container, firstName) {
+            const defaultAvatar = document.createElement('div');
+            defaultAvatar.classList.add('avatar', 'default-avatar');
+            
+            // Берем первую букву имени или 'T', если имя не доступно
+            const firstLetter = firstName ? firstName.charAt(0).toUpperCase() : 'T';
+            defaultAvatar.textContent = firstLetter;
+            
+            container.appendChild(defaultAvatar);
+        }
     </script>
 </body>
 </html>
