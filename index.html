@@ -51,7 +51,7 @@
         .user-info {
             display: flex;
             flex-direction: column;
-            margin-top: -3px; /* Поднимаем имя немного выше */
+            margin-top: -3px;
         }
         .username {
             font-size: 16px;
@@ -111,41 +111,33 @@
     <script>
         // Инициализация WebApp Telegram
         Telegram.WebApp.ready();
+        Telegram.WebApp.expand();
         
         // Получаем данные пользователя
         const user = Telegram.WebApp.initDataUnsafe.user;
         let coinCount = 0;
         
-        // Функция для сохранения данных
-        async function saveCoins(userId, coins) {
-            try {
-                // Здесь будет запрос к вашему бэкенду
-                // Это пример для демонстрации
-                console.log(`Saving ${coins} coins for user ${userId}`);
-                // В реальном приложении используйте fetch или другой метод для сохранения данных
-            } catch (error) {
-                console.error('Error saving coins:', error);
+        // Функции для работы с CloudStorage Telegram
+        async function saveCoins(coins) {
+            if (Telegram.WebApp.isVersionAtLeast('6.9')) {
+                await Telegram.WebApp.CloudStorage.setItem('coins', coins.toString());
+                return true;
             }
+            return false;
         }
         
-        // Функция для загрузки данных
-        async function loadCoins(userId) {
-            try {
-                // Здесь будет запрос к вашему бэкенду
-                // Это пример для демонстрации
-                console.log(`Loading coins for user ${userId}`);
-                return 0; // В реальном приложении вернёте сохранённое значение
-            } catch (error) {
-                console.error('Error loading coins:', error);
-                return 0;
+        async function loadCoins() {
+            if (Telegram.WebApp.isVersionAtLeast('6.9')) {
+                const coins = await Telegram.WebApp.CloudStorage.getItem('coins');
+                return parseInt(coins || '0');
             }
+            return 0;
         }
         
-        // Отображаем информацию о пользователе и загружаем монеты
+        // Отображаем информацию о пользователе
         if (user) {
             // Имя пользователя
-            const username = user.username || 
-                           `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
+            const username = user.username || `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
             document.getElementById('username').textContent = username;
             
             // ID пользователя
@@ -153,26 +145,21 @@
             
             // Аватар
             const avatarContainer = document.getElementById('avatar');
-            
             if (user.photo_url) {
                 const avatarImg = document.createElement('img');
                 avatarImg.src = user.photo_url;
                 avatarImg.classList.add('avatar');
-                avatarImg.onerror = function() {
-                    showDefaultAvatar(avatarContainer, user.first_name);
-                };
+                avatarImg.onerror = () => showDefaultAvatar(avatarContainer, user.first_name);
                 avatarContainer.appendChild(avatarImg);
             } else {
                 showDefaultAvatar(avatarContainer, user.first_name);
             }
             
             // Загружаем сохранённые монеты
-            loadCoins(user.id).then(count => {
+            loadCoins().then(count => {
                 coinCount = count;
                 document.getElementById('coin-count').textContent = coinCount;
             });
-            
-            Telegram.WebApp.expand();
         } else {
             document.getElementById('username').textContent = 'Гость';
         }
@@ -187,20 +174,16 @@
         }
         
         // Обработчик клика по монетке
-        document.getElementById('coin-button').addEventListener('click', function() {
+        document.getElementById('coin-button').addEventListener('click', async function() {
             coinCount++;
             document.getElementById('coin-count').textContent = coinCount;
             
-            // Сохраняем монеты (если пользователь авторизован)
-            if (user) {
-                saveCoins(user.id, coinCount);
-            }
+            // Сохраняем монеты
+            await saveCoins(coinCount);
             
-            // Анимация "подпрыгивания"
+            // Анимация
             this.style.transform = 'translateY(-10px)';
-            setTimeout(() => {
-                this.style.transform = 'translateY(0)';
-            }, 200);
+            setTimeout(() => this.style.transform = 'translateY(0)', 200);
         });
     </script>
 </body>
