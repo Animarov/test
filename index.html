@@ -1,262 +1,50 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>animarov</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
+            text-align: center;
+            padding: 20px;
             background-color: #f5f5f5;
         }
-        .header {
-            background-color: black;
-            color: white;
-            text-align: center;
-            padding: 15px 0;
-            font-size: 24px;
-        }
-        .nav {
-            display: flex;
-            justify-content: flex-start;
-            padding: 10px 20px;
-            background-color: #333;
-        }
-        .nav button {
-            margin-right: 10px;
-            padding: 8px 15px;
-            background-color: #555;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .nav button:hover {
-            background-color: #777;
-        }
-        .content {
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
             padding: 20px;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 300px;
-            border-radius: 5px;
-            position: relative;
-        }
-        .close {
-            position: absolute;
-            right: 10px;
-            top: 5px;
-            font-size: 24px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .modal-content input {
-            width: 100%;
-            padding: 8px;
-            margin: 8px 0;
-            box-sizing: border-box;
-        }
-        .modal-content button {
-            background-color: #555;
-            color: white;
-            padding: 8px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .error {
-            color: red;
-            font-size: 14px;
-        }
-        .success {
-            color: green;
-            font-size: 14px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <div class="header">animarovs co</div>
-    
-    <div class="nav" id="nav">
-        <button id="loginBtn">Вход</button>
-        <button id="registerBtn">Регистрация</button>
-    </div>
-    
-    <div class="content" id="content"></div>
-    
-    <!-- Модальное окно входа -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="closeLogin">&times;</span>
-            <h2>Вход</h2>
-            <div id="loginError" class="error"></div>
-            <input type="text" id="loginUsername" placeholder="Введите логин">
-            <input type="password" id="loginPassword" placeholder="Введите пароль">
-            <button id="submitLogin">Войти</button>
-        </div>
-    </div>
-    
-    <!-- Модальное окно регистрации -->
-    <div id="registerModal" class="modal">
-        <div class="modal-content">
-            <span class="close" id="closeRegister">&times;</span>
-            <h2>Регистрация</h2>
-            <div id="registerError" class="error"></div>
-            <div id="registerSuccess" class="success"></div>
-            <input type="text" id="registerUsername" placeholder="Придумайте логин">
-            <input type="password" id="registerPassword" placeholder="Создайте пароль">
-            <button id="submitRegister">Зарегистрироваться</button>
-        </div>
+    <div class="container">
+        <h1>Добро пожаловать!</h1>
+        <p id="username">Загрузка...</p>
     </div>
 
     <script>
-        // Хранилище пользователей
-        let users = JSON.parse(localStorage.getItem('users')) || {};
-        let currentUser = null;
-        // Элементы
-        const nav = document.getElementById('nav');
-        const content = document.getElementById('content');
-        const loginBtn = document.getElementById('loginBtn');
-        const registerBtn = document.getElementById('registerBtn');
-        const loginModal = document.getElementById('loginModal');
-        const registerModal = document.getElementById('registerModal');
-        const closeLogin = document.getElementById('closeLogin');
-        const closeRegister = document.getElementById('closeRegister');
-        const submitLogin = document.getElementById('submitLogin');
-        const submitRegister = document.getElementById('submitRegister');
-        const loginError = document.getElementById('loginError');
-        const registerError = document.getElementById('registerError');
-        const registerSuccess = document.getElementById('registerSuccess');
-
-        // Открытие модальных окон
-        loginBtn.onclick = () => {
-            loginError.textContent = '';
-            loginModal.style.display = 'block';
-        };
+        // Ждем инициализации WebApp Telegram
+        Telegram.WebApp.ready();
         
-        registerBtn.onclick = () => {
-            registerError.textContent = '';
-            registerSuccess.textContent = '';
-            registerModal.style.display = 'block';
-        };
-
-        // Закрытие модальных окон
-        closeLogin.onclick = () => loginModal.style.display = 'none';
-        closeRegister.onclick = () => registerModal.style.display = 'none';
+        // Получаем данные пользователя
+        const user = Telegram.WebApp.initDataUnsafe.user;
         
-        window.onclick = (event) => {
-            if (event.target === loginModal) loginModal.style.display = 'none';
-            if (event.target === registerModal) registerModal.style.display = 'none';
-        };
-
-        // Регистрация
-        submitRegister.onclick = () => {
-            const username = document.getElementById('registerUsername').value;
-            const password = document.getElementById('registerPassword').value;
-            
-            registerError.textContent = '';
-            registerSuccess.textContent = '';
-            
-            if (!username || !password) {
-                registerError.textContent = 'Заполните все поля';
-                return;
-            }
-            
-            if (users[username]) {
-                registerError.textContent = 'Такой логин уже занят, придумайте новый';
-            } else {
-                users[username] = password;
-                localStorage.setItem('users', JSON.stringify(users));
-                registerSuccess.textContent = 'Аккаунт успешно создан!';
-                
-                // Очищаем поля через 2 секунды и закрываем окно
-                setTimeout(() => {
-                    document.getElementById('registerUsername').value = '';
-                    document.getElementById('registerPassword').value = '';
-                    registerModal.style.display = 'none';
-                }, 2000);
-            }
-        };
-
-        // Вход
-        submitLogin.onclick = () => {
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            loginError.textContent = '';
-            
-            if (!username || !password) {
-                loginError.textContent = 'Заполните все поля';
-                return;
-            }
-            
-            if (users[username] && users[username] === password) {
-                currentUser = username;
-                loginModal.style.display = 'none';
-                updateUI();
-            } else {
-                loginError.textContent = 'Неверный логин или пароль';
-            }
-        };
-
-        // Выход
-        function logout() {
-            currentUser = null;
-            updateUI();
+        // Отображаем имя пользователя
+        if (user) {
+            const username = user.username || `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
+            document.getElementById('username').textContent = `Привет, ${username}!`;
+        } else {
+            document.getElementById('username').textContent = 'Не удалось получить данные пользователя';
         }
-
-        // Обновление интерфейса
-        function updateUI() {
-            if (currentUser) {
-                nav.innerHTML = 
-                    <button id="profileBtn">Профиль</button>
-                    <button id="logoutBtn">Выйти</button>
-                ;
-                
-                document.getElementById('profileBtn').onclick = showProfile;
-                document.getElementById('logoutBtn').onclick = logout;
-                
-                showProfile();
-            } else {
-                nav.innerHTML = 
-                    <button id="loginBtn">Вход</button>
-                    <button id="registerBtn">Регистрация</button>
-                ;
-                
-                document.getElementById('loginBtn').onclick = () => loginModal.style.display = 'block';
-                document.getElementById('registerBtn').onclick = () => registerModal.style.display = 'block';
-                
-                content.innerHTML = '';
-            }
-        }
-
-        // Показать профиль
-        function showProfile() {
-            content.innerHTML = 
-                <h2>Здравствуйте, ${currentUser}!</h2>
-                <p>Добро пожаловать в ваш профиль.</p>
-            ;
-        }
-
-        // Инициализация
-        updateUI();
+        
+        // Можно расширить функционал:
+        // Telegram.WebApp.expand(); // Развернуть приложение на весь экран
     </script>
 </body>
 </html>
