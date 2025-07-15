@@ -119,19 +119,32 @@
         
         // Функции для работы с CloudStorage Telegram
         async function saveCoins(coins) {
-            if (Telegram.WebApp.isVersionAtLeast('6.9')) {
-                await Telegram.WebApp.CloudStorage.setItem('coins', coins.toString());
+            try {
+                if (Telegram.WebApp.isVersionAtLeast('6.9')) {
+                    await Telegram.WebApp.CloudStorage.setItem('coins', coins.toString());
+                    return true;
+                }
+                // Fallback для старых версий
+                localStorage.setItem('tg_coins', coins.toString());
                 return true;
+            } catch (e) {
+                console.error('Error saving coins:', e);
+                return false;
             }
-            return false;
         }
         
         async function loadCoins() {
-            if (Telegram.WebApp.isVersionAtLeast('6.9')) {
-                const coins = await Telegram.WebApp.CloudStorage.getItem('coins');
-                return parseInt(coins || '0');
+            try {
+                if (Telegram.WebApp.isVersionAtLeast('6.9')) {
+                    const result = await Telegram.WebApp.CloudStorage.getItem('coins');
+                    return parseInt(result || '0') || 0;
+                }
+                // Fallback для старых версий
+                return parseInt(localStorage.getItem('tg_coins') || '0') || 0;
+            } catch (e) {
+                console.error('Error loading coins:', e);
+                return 0;
             }
-            return 0;
         }
         
         // Отображаем информацию о пользователе
@@ -154,15 +167,18 @@
             } else {
                 showDefaultAvatar(avatarContainer, user.first_name);
             }
-            
-            // Загружаем сохранённые монеты
-            loadCoins().then(count => {
-                coinCount = count;
-                document.getElementById('coin-count').textContent = coinCount;
-            });
         } else {
             document.getElementById('username').textContent = 'Гость';
         }
+        
+        // Загружаем сохранённые монеты при старте
+        loadCoins().then(count => {
+            coinCount = count;
+            document.getElementById('coin-count').textContent = coinCount;
+        }).catch(e => {
+            console.error('Failed to load coins:', e);
+            document.getElementById('coin-count').textContent = '0';
+        });
         
         // Функция для дефолтного аватара
         function showDefaultAvatar(container, firstName) {
@@ -178,12 +194,12 @@
             coinCount++;
             document.getElementById('coin-count').textContent = coinCount;
             
-            // Сохраняем монеты
-            await saveCoins(coinCount);
-            
             // Анимация
             this.style.transform = 'translateY(-10px)';
             setTimeout(() => this.style.transform = 'translateY(0)', 200);
+            
+            // Сохраняем монеты (без ожидания, чтобы не блокировать интерфейс)
+            saveCoins(coinCount).catch(e => console.error('Failed to save coins:', e));
         });
     </script>
 </body>
