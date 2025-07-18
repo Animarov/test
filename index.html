@@ -1,207 +1,134 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Coin Mini App</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кликер монет</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            padding: 15px;
-            background-color: #f5f5f5;
-            margin: 0;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 15px;
-            border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .user-header {
             display: flex;
-            align-items: flex-start;
-            margin-bottom: 15px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
         }
-        .avatar-container {
-            position: relative;
+        #user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        #user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
             margin-right: 10px;
-        }
-        .avatar {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
             object-fit: cover;
-            border: 2px solid #0088cc;
         }
-        .default-avatar {
-            width: 35px;
-            height: 35px;
+        #user-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        #coin {
+            width: 100px;
+            height: 100px;
+            background-color: gold;
             border-radius: 50%;
-            background-color: #0088cc;
-            color: white;
-            font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 2px solid #0088cc;
-        }
-        .user-info {
-            display: flex;
-            flex-direction: column;
-            margin-top: -3px;
-        }
-        .username {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-        }
-        .user-id {
-            color: #666;
-            font-size: 11px;
-        }
-        .counter {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .coin-button {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto;
-            background: none;
-            border: none;
             cursor: pointer;
-            transition: transform 0.2s;
-            display: block;
+            user-select: none;
+            font-size: 24px;
         }
-        .coin-button:active {
-            transform: scale(0.95);
+        #coin-count {
+            font-size: 32px;
+            margin-top: 20px;
         }
-        .coin-button img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        #reset-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #reset-button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="user-header">
-            <div class="avatar-container">
-                <div id="avatar"></div>
-            </div>
-            <div class="user-info">
-                <div class="username" id="username"></div>
-                <div class="user-id" id="user-id"></div>
-            </div>
-        </div>
-        
-        <div class="counter">Монет: <span id="coin-count">0</span></div>
-        
-        <button class="coin-button" id="coin-button">
-            <img src="https://cdn-icons-png.flaticon.com/512/3523/3523887.png" alt="Coin">
-        </button>
+    <div id="user-info">
+        <img id="user-avatar" src="" alt="Аватар">
+        <span id="user-name"></span>
     </div>
+    <div id="coin">🪙</div>
+    <div id="coin-count">Монет: 0</div>
+    <button id="reset-button">Сбросить</button>
 
-    <script src="storage.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        // Инициализация WebApp Telegram
-        Telegram.WebApp.ready();
-        Telegram.WebApp.expand();
-        
-        // Получаем данные пользователя
-        const user = Telegram.WebApp.initDataUnsafe.user;
-        let coinCount = 0;
-        
-        // Функции для работы с CloudStorage Telegram
-        async function saveCoins(coins) {
-            try {
-                if (Telegram.WebApp.isVersionAtLeast('6.9')) {
-                    await Telegram.WebApp.CloudStorage.setItem('coins', coins.toString());
-                    return true;
-                }
-                // Fallback для старых версий
-                localStorage.setItem('tg_coins', coins.toString());
-                return true;
-            } catch (e) {
-                console.error('Error saving coins:', e);
-                return false;
-            }
-        }
-        
-        async function loadCoins() {
-            try {
-                if (Telegram.WebApp.isVersionAtLeast('6.9')) {
-                    const result = await Telegram.WebApp.CloudStorage.getItem('coins');
-                    return parseInt(result || '0') || 0;
-                }
-                // Fallback для старых версий
-                return parseInt(localStorage.getItem('tg_coins') || '0') || 0;
-            } catch (e) {
-                console.error('Error loading coins:', e);
-                return 0;
-            }
-        }
-        
-        // Отображаем информацию о пользователе
-        if (user) {
-            // Имя пользователя
-            const username = user.username || `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`;
-            document.getElementById('username').textContent = username;
-            
-            // ID пользователя
-            document.getElementById('user-id').textContent = `ID: ${user.id}`;
-            
-            // Аватар
-            const avatarContainer = document.getElementById('avatar');
-            if (user.photo_url) {
-                const avatarImg = document.createElement('img');
-                avatarImg.src = user.photo_url;
-                avatarImg.classList.add('avatar');
-                avatarImg.onerror = () => showDefaultAvatar(avatarContainer, user.first_name);
-                avatarContainer.appendChild(avatarImg);
-            } else {
-                showDefaultAvatar(avatarContainer, user.first_name);
-            }
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Получение данных пользователя
+        const user = tg.initDataUnsafe.user || {};
+        const userNameElement = document.getElementById('user-name');
+        const userAvatarElement = document.getElementById('user-avatar');
+
+        // Установка имени пользователя
+        userNameElement.textContent = user.first_name || 'Пользователь';
+
+        // Установка аватарки, если доступна
+        if (user.photo_url) {
+            userAvatarElement.src = user.photo_url;
         } else {
-            document.getElementById('username').textContent = 'Гость';
+            userAvatarElement.src = 'https://via.placeholder.com/50'; // Запасная аватарка
+            userAvatarElement.alt = 'Аватар не доступен';
         }
-        
-        // Загружаем сохранённые монеты при старте
-        loadCoins().then(count => {
-            coinCount = count;
-            document.getElementById('coin-count').textContent = coinCount;
-        }).catch(e => {
-            console.error('Failed to load coins:', e);
-            document.getElementById('coin-count').textContent = '0';
-        });
-        
-        // Функция для дефолтного аватара
-        function showDefaultAvatar(container, firstName) {
-            const defaultAvatar = document.createElement('div');
-            defaultAvatar.classList.add('default-avatar');
-            const firstLetter = firstName ? firstName.charAt(0).toUpperCase() : 'T';
-            defaultAvatar.textContent = firstLetter;
-            container.appendChild(defaultAvatar);
+
+        // Работа с локальным хранилищем
+        let coins = parseInt(localStorage.getItem('coins')) || 0;
+        const coinCountElement = document.getElementById('coin-count');
+        const coinElement = document.getElementById('coin');
+        const resetButton = document.getElementById('reset-button');
+
+        // Обновление отображения монет
+        function updateCoinCount() {
+            coinCountElement.textContent = `Монет: ${coins}`;
+            localStorage.setItem('coins', coins);
         }
-        
-        // Обработчик клика по монетке
-        document.getElementById('coin-button').addEventListener('click', async function() {
-            coinCount++;
-            document.getElementById('coin-count').textContent = coinCount;
-            
-            // Анимация
-            this.style.transform = 'translateY(-10px)';
-            setTimeout(() => this.style.transform = 'translateY(0)', 200);
-            
-            // Сохраняем монеты (без ожидания, чтобы не блокировать интерфейс)
-            saveCoins(coinCount).catch(e => console.error('Failed to save coins:', e));
+
+        // Обработка клика по монете
+        coinElement.addEventListener('click', () => {
+            coins++;
+            updateCoinCount();
+            coinElement.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                coinElement.style.transform = 'scale(1)';
+            }, 100);
         });
+
+        // Обработка сброса монет
+        resetButton.addEventListener('click', () => {
+            tg.showConfirm('Сбросить все монеты?', (confirmed) => {
+                if (confirmed) {
+                    coins = 0;
+                    updateCoinCount();
+                    tg.showAlert('Монеты сброшены!');
+                }
+            });
+        });
+
+        // Инициализация количества монет при загрузке
+        updateCoinCount();
     </script>
 </body>
 </html>
