@@ -27,9 +27,12 @@
             margin-right: 10px;
             object-fit: cover;
         }
-        #user-name {
+        #user-name, #user-id {
             font-size: 18px;
-            font-weight: bold;
+            margin-right: 10px;
+        }
+        #user-id {
+            color: #555;
         }
         #coin {
             width: 100px;
@@ -47,8 +50,12 @@
             font-size: 32px;
             margin-top: 20px;
         }
-        #reset-button {
+        #button-container {
             margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        #reset-button, #transfer-button {
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
@@ -57,7 +64,7 @@
             border: none;
             border-radius: 5px;
         }
-        #reset-button:hover {
+        #reset-button:hover, #transfer-button:hover {
             background-color: #0056b3;
         }
     </style>
@@ -66,10 +73,14 @@
     <div id="user-info">
         <img id="user-avatar" src="" alt="Аватар">
         <span id="user-name"></span>
+        <span id="user-id"></span>
     </div>
     <div id="coin">🪙</div>
     <div id="coin-count">Монет: 0</div>
-    <button id="reset-button">Сбросить</button>
+    <div id="button-container">
+        <button id="reset-button">Сбросить</button>
+        <button id="transfer-button">Переводы</button>
+    </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
@@ -81,29 +92,32 @@
         // Получение данных пользователя
         const user = tg.initDataUnsafe.user || {};
         const userNameElement = document.getElementById('user-name');
+        const userIdElement = document.getElementById('user-id');
         const userAvatarElement = document.getElementById('user-avatar');
 
-        // Установка имени пользователя
+        // Установка имени и ID пользователя
         userNameElement.textContent = user.first_name || 'Пользователь';
+        userIdElement.textContent = `ID: ${user.id || 'Неизвестно'}`;
 
         // Установка аватарки, если доступна
         if (user.photo_url) {
             userAvatarElement.src = user.photo_url;
         } else {
-            userAvatarElement.src = 'https://via.placeholder.com/50'; // Запасная аватарка
+            userAvatarElement.src = 'https://via.placeholder.com/50';
             userAvatarElement.alt = 'Аватар не доступен';
         }
 
         // Работа с локальным хранилищем
-        let coins = parseInt(localStorage.getItem('coins')) || 0;
+        let coins = parseInt(localStorage.getItem(`coins_${user.id}`)) || 0;
         const coinCountElement = document.getElementById('coin-count');
         const coinElement = document.getElementById('coin');
         const resetButton = document.getElementById('reset-button');
+        const transferButton = document.getElementById('transfer-button');
 
         // Обновление отображения монет
         function updateCoinCount() {
             coinCountElement.textContent = `Монет: ${coins}`;
-            localStorage.setItem('coins', coins);
+            localStorage.setItem(`coins_${user.id}`, coins);
         }
 
         // Обработка клика по монете
@@ -123,6 +137,39 @@
                     coins = 0;
                     updateCoinCount();
                     tg.showAlert('Монеты сброшены!');
+                }
+            });
+        });
+
+        // Обработка нажатия на кнопку "Переводы"
+        transferButton.addEventListener('click', () => {
+            tg.showPopup({
+                title: 'Перевод монет',
+                message: 'Введите ID пользователя и сумму для перевода:',
+                buttons: [
+                    { id: 'recipient_id', type: 'text', placeholder: 'ID получателя' },
+                    { id: 'amount', type: 'text', placeholder: 'Сумма' },
+                    { type: 'ok', text: 'Перевести' },
+                    { type: 'cancel', text: 'Отмена' }
+                ]
+            }, (buttonId, data) => {
+                if (buttonId === 'ok') {
+                    const recipientId = data.recipient_id;
+                    const amount = parseInt(data.amount);
+                    if (!recipientId || isNaN(amount) || amount <= 0) {
+                        tg.showAlert('Укажите корректный ID получателя и сумму!');
+                        return;
+                    }
+                    if (amount > coins) {
+                        tg.showAlert('Недостаточно монет для перевода!');
+                        return;
+                    }
+                    // Обновление балансов
+                    coins -= amount;
+                    const recipientCoins = parseInt(localStorage.getItem(`coins_${recipientId}`)) || 0;
+                    localStorage.setItem(`coins_${recipientId}`, recipientCoins + amount);
+                    updateCoinCount();
+                    tg.showAlert(`Переведено ${amount} монет пользователю с ID ${recipientId}`);
                 }
             });
         });
