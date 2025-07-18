@@ -94,12 +94,16 @@
         const userNameElement = document.getElementById('user-name');
         const userIdElement = document.getElementById('user-id');
         const userAvatarElement = document.getElementById('user-avatar');
+        const coinCountElement = document.getElementById('coin-count');
+        const coinElement = document.getElementById('coin');
+        const resetButton = document.getElementById('reset-button');
+        const transferButton = document.getElementById('transfer-button');
 
         // Установка имени и ID пользователя
         userNameElement.textContent = user.first_name || 'Пользователь';
         userIdElement.textContent = `ID: ${user.id || 'Неизвестно'}`;
 
-        // Установка аватарки, если доступна
+        // Установка аватарки
         if (user.photo_url) {
             userAvatarElement.src = user.photo_url;
         } else {
@@ -107,23 +111,74 @@
             userAvatarElement.alt = 'Аватар не доступен';
         }
 
-        // Работа с локальным хранилищем
-        let coins = parseInt(localStorage.getItem(`coins_${user.id}`)) || 0;
-        const coinCountElement = document.getElementById('coin-count');
-        const coinElement = document.getElementById('coin');
-        const resetButton = document.getElementById('reset-button');
-        const transferButton = document.getElementById('transfer-button');
+        // URL сервера (замените на ваш серверный адрес)
+        const SERVER_URL = 'https://your-server-url.com';
 
-        // Обновление отображения монет
-        function updateCoinCount() {
-            coinCountElement.textContent = `Монет: ${coins}`;
-            localStorage.setItem(`coins_${user.id}`, coins);
+        // Получение баланса с сервера
+        async function fetchBalance() {
+            try {
+                const response = await fetch(`${SERVER_URL}/balance/${user.id}`);
+                const data = await response.json();
+                coinCountElement.textContent = `Монет: ${data.coins || 0}`;
+            } catch (error) {
+                tg.showAlert('Ошибка связи с сервером');
+            }
+        }
+
+        // Обновление баланса после клика
+        async function addCoin() {
+            try {
+                const response = await fetch(`${SERVER_URL}/add-coin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                const data = await response.json();
+                coinCountElement.textContent = `Монет: ${data.coins}`;
+            } catch (error) {
+                tg.showAlert('Ошибка при добавлении монеты');
+            }
+        }
+
+        // Сброс баланса
+        async function resetBalance() {
+            try {
+                const response = await fetch(`${SERVER_URL}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: user.id })
+                });
+                const data = await response.json();
+                coinCountElement.textContent = `Монет: ${data.coins}`;
+                tg.showAlert('Монеты сброшены!');
+            } catch (error) {
+                tg.showAlert('Ошибка при сбросе монет');
+            }
+        }
+
+        // Перевод монет
+        async function transferCoins(recipientId, amount) {
+            try {
+                const response = await fetch(`${SERVER_URL}/transfer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ senderId: user.id, recipientId, amount })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    coinCountElement.textContent = `Монет: ${data.senderCoins}`;
+                    tg.showAlert(`Переведено ${amount} монет пользователю с ID ${recipientId}`);
+                } else {
+                    tg.showAlert(data.message || 'Ошибка перевода');
+                }
+            } catch (error) {
+                tg.showAlert('Ошибка связи с сервером');
+            }
         }
 
         // Обработка клика по монете
-        coinElement.addEventListener('click', () => {
-            coins++;
-            updateCoinCount();
+        coinElement.addEventListener('click', async () => {
+            await addCoin();
             coinElement.style.transform = 'scale(0.9)';
             setTimeout(() => {
                 coinElement.style.transform = 'scale(1)';
@@ -132,11 +187,9 @@
 
         // Обработка сброса монет
         resetButton.addEventListener('click', () => {
-            tg.showConfirm('Сбросить все монеты?', (confirmed) => {
+            tg.showConfirm('Сбросить все монеты?', async (confirmed) => {
                 if (confirmed) {
-                    coins = 0;
-                    updateCoinCount();
-                    tg.showAlert('Монеты сброшены!');
+                    await resetBalance();
                 }
             });
         });
@@ -152,7 +205,7 @@
                     { type: 'ok', text: 'Перевести' },
                     { type: 'cancel', text: 'Отмена' }
                 ]
-            }, (buttonId, data) => {
+            }, async (buttonId, data) => {
                 if (buttonId === 'ok') {
                     const recipientId = data.recipient_id;
                     const amount = parseInt(data.amount);
@@ -160,22 +213,13 @@
                         tg.showAlert('Укажите корректный ID получателя и сумму!');
                         return;
                     }
-                    if (amount > coins) {
-                        tg.showAlert('Недостаточно монет для перевода!');
-                        return;
-                    }
-                    // Обновление балансов
-                    coins -= amount;
-                    const recipientCoins = parseInt(localStorage.getItem(`coins_${recipientId}`)) || 0;
-                    localStorage.setItem(`coins_${recipientId}`, recipientCoins + amount);
-                    updateCoinCount();
-                    tg.showAlert(`Переведено ${amount} монет пользователю с ID ${recipientId}`);
+                    await transferCoins(recipientId, amount);
                 }
             });
         });
 
-        // Инициализация количества монет при загрузке
-        updateCoinCount();
+        // Инициализация баланса при загрузке
+        fetchBalance();
     </script>
 </body>
 </html>
