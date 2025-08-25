@@ -135,10 +135,15 @@
 
         async function callApi(method, payload) {
             try {
-                // Используем GET с параметрами в URL для обхода CORS
+                // Преобразуем ключи в lowercase для GET-запросов
+                const lowerCasePayload = {};
+                for (const key in payload) {
+                    lowerCasePayload[key.toLowerCase()] = payload[key];
+                }
+                
                 const params = new URLSearchParams({
-                    method: method,
-                    ...payload
+                    method: method.toLowerCase(),
+                    ...lowerCasePayload
                 });
                 
                 let response = await fetch(API_URL + '?' + params.toString(), {
