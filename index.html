@@ -1,26 +1,245 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            text-align: center; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        button { 
+            padding: 20px 40px; 
+            font-size: 20px; 
+            margin: 15px; 
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white; 
+            border: none; 
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .balance { 
+            font-size: 24px; 
+            margin: 25px 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        #coins {
+            font-size: 32px;
+            color: #feca57;
+            font-weight: bold;
+        }
+        #userId {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        .transfer-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+        }
+        input {
+            padding: 12px;
+            margin: 8px;
+            border: none;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 200px;
+            font-size: 16px;
+        }
+        #transferBtn {
+            background: linear-gradient(45deg, #00d2d3, #54a0ff);
+            padding: 12px 25px;
+            font-size: 16px;
+        }
+        #transferStatus {
+            margin: 10px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <h1>🪙 Coin Clicker</h1>
         <div class="balance">Баланс: <span id="coins">0</span> монет</div>
-        <button id="clickBtn">Кликни меня!</button>
+        
+        <button id="clickBtn">🎯 Кликни меня!</button>
+
         <div class="transfer-section">
-            <h3>Перевод монет</h3>
+            <h3>💸 Перевод монет</h3>
             <input type="number" id="receiverId" placeholder="ID получателя">
             <input type="number" id="transferAmount" placeholder="Количество">
             <button id="transferBtn">Перевести</button>
             <p id="transferStatus"></p>
         </div>
+
         <p>Ваш ID: <span id="userId"></span></p>
+        <p>👆 Используйте этот ID для переводов</p>
     </div>
-    <script src="script.js"></script>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyZ-bWw_-S6ea1Fl8ngh4BCWSzI0w2WHGQnG76Z6LXVMTBNXxFK3rRAnVZFm1vEJMBVZA/exec';
+
+        let tg = window.Telegram.WebApp;
+        let userTelegramId = tg.initDataUnsafe.user.id;
+        let currentCoins = 0;
+
+        tg.expand();
+        tg.enableClosingConfirmation();
+        document.getElementById('userId').textContent = userTelegramId;
+
+        async function callApi(method, payload) {
+            try {
+                let response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ method, ...payload })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                return { error: 'Network error' };
+            }
+        }
+
+        async function loadUser() {
+            try {
+                let userData = await callApi('getUser', { 
+                    telegramId: userTelegramId,
+                    username: tg.initDataUnsafe.user.username,
+                    first_name: tg.initDataUnsafe.user.first_name
+                });
+                
+                if (userData.error) {
+                    alert('Error: ' + userData.error);
+                    return;
+                }
+                
+                currentCoins = userData.coins;
+                document.getElementById('coins').textContent = currentCoins;
+            } catch (error) {
+                console.error('Load user error:', error);
+            }
+        }
+
+        document.getElementById('clickBtn').addEventListener('click', async () => {
+            let result = await callApi('click', { 
+                telegramId: userTelegramId,
+                username: tg.initDataUnsafe.user.username,
+                first_name: tg.initDataUnsafe.user.first_name
+            });
+            
+            if (result.success) {
+                currentCoins = result.newCoins;
+                document.getElementById('coins').textContent = currentCoins;
+                tg.HapticFeedback.impactOccurred('light');
+                
+                // Анимация клика
+                const btn = document.getElementById('clickBtn');
+                btn.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    btn.style.transform = 'scale(1)';
+                }, 100);
+            }
+        });
+
+        document.getElementById('transferBtn').addEventListener('click', async () => {
+            const receiverId = document.getElementById('receiverId').value;
+            const amount = parseInt(document.getElementById('transferAmount').value);
+            const statusEl = document.getElementById('transferStatus');
+
+            if (!receiverId || !amount) {
+                statusEl.textContent = '❌ Заполните все поля!';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+
+            if (receiverId == userTelegramId) {
+                statusEl.textContent = '❌ Нельзя переводить себе!';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+
+            if (amount <= 0) {
+                statusEl.textContent = '❌ Сумма должна быть больше 0!';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+
+            if (amount > currentCoins) {
+                statusEl.textContent = '❌ Недостаточно монет!';
+                statusEl.style.color = '#ff6b6b';
+                return;
+            }
+
+            statusEl.textContent = '⏳ Отправляем...';
+            statusEl.style.color = '#feca57';
+
+            try {
+                const result = await callApi('transfer', {
+                    fromTelegramId: userTelegramId,
+                    toTelegramId: receiverId,
+                    amount: amount
+                });
+
+                if (result.success) {
+                    statusEl.textContent = `✅ Успешно переведено ${amount} монет!`;
+                    statusEl.style.color = '#00d2d3';
+                    currentCoins -= amount;
+                    document.getElementById('coins').textContent = currentCoins;
+                    tg.HapticFeedback.notificationOccurred('success');
+                    
+                    // Очищаем поля
+                    document.getElementById('receiverId').value = '';
+                    document.getElementById('transferAmount').value = '';
+                } else {
+                    statusEl.textContent = '❌ Ошибка: ' + (result.error || 'Unknown error');
+                    statusEl.style.color = '#ff6b6b';
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            } catch (error) {
+                statusEl.textContent = '❌ Ошибка сети';
+                statusEl.style.color = '#ff6b6b';
+                console.error('Transfer error:', error);
+            }
+        });
+
+        // Запускаем приложение
+        loadUser();
+    </script>
 </body>
 </html>
