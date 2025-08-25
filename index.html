@@ -88,6 +88,19 @@
             font-weight: bold;
             min-height: 20px;
         }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -145,7 +158,7 @@
                 });
                 
                 if (userData.error) {
-                    alert('Error: ' + userData.error);
+                    showError('Ошибка загрузки: ' + userData.error);
                     return;
                 }
                 
@@ -153,7 +166,26 @@
                 document.getElementById('coins').textContent = currentCoins;
             } catch (error) {
                 console.error('Load user error:', error);
+                showError('Ошибка подключения');
             }
+        }
+
+        function showError(message) {
+            const statusEl = document.getElementById('transferStatus');
+            statusEl.textContent = '❌ ' + message;
+            statusEl.style.color = '#ff6b6b';
+        }
+
+        function showSuccess(message) {
+            const statusEl = document.getElementById('transferStatus');
+            statusEl.textContent = '✅ ' + message;
+            statusEl.style.color = '#00d2d3';
+        }
+
+        function showLoading() {
+            const statusEl = document.getElementById('transferStatus');
+            statusEl.innerHTML = '<div class="loader"></div>';
+            statusEl.style.color = '#feca57';
         }
 
         document.getElementById('clickBtn').addEventListener('click', async () => {
@@ -174,6 +206,8 @@
                 setTimeout(() => {
                     btn.style.transform = 'scale(1)';
                 }, 100);
+            } else {
+                showError('Ошибка клика: ' + (result.error || 'Unknown error'));
             }
         });
 
@@ -183,31 +217,26 @@
             const statusEl = document.getElementById('transferStatus');
 
             if (!receiverId || !amount) {
-                statusEl.textContent = '❌ Заполните все поля!';
-                statusEl.style.color = '#ff6b6b';
+                showError('Заполните все поля!');
                 return;
             }
 
             if (receiverId == userTelegramId) {
-                statusEl.textContent = '❌ Нельзя переводить себе!';
-                statusEl.style.color = '#ff6b6b';
+                showError('Нельзя переводить себе!');
                 return;
             }
 
             if (amount <= 0) {
-                statusEl.textContent = '❌ Сумма должна быть больше 0!';
-                statusEl.style.color = '#ff6b6b';
+                showError('Сумма должна быть больше 0!');
                 return;
             }
 
             if (amount > currentCoins) {
-                statusEl.textContent = '❌ Недостаточно монет!';
-                statusEl.style.color = '#ff6b6b';
+                showError('Недостаточно монет!');
                 return;
             }
 
-            statusEl.textContent = '⏳ Отправляем...';
-            statusEl.style.color = '#feca57';
+            showLoading();
 
             try {
                 const result = await callApi('transfer', {
@@ -217,8 +246,7 @@
                 });
 
                 if (result.success) {
-                    statusEl.textContent = `✅ Успешно переведено ${amount} монет!`;
-                    statusEl.style.color = '#00d2d3';
+                    showSuccess(`Успешно переведено ${amount} монет!`);
                     currentCoins -= amount;
                     document.getElementById('coins').textContent = currentCoins;
                     tg.HapticFeedback.notificationOccurred('success');
@@ -227,13 +255,11 @@
                     document.getElementById('receiverId').value = '';
                     document.getElementById('transferAmount').value = '';
                 } else {
-                    statusEl.textContent = '❌ Ошибка: ' + (result.error || 'Unknown error');
-                    statusEl.style.color = '#ff6b6b';
+                    showError('Ошибка: ' + (result.error || 'Unknown error'));
                     tg.HapticFeedback.notificationOccurred('error');
                 }
             } catch (error) {
-                statusEl.textContent = '❌ Ошибка сети';
-                statusEl.style.color = '#ff6b6b';
+                showError('Ошибка сети');
                 console.error('Transfer error:', error);
             }
         });
