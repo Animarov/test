@@ -135,12 +135,17 @@
 
         async function callApi(method, payload) {
             try {
-                let response = await fetch(API_URL, {
-                    method: 'POST',
+                // Используем GET с параметрами в URL для обхода CORS
+                const params = new URLSearchParams({
+                    method: method,
+                    ...payload
+                });
+                
+                let response = await fetch(API_URL + '?' + params.toString(), {
+                    method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ method, ...payload })
+                        'Accept': 'application/json'
+                    }
                 });
                 return await response.json();
             } catch (error) {
@@ -153,8 +158,8 @@
             try {
                 let userData = await callApi('getUser', { 
                     telegramId: userTelegramId,
-                    username: tg.initDataUnsafe.user.username,
-                    first_name: tg.initDataUnsafe.user.first_name
+                    username: tg.initDataUnsafe.user.username || '',
+                    first_name: tg.initDataUnsafe.user.first_name || ''
                 });
                 
                 if (userData.error) {
@@ -162,7 +167,7 @@
                     return;
                 }
                 
-                currentCoins = userData.coins;
+                currentCoins = userData.coins || 0;
                 document.getElementById('coins').textContent = currentCoins;
             } catch (error) {
                 console.error('Load user error:', error);
@@ -191,12 +196,12 @@
         document.getElementById('clickBtn').addEventListener('click', async () => {
             let result = await callApi('click', { 
                 telegramId: userTelegramId,
-                username: tg.initDataUnsafe.user.username,
-                first_name: tg.initDataUnsafe.user.first_name
+                username: tg.initDataUnsafe.user.username || '',
+                first_name: tg.initDataUnsafe.user.first_name || ''
             });
             
             if (result.success) {
-                currentCoins = result.newCoins;
+                currentCoins = result.newCoins || currentCoins + 1;
                 document.getElementById('coins').textContent = currentCoins;
                 tg.HapticFeedback.impactOccurred('light');
                 
