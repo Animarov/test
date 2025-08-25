@@ -101,6 +101,18 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .coin-animation {
+            position: absolute;
+            font-size: 20px;
+            color: #feca57;
+            font-weight: bold;
+            animation: coinFloat 1s ease-out;
+            pointer-events: none;
+        }
+        @keyframes coinFloat {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -128,12 +140,16 @@
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
         let currentCoins = 0;
+        let isRequestPending = false;
 
         tg.expand();
         tg.enableClosingConfirmation();
         document.getElementById('userId').textContent = userTelegramId;
 
         async function callApi(method, payload) {
+            if (isRequestPending) return { error: 'Request already pending' };
+            isRequestPending = true;
+            
             try {
                 // Преобразуем ключи в lowercase для GET-запросов
                 const lowerCasePayload = {};
@@ -146,6 +162,9 @@
                     ...lowerCasePayload
                 });
                 
+                // Добавляем timestamp чтобы избежать кэширования
+                params.append('t', Date.now());
+                
                 let response = await fetch(API_URL + '?' + params.toString(), {
                     method: 'GET',
                     headers: {
@@ -156,6 +175,8 @@
             } catch (error) {
                 console.error('API Error:', error);
                 return { error: 'Network error' };
+            } finally {
+                isRequestPending = false;
             }
         }
 
@@ -198,27 +219,61 @@
             statusEl.style.color = '#feca57';
         }
 
-        document.getElementById('clickBtn').addEventListener('click', async () => {
-            let result = await callApi('click', { 
-                telegramId: userTelegramId,
-                username: tg.initDataUnsafe.user.username || '',
-                first_name: tg.initDataUnsafe.user.first_name || ''
-            });
+        function createCoinAnimation(x, y) {
+            const coin = document.createElement('div');
+            coin.className = 'coin-animation';
+            coin.textContent = '+1';
+            coin.style.left = (x - 20) + 'px';
+            coin.style.top = (y - 20) + 'px';
+            document.body.appendChild(coin);
             
-            if (result.success) {
-                currentCoins = result.newCoins || currentCoins + 1;
-                document.getElementById('coins').textContent = currentCoins;
-                tg.HapticFeedback.impactOccurred('light');
-                
-                // Анимация клика
-                const btn = document.getElementById('clickBtn');
-                btn.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    btn.style.transform = 'scale(1)';
-                }, 100);
-            } else {
-                showError('Ошибка клика: ' + (result.error || 'Unknown error'));
-            }
+            setTimeout(() => {
+                document.body.removeChild(coin);
+            }, 1000);
+        }
+
+        document.getElementById('clickBtn').addEventListener('click', function(event) {
+            // Мгновенное обновление интерфейса
+            currentCoins++;
+            document.getElementById('coins').textContent = currentCoins;
+            
+            // Создаем анимацию монетки
+            const rect = this.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            createCoinAnimation(x, y);
+            
+            // Вибрация
+            tg.HapticFeedback.impactOccurred('light');
+            
+            // Анимация кнопки
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 100);
+            
+            // Асинхронная отправка на сервер (без ожидания)
+            setTimeout(async () => {
+                try {
+                    let result = await callApi('click', { 
+                        telegramId: userTelegramId,
+                        username: tg.initDataUnsafe.user.username || '',
+                        first_name: tg.initDataUnsafe.user.first_name || ''
+                    });
+                    
+                    if (result.error) {
+                        // Если ошибка, откатываем визуальное изменение
+                        currentCoins--;
+                        document.getElementById('coins').textContent = currentCoins;
+                        console.error('Ошибка синхронизации:', result.error);
+                    }
+                } catch (error) {
+                    console.error('Background click error:', error);
+                    // Откатываем при ошибке сети
+                    currentCoins--;
+                    document.getElementById('coins').textContent = currentCoins;
+                }
+            }, 0);
         });
 
         document.getElementById('transferBtn').addEventListener('click', async () => {
