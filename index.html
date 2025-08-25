@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>gold coin</title>
+    <title>B coin</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -160,6 +160,12 @@
         .top-btn:hover {
             transform: translateY(-2px);
         }
+
+        /* Стили для disabled состояния */
+        .gold-coin.disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -170,7 +176,7 @@
 
     <!-- Основная страница -->
     <div class="container" id="mainPage" style="display: none;">
-        <h1>🪙 gold Coin</h1>
+        <h1>🪙 B Coin</h1>
         <div class="balance">Баланс: <span id="coins">0</span> монет</div>
         
         <!-- Кнопка топа -->
@@ -233,10 +239,18 @@
                         'Accept': 'application/json'
                     }
                 });
-                return await response.json();
+                
+                const data = await response.json();
+                
+                // Добавляем проверку статуса ответа
+                if (!response.ok) {
+                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
+                }
+                
+                return data;
             } catch (error) {
                 console.error('API Error:', error);
-                return { error: 'Network error' };
+                return { error: error.message };
             }
         }
 
@@ -270,12 +284,22 @@
             const statusEl = document.getElementById('transferStatus');
             statusEl.textContent = '❌ ' + message;
             statusEl.style.color = '#ff6b6b';
+            
+            // Автоматическое скрытие через 3 секунды
+            setTimeout(() => {
+                statusEl.textContent = '';
+            }, 3000);
         }
 
         function showSuccess(message) {
             const statusEl = document.getElementById('transferStatus');
             statusEl.textContent = '✅ ' + message;
             statusEl.style.color = '#00d2d3';
+            
+            // Автоматическое скрытие через 3 секунды
+            setTimeout(() => {
+                statusEl.textContent = '';
+            }, 3000);
         }
 
         function createCoinAnimation(x, y) {
@@ -292,8 +316,18 @@
         }
 
         // Обработчик клика по золотой монетке
-        document.getElementById('clickCoin').addEventListener('click', function(event) {
-            // Мгновенное обновление интерфейса
+        document.getElementById('clickCoin').addEventListener('click', async function(event) {
+            // Блокируем повторные клики во время обработки
+            if (isRequestPending) return;
+            isRequestPending = true;
+            
+            // Добавляем визуальную блокировку
+            this.classList.add('disabled');
+            
+            // Сохраняем исходное значение на случай отката
+            const originalCoins = currentCoins;
+            
+            // Мгновенное обновление интерфейса (оптимистичное)
             currentCoins++;
             document.getElementById('coins').textContent = currentCoins;
             
@@ -312,27 +346,36 @@
                 this.style.transform = 'scale(1)';
             }, 100);
             
-            // Отправка на сервер
-            setTimeout(async () => {
-                try {
-                    let result = await callApi('click', { 
-                        telegramId: userTelegramId,
-                        username: tg.initDataUnsafe.user.username || '',
-                        first_name: tg.initDataUnsafe.user.first_name || ''
-                    });
-                    
-                    if (result.error) {
-                        console.error('Click error:', result.error);
-                        // Откатываем если ошибка
-                        currentCoins--;
-                        document.getElementById('coins').textContent = currentCoins;
-                    }
-                } catch (error) {
-                    console.error('Click request error:', error);
-                    currentCoins--;
+            try {
+                // Отправка на сервер
+                let result = await callApi('click', { 
+                    telegramId: userTelegramId,
+                    username: tg.initDataUnsafe.user.username || '',
+                    first_name: tg.initDataUnsafe.user.first_name || ''
+                });
+                
+                if (result.error) {
+                    console.error('Click error:', result.error);
+                    // Откатываем если ошибка
+                    currentCoins = originalCoins;
+                    document.getElementById('coins').textContent = currentCoins;
+                    showError('Ошибка сервера: ' + result.error);
+                } else if (result.newCoins !== undefined) {
+                    // Синхронизируем с сервером
+                    currentCoins = result.newCoins;
                     document.getElementById('coins').textContent = currentCoins;
                 }
-            }, 100);
+            } catch (error) {
+                console.error('Click request error:', error);
+                // Откатываем при ошибке сети
+                currentCoins = originalCoins;
+                document.getElementById('coins').textContent = currentCoins;
+                showError('Ошибка сети');
+            } finally {
+                // Разблокируем кнопку
+                isRequestPending = false;
+                this.classList.remove('disabled');
+            }
         });
 
         document.getElementById('transferBtn').addEventListener('click', async () => {
@@ -382,6 +425,33 @@
             } catch (error) {
                 showError('Ошибка сети');
                 console.error('Transfer error:', error);
+            }
+        });
+
+        // Обработчик кнопки топа
+        document.getElementById('topBtn').addEventListener('click', async () => {
+            try {
+                const result = await callApi('getTop', {
+                    telegramId: userTelegramId
+                });
+                
+                if (result.success && result.topPlayers) {
+                    let message = '🏆 Топ игроков:\n\n';
+                    result.topPlayers.forEach((player, index) => {
+                        message += `${index + 1}. ${player.name} (${player.username || 'без username'}) - ${player.coins} монет\n`;
+                    });
+                    
+                    if (result.userRank !== null) {
+                        message += `\nВаше место: ${result.userRank} из ${result.totalPlayers}`;
+                    }
+                    
+                    alert(message);
+                } else {
+                    showError('Не удалось загрузить топ игроков');
+                }
+            } catch (error) {
+                showError('Ошибка загрузки топа');
+                console.error('Top players error:', error);
             }
         });
 
