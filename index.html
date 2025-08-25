@@ -141,10 +141,35 @@
         let userTelegramId = tg.initDataUnsafe.user.id;
         let currentCoins = 0;
         let isRequestPending = false;
+        let unsyncedClicks = 0;
+        let lastServerCoins = 0;
 
         tg.expand();
         tg.enableClosingConfirmation();
         document.getElementById('userId').textContent = userTelegramId;
+
+        // Сохраняем состояние в localStorage
+        function saveLocalState() {
+            const state = {
+                coins: currentCoins,
+                lastSync: Date.now(),
+                userId: userTelegramId
+            };
+            localStorage.setItem('clickerState', JSON.stringify(state));
+        }
+
+        // Загружаем состояние из localStorage
+        function loadLocalState() {
+            const saved = localStorage.getItem('clickerState');
+            if (saved) {
+                const state = JSON.parse(saved);
+                // Загружаем только если это тот же пользователь
+                if (state.userId === userTelegramId) {
+                    return state.coins;
+                }
+            }
+            return null;
+        }
 
         async function callApi(method, payload) {
             if (isRequestPending) return { error: 'Request already pending' };
@@ -182,6 +207,9 @@
 
         async function loadUser() {
             try {
+                // Пробуем загрузить из localStorage
+                const localCoins = loadLocalState();
+                
                 let userData = await callApi('getUser', { 
                     telegramId: userTelegramId,
                     username: tg.initDataUnsafe.user.username || '',
@@ -190,16 +218,65 @@
                 
                 if (userData.error) {
                     showError('Ошибка загрузки: ' + userData.error);
+                    // Используем локальные данные если есть
+                    if (localCoins !== null) {
+                        currentCoins = localCoins;
+                        document.getElementById('coins').textContent = currentCoins;
+                    }
                     return;
                 }
                 
-                currentCoins = userData.coins || 0;
+                // Синхронизируем: берем максимум из серверных и локальных данных
+                const serverCoins = userData.coins || 0;
+                lastServerCoins = serverCoins;
+                
+                if (localCoins !== null && localCoins > serverCoins) {
+                    // Локальные данные новее, синхронизируем с сервером
+                    currentCoins = localCoins;
+                    await synchronizeWithServer();
+                } else {
+                    // Серверные данные актуальнее
+                    currentCoins = serverCoins;
+                    saveLocalState();
+                }
+                
                 document.getElementById('coins').textContent = currentCoins;
             } catch (error) {
                 console.error('Load user error:', error);
+                // Используем локальные данные при ошибке
+                const localCoins = loadLocalState();
+                if (localCoins !== null) {
+                    currentCoins = localCoins;
+                    document.getElementById('coins').textContent = currentCoins;
+                }
                 showError('Ошибка подключения');
             }
         }
+
+        // Синхронизация расхождений с сервером
+        async function synchronizeWithServer() {
+            if (currentCoins > lastServerCoins) {
+                const difference = currentCoins - lastServerCoins;
+                try {
+                    const result = await callApi('syncClicks', {
+                        telegramId: userTelegramId,
+                        additionalClicks: difference,
+                        username: tg.initDataUnsafe.user.username || '',
+                        first_name: tg.initDataUnsafe.user.first_name || ''
+                    });
+                    
+                    if (result.success) {
+                        lastServerCoins = currentCoins;
+                        saveLocalState();
+                    }
+                } catch (error) {
+                    console.error('Sync error:', error);
+                }
+            }
+        }
+
+        // Периодическая синхронизация
+        setInterval(synchronizeWithServer, 30000); // Каждые 30 секунд
 
         function showError(message) {
             const statusEl = document.getElementById('transferStatus');
@@ -236,6 +313,8 @@
             // Мгновенное обновление интерфейса
             currentCoins++;
             document.getElementById('coins').textContent = currentCoins;
+            unsyncedClicks++;
+            saveLocalState(); // Сохраняем в localStorage
             
             // Создаем анимацию монетки
             const rect = this.getBoundingClientRect();
@@ -252,7 +331,7 @@
                 this.style.transform = 'scale(1)';
             }, 100);
             
-            // Асинхронная отправка на сервер (без ожидания)
+            // Асинхронная отправка на сервер
             setTimeout(async () => {
                 try {
                     let result = await callApi('click', { 
@@ -261,19 +340,18 @@
                         first_name: tg.initDataUnsafe.user.first_name || ''
                     });
                     
-                    if (result.error) {
-                        // Если ошибка, откатываем визуальное изменение
-                        currentCoins--;
-                        document.getElementById('coins').textContent = currentCoins;
+                    if (result.success) {
+                        unsyncedClicks--;
+                        lastServerCoins = result.newCoins;
+                    } else {
+                        // Если ошибка, оставляем монеты но помечаем для повторной синхронизации
                         console.error('Ошибка синхронизации:', result.error);
                     }
                 } catch (error) {
                     console.error('Background click error:', error);
-                    // Откатываем при ошибке сети
-                    currentCoins--;
-                    document.getElementById('coins').textContent = currentCoins;
+                    // Ошибка сети - оставляем монеты, синхронизируем позже
                 }
-            }, 0);
+            }, 1000); // Отправляем через 1 секунду
         });
 
         document.getElementById('transferBtn').addEventListener('click', async () => {
@@ -314,6 +392,7 @@
                     showSuccess(`Успешно переведено ${amount} монет!`);
                     currentCoins -= amount;
                     document.getElementById('coins').textContent = currentCoins;
+                    saveLocalState();
                     tg.HapticFeedback.notificationOccurred('success');
                     
                     // Очищаем поля
@@ -331,6 +410,12 @@
 
         // Запускаем приложение
         loadUser();
+
+        // Сохраняем состояние перед закрытием
+        window.addEventListener('beforeunload', () => {
+            saveLocalState();
+            synchronizeWithServer();
+        });
     </script>
 </body>
 </html>
