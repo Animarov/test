@@ -34,453 +34,305 @@
             color: #feca57;
             font-weight: bold;
         }
-        .coin-btn {
+        .coin {
             width: 150px;
             height: 150px;
-            background: radial-gradient(circle, #feca57 30%, #ff9f43 100%);
-            border: 5px solid #ff9f43;
-            border-radius: 50%;
-            margin: 20px auto;
+            margin: 30px auto;
             cursor: pointer;
+            background: radial-gradient(circle, #feca57 30%, #ff9f43 100%);
+            border-radius: 50%;
+            box-shadow: 
+                0 0 30px rgba(254, 202, 87, 0.8),
+                0 0 60px rgba(254, 202, 87, 0.5),
+                inset 0 0 20px rgba(255, 255, 255, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 60px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            font-size: 70px;
             transition: transform 0.1s;
+            user-select: none;
         }
-        .coin-btn:active {
+        .coin:active {
             transform: scale(0.95);
         }
-        .menu {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-        .menu-btn {
+        button {
             background: rgba(255, 255, 255, 0.2);
             border: none;
-            padding: 10px 15px;
+            padding: 12px 20px;
+            margin: 10px;
             border-radius: 10px;
             color: white;
             font-weight: bold;
             cursor: pointer;
             transition: background 0.3s;
+            backdrop-filter: blur(5px);
         }
-        .menu-btn:hover {
+        button:hover {
             background: rgba(255, 255, 255, 0.3);
         }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
+        .user-id {
+            margin-top: 30px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: inline-block;
         }
-        .modal-content {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(15px);
-            padding: 20px;
-            border-radius: 15px;
-            width: 80%;
-            max-width: 400px;
-            max-height: 80vh;
+        .top-players {
+            text-align: left;
+            margin-top: 20px;
+            max-height: 200px;
             overflow-y: auto;
         }
-        .close {
-            float: right;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        .leaderboard-item {
+        .player-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         .transfer-form {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
         }
-        .transfer-form input {
+        input {
             padding: 10px;
-            border-radius: 5px;
+            margin: 5px;
             border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-        .transfer-form input::placeholder {
-            color: rgba(255, 255, 255, 0.7);
-        }
-        .transfer-form button {
-            padding: 10px;
             border-radius: 5px;
-            border: none;
-            background: #feca57;
-            color: #333;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .error {
-            color: #ff6b6b;
-            margin-top: 5px;
-            font-size: 14px;
-        }
-        .success {
-            color: #1dd1a1;
-            margin-top: 5px;
-            font-size: 14px;
+            width: 80%;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Coin Clicker</h1>
-        <div class="balance">
-            Ваш баланс: <span id="coins">0</span> 🪙
+        
+        <div class="balance">Ваш баланс: <span id="coins">0</span></div>
+        
+        <div>
+            <button id="topPlayersBtn">Топ игроков</button>
+            <button id="transferBtn">Перевести</button>
         </div>
         
-        <div class="coin-btn" id="coinBtn">
-            🪙
-        </div>
+        <div class="coin" id="coin">🪙</div>
         
-        <div class="menu">
-            <button class="menu-btn" id="leaderboardBtn">Топ игроков</button>
-            <button class="menu-btn" id="transferBtn">Перевод</button>
-        </div>
-    </div>
-
-    <!-- Модальное окно для топа игроков -->
-    <div class="modal" id="leaderboardModal">
-        <div class="modal-content">
-            <span class="close" id="closeLeaderboard">&times;</span>
-            <h2>Топ игроков</h2>
-            <div id="leaderboardList"></div>
-            <div id="userRank"></div>
-        </div>
-    </div>
-
-    <!-- Модальное окно для перевода -->
-    <div class="modal" id="transferModal">
-        <div class="modal-content">
-            <span class="close" id="closeTransfer">&times;</span>
-            <h2>Перевод монет</h2>
-            <div class="transfer-form">
-                <input type="text" id="recipientId" placeholder="ID получателя">
-                <input type="number" id="transferAmount" placeholder="Количество монет">
-                <button id="submitTransfer">Отправить</button>
-                <div id="transferResult"></div>
-            </div>
+        <div class="user-id">Ваш ID: <span id="userId"></span></div>
+        
+        <div id="topPlayers" class="top-players" style="display: none;"></div>
+        
+        <div id="transferForm" class="transfer-form" style="display: none;">
+            <input type="number" id="receiverId" placeholder="ID получателя">
+            <input type="number" id="transferAmount" placeholder="Количество монет">
+            <button id="confirmTransfer">Отправить</button>
         </div>
     </div>
 
     <script>
-        // Глобальные переменные
-        let tg = null;
-        let userData = null;
-        const APP_URL = "https://script.google.com/macros/s/AKfycbx2Q0hH5WQvQZtWg5HqGQ2qJ4Z7X3Q2Q9Q8Q7Q6Q5Q4Q3Q2Q1/exec"; // Замените на ваш URL Apps Script
-
-        // Инициализация приложения
+        // Конфигурация
+        const API_URL = 'https://script.google.com/macros/s/1QjQhxlZjzNFxPBfM4GuYpF0dSRrGKzhGsXr6ehS6C7g/exec';
+        let tg = window.Telegram.WebApp;
+        let userId = tg.initDataUnsafe.user?.id;
+        
+        // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
-            // Инициализация Telegram Web App
-            tg = window.Telegram.WebApp;
-            tg.expand();
+            // Показываем ID пользователя
+            document.getElementById('userId').textContent = userId;
             
-            // Попытка получить сохраненные данные пользователя
-            const savedUserData = localStorage.getItem('coinClickerUserData');
+            // Загружаем данные пользователя
+            getUserData();
             
-            if (savedUserData) {
-                userData = JSON.parse(savedUserData);
-                updateUI();
-            }
+            // Обработчик клика по монете
+            document.getElementById('coin').addEventListener('click', handleCoinClick);
             
-            // Инициализация пользователя
-            initUser();
-            
-            // Настройка обработчиков событий
-            document.getElementById('coinBtn').addEventListener('click', handleCoinClick);
-            document.getElementById('leaderboardBtn').addEventListener('click', showLeaderboard);
-            document.getElementById('transferBtn').addEventListener('click', showTransferModal);
-            document.getElementById('closeLeaderboard').addEventListener('click', closeLeaderboard);
-            document.getElementById('closeTransfer').addEventListener('click', closeTransferModal);
-            document.getElementById('submitTransfer').addEventListener('click', handleTransfer);
-            
-            // Закрытие модальных окон при клике вне их области
-            window.addEventListener('click', function(event) {
-                if (event.target === document.getElementById('leaderboardModal')) {
-                    closeLeaderboard();
-                }
-                if (event.target === document.getElementById('transferModal')) {
-                    closeTransferModal();
-                }
-            });
+            // Обработчики кнопок
+            document.getElementById('topPlayersBtn').addEventListener('click', showTopPlayers);
+            document.getElementById('transferBtn').addEventListener('click', showTransferForm);
+            document.getElementById('confirmTransfer').addEventListener('click', handleTransfer);
         });
-
-        // Инициализация пользователя
-        async function initUser() {
-            try {
-                // Если у нас уже есть данные пользователя, используем их
-                if (userData && userData.telegram_id) {
-                    const response = await fetch(APP_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            method: 'getUser',
-                            telegramId: userData.telegram_id
-                        })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        console.error("Ошибка получения данных пользователя:", data.error);
-                        createNewUser();
-                    } else {
-                        userData = data;
-                        saveUserData();
-                        updateUI();
-                    }
-                } else {
-                    // Создаем нового пользователя
-                    createNewUser();
+        
+        // Функция для получения данных пользователя
+        function getUserData() {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    method: 'getUser',
+                    telegramId: userId,
+                    username: tg.initDataUnsafe.user?.username,
+                    first_name: tg.initDataUnsafe.user?.first_name
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Ошибка:', data.error);
+                    return;
                 }
-            } catch (error) {
-                console.error("Ошибка инициализации пользователя:", error);
-            }
+                document.getElementById('coins').textContent = data.coins;
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            });
         }
-
-        // Создание нового пользователя
-        async function createNewUser() {
-            try {
-                // Получаем данные из Telegram Web App
-                const initData = tg.initDataUnsafe;
-                const telegramId = initData.user?.id || tg.initData;
-                const username = initData.user?.username || '';
-                const firstName = initData.user?.first_name || 'User';
+        
+        // Обработчик клика по монете
+        function handleCoinClick() {
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    method: 'click',
+                    telegramId: userId,
+                    username: tg.initDataUnsafe.user?.username,
+                    first_name: tg.initDataUnsafe.user?.first_name
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Ошибка:', data.error);
+                    return;
+                }
+                document.getElementById('coins').textContent = data.newCoins;
                 
-                if (!telegramId) {
-                    console.error("Не удалось получить ID пользователя");
+                // Анимация клика
+                const coin = document.getElementById('coin');
+                coin.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    coin.style.transform = 'scale(1)';
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            });
+        }
+        
+        // Показать топ игроков
+        function showTopPlayers() {
+            const topPlayersDiv = document.getElementById('topPlayers');
+            
+            if (topPlayersDiv.style.display === 'block') {
+                topPlayersDiv.style.display = 'none';
+                return;
+            }
+            
+            // Скрыть форму перевода, если открыта
+            document.getElementById('transferForm').style.display = 'none';
+            
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    method: 'getTop',
+                    telegramId: userId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Ошибка:', data.error);
                     return;
                 }
                 
-                const response = await fetch(APP_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        method: 'getUser',
-                        telegramId: telegramId,
-                        username: username,
-                        first_name: firstName
-                    })
-                });
+                let html = '<h3>Топ игроков</h3>';
                 
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error("Ошибка создания пользователя:", data.error);
-                } else {
-                    userData = data;
-                    saveUserData();
-                    updateUI();
-                }
-            } catch (error) {
-                console.error("Ошибка создания пользователя:", error);
-            }
-        }
-
-        // Сохранение данных пользователя в localStorage
-        function saveUserData() {
-            if (userData) {
-                localStorage.setItem('coinClickerUserData', JSON.stringify(userData));
-            }
-        }
-
-        // Обновление интерфейса
-        function updateUI() {
-            if (userData && userData.coins !== undefined) {
-                document.getElementById('coins').textContent = userData.coins;
-            }
-        }
-
-        // Обработка клика по монете
-        async function handleCoinClick() {
-            if (!userData || !userData.telegram_id) {
-                console.error("Данные пользователя не загружены");
-                return;
-            }
-            
-            try {
-                const response = await fetch(APP_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        method: 'click',
-                        telegramId: userData.telegram_id
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error("Ошибка клика:", data.error);
-                } else if (data.success) {
-                    userData.coins = data.newCoins;
-                    saveUserData();
-                    updateUI();
-                    
-                    // Анимация клика
-                    const coinBtn = document.getElementById('coinBtn');
-                    coinBtn.style.transform = 'scale(0.95)';
-                    setTimeout(() => {
-                        coinBtn.style.transform = 'scale(1)';
-                    }, 100);
-                }
-            } catch (error) {
-                console.error("Ошибка при выполнении клика:", error);
-            }
-        }
-
-        // Показать таблицу лидеров
-        async function showLeaderboard() {
-            if (!userData || !userData.telegram_id) {
-                console.error("Данные пользователя не загружены");
-                return;
-            }
-            
-            try {
-                const response = await fetch(APP_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        method: 'getTop',
-                        telegramId: userData.telegram_id
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.error("Ошибка получения топа:", data.error);
-                } else if (data.success) {
-                    const leaderboardList = document.getElementById('leaderboardList');
-                    leaderboardList.innerHTML = '';
-                    
-                    // Отображаем топ-10 игроков
-                    data.topPlayers.slice(0, 10).forEach((player, index) => {
-                        const item = document.createElement('div');
-                        item.className = 'leaderboard-item';
-                        item.innerHTML = `
-                            <span>${index + 1}. ${player.name}${player.username ? ` (@${player.username})` : ''}</span>
-                            <span>${player.coins} 🪙</span>
+                if (data.topPlayers && data.topPlayers.length > 0) {
+                    data.topPlayers.forEach((player, index) => {
+                        const rank = index + 1;
+                        const name = player.name || 'Игрок';
+                        const coins = player.coins || 0;
+                        html += `
+                            <div class="player-item">
+                                <span>${rank}. ${name} (@${player.username || 'без username'})</span>
+                                <span>${coins} 🪙</span>
+                            </div>
                         `;
-                        leaderboardList.appendChild(item);
                     });
                     
-                    // Показываем место пользователя
-                    const userRank = document.getElementById('userRank');
-                    if (data.userRank) {
-                        userRank.innerHTML = `<p>Ваше место: ${data.userRank}</p>`;
-                    } else {
-                        userRank.innerHTML = `<p>Вы еще не в рейтинге</p>`;
+                    // Добавляем позицию текущего пользователя, если он не в топе
+                    if (data.userRank > data.topPlayers.length) {
+                        html += `<div class="player-item">... Ваше место: ${data.userRank} ...</div>`;
                     }
-                    
-                    // Показываем модальное окно
-                    document.getElementById('leaderboardModal').style.display = 'flex';
+                } else {
+                    html += '<p>Пока нет игроков</p>';
                 }
-            } catch (error) {
-                console.error("Ошибка при получении топа:", error);
+                
+                topPlayersDiv.innerHTML = html;
+                topPlayersDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                topPlayersDiv.innerHTML = '<p>Ошибка загрузки топа игроков</p>';
+                topPlayersDiv.style.display = 'block';
+            });
+        }
+        
+        // Показать форму перевода
+        function showTransferForm() {
+            const transferForm = document.getElementById('transferForm');
+            
+            if (transferForm.style.display === 'block') {
+                transferForm.style.display = 'none';
+            } else {
+                // Скрыть топ игроков, если открыт
+                document.getElementById('topPlayers').style.display = 'none';
+                transferForm.style.display = 'block';
             }
         }
-
-        // Закрыть таблицу лидеров
-        function closeLeaderboard() {
-            document.getElementById('leaderboardModal').style.display = 'none';
-        }
-
-        // Показать модальное окно перевода
-        function showTransferModal() {
-            document.getElementById('transferModal').style.display = 'flex';
-            document.getElementById('transferResult').innerHTML = '';
-        }
-
-        // Закрыть модальное окно перевода
-        function closeTransferModal() {
-            document.getElementById('transferModal').style.display = 'none';
-        }
-
+        
         // Обработка перевода монет
-        async function handleTransfer() {
-            const recipientId = document.getElementById('recipientId').value;
+        function handleTransfer() {
+            const receiverId = document.getElementById('receiverId').value;
             const amount = parseInt(document.getElementById('transferAmount').value);
-            const resultElement = document.getElementById('transferResult');
             
-            if (!recipientId || !amount) {
-                resultElement.innerHTML = '<div class="error">Заполните все поля</div>';
+            if (!receiverId || !amount) {
+                alert('Заполните все поля');
                 return;
             }
             
             if (amount <= 0) {
-                resultElement.innerHTML = '<div class="error">Введите положительное число</div>';
+                alert('Количество монет должно быть положительным');
                 return;
             }
             
-            if (!userData || !userData.telegram_id) {
-                resultElement.innerHTML = '<div class="error">Данные пользователя не загружены</div>';
-                return;
-            }
-            
-            if (userData.coins < amount) {
-                resultElement.innerHTML = '<div class="error">Недостаточно монет</div>';
-                return;
-            }
-            
-            try {
-                const response = await fetch(APP_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        method: 'transfer',
-                        fromTelegramId: userData.telegram_id,
-                        toTelegramId: recipientId,
-                        amount: amount
-                    })
-                });
-                
-                const data = await response.json();
-                
+            fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    method: 'transfer',
+                    fromTelegramId: userId,
+                    toTelegramId: receiverId,
+                    amount: amount
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
                 if (data.error) {
-                    resultElement.innerHTML = `<div class="error">${data.error}</div>`;
-                } else if (data.success) {
-                    resultElement.innerHTML = '<div class="success">Перевод выполнен успешно!</div>';
-                    userData.coins = data.fromNewBalance;
-                    saveUserData();
-                    updateUI();
-                    
-                    // Очищаем поля формы
-                    document.getElementById('recipientId').value = '';
-                    document.getElementById('transferAmount').value = '';
+                    alert('Ошибка: ' + data.error);
+                    return;
                 }
-            } catch (error) {
-                console.error("Ошибка при переводе:", error);
-                resultElement.innerHTML = '<div class="error">Ошибка при выполнении перевода</div>';
-            }
+                
+                alert(`Успешно переведено ${amount} монет!`);
+                document.getElementById('coins').textContent = data.fromNewBalance;
+                document.getElementById('transferForm').style.display = 'none';
+                document.getElementById('receiverId').value = '';
+                document.getElementById('transferAmount').value = '';
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Ошибка при переводе');
+            });
         }
     </script>
 </body>
