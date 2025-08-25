@@ -188,6 +188,7 @@
             max-height: 80%;
             overflow-y: auto;
             color: #333;
+            position: relative;
         }
         .close-modal {
             position: absolute;
@@ -200,16 +201,48 @@
             width: 30px;
             height: 30px;
             cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .player-item {
             display: flex;
             justify-content: space-between;
             padding: 10px;
             border-bottom: 1px solid #eee;
+            align-items: center;
         }
         .player-rank {
             font-weight: bold;
             margin-right: 10px;
+            min-width: 30px;
+            text-align: center;
+        }
+        .player-name {
+            flex-grow: 1;
+            text-align: left;
+            margin-left: 10px;
+        }
+        .player-coins {
+            font-weight: bold;
+            color: #ff6b00;
+            min-width: 60px;
+            text-align: right;
+        }
+
+        /* Стили для отладочной информации */
+        .debug-info {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1001;
+            display: none;
         }
     </style>
 </head>
@@ -227,6 +260,9 @@
             <div id="topPlayersList"></div>
         </div>
     </div>
+
+    <!-- Отладочная информация -->
+    <div class="debug-info" id="debugInfo"></div>
 
     <!-- Основная страница -->
     <div class="container" id="mainPage" style="display: none;">
@@ -251,15 +287,21 @@
 
         <p>Ваш ID: <span id="userId"></span></p>
         <p>👆 Используйте этот ID для переводов</p>
+        
+        <!-- Кнопка отладки -->
+        <button onclick="toggleDebug()" style="margin-top: 20px; padding: 5px 10px; font-size: 12px; background: #666; color: white; border: none; border-radius: 5px;">
+            🐞 Отладка
+        </button>
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/ВАШ_URL_СКРИПТА/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzblqqGCbaXHHXckBAmk4l5lQbDPTTN_eKRxtQOfKPq2MZZx7gEuwkPS4qN5mziveI/exec';
 
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
         let currentCoins = 0;
         let isRequestPending = false;
+        let debugMode = false;
 
         tg.expand();
         // Убираем подтверждение закрытия
@@ -281,8 +323,31 @@
             document.getElementById('mainPage').style.display = 'block';
         }
 
+        // Функция для отладки
+        function toggleDebug() {
+            debugMode = !debugMode;
+            document.getElementById('debugInfo').style.display = debugMode ? 'block' : 'none';
+            updateDebugInfo('Режим отладки ' + (debugMode ? 'включен' : 'выключен'));
+        }
+
+        function updateDebugInfo(message) {
+            if (debugMode) {
+                const debugEl = document.getElementById('debugInfo');
+                debugEl.innerHTML = message + '<br>' + new Date().toLocaleTimeString();
+            }
+        }
+
+        function logDebug(message) {
+            if (debugMode) {
+                console.log('DEBUG:', message);
+                updateDebugInfo(message);
+            }
+        }
+
         async function callApi(method, payload) {
             try {
+                logDebug(`Вызов API: ${method}`);
+                
                 // Преобразуем ключи в lowercase для GET-запросов
                 const lowerCasePayload = {};
                 for (const key in payload) {
@@ -297,7 +362,10 @@
                 // Добавляем timestamp чтобы избежать кэширования
                 params.append('t', Date.now());
                 
-                let response = await fetch(API_URL + '?' + params.toString(), {
+                const url = API_URL + '?' + params.toString();
+                logDebug(`URL: ${url}`);
+                
+                let response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
@@ -305,6 +373,7 @@
                 });
                 
                 const data = await response.json();
+                logDebug(`Ответ API: ${JSON.stringify(data)}`);
                 
                 // Добавляем проверку статуса ответа
                 if (!response.ok) {
@@ -313,6 +382,7 @@
                 
                 return data;
             } catch (error) {
+                logDebug(`Ошибка API: ${error.message}`);
                 console.error('API Error:', error);
                 return { error: error.message };
             }
@@ -320,6 +390,7 @@
 
         async function loadUser() {
             try {
+                logDebug('Загрузка пользователя...');
                 let userData = await callApi('getUser', { 
                     telegramId: userTelegramId,
                     username: tg.initDataUnsafe.user.username || '',
@@ -328,9 +399,11 @@
                 
                 if (userData.error) {
                     console.error('Error loading user:', userData.error);
+                    logDebug(`Ошибка загрузки: ${userData.error}`);
                     currentCoins = 0;
                 } else {
                     currentCoins = userData.coins || 0;
+                    logDebug(`Пользователь загружен: ${currentCoins} монет`);
                 }
                 
                 document.getElementById('coins').textContent = currentCoins;
@@ -338,6 +411,7 @@
                 
             } catch (error) {
                 console.error('Load user error:', error);
+                logDebug(`Ошибка загрузки пользователя: ${error.message}`);
                 currentCoins = 0;
                 document.getElementById('coins').textContent = currentCoins;
                 showInterface();
@@ -420,6 +494,7 @@
                 
                 if (result.error) {
                     console.error('Click error:', result.error);
+                    logDebug(`Ошибка клика: ${result.error}`);
                     // Откатываем если ошибка
                     currentCoins = originalCoins;
                     document.getElementById('coins').textContent = currentCoins;
@@ -428,9 +503,11 @@
                     // Синхронизируем с сервером
                     currentCoins = result.newCoins;
                     document.getElementById('coins').textContent = currentCoins;
+                    logDebug(`Клик зарегистрирован: ${currentCoins} монет`);
                 }
             } catch (error) {
                 console.error('Click request error:', error);
+                logDebug(`Ошибка запроса клика: ${error.message}`);
                 // Откатываем при ошибке сети
                 currentCoins = originalCoins;
                 document.getElementById('coins').textContent = currentCoins;
@@ -468,6 +545,7 @@
             }
 
             try {
+                logDebug(`Перевод ${amount} монет пользователю ${receiverId}`);
                 const result = await callApi('transfer', {
                     fromTelegramId: userTelegramId,
                     toTelegramId: receiverId,
@@ -482,58 +560,99 @@
                     
                     document.getElementById('receiverId').value = '';
                     document.getElementById('transferAmount').value = '';
+                    logDebug(`Перевод выполнен успешно`);
                 } else {
-                    showError('Ошибка: ' + (result.error || 'Unknown error'));
+                    const errorMsg = result.error || 'Unknown error';
+                    showError('Ошибка: ' + errorMsg);
                     tg.HapticFeedback.notificationOccurred('error');
+                    logDebug(`Ошибка перевода: ${errorMsg}`);
                 }
             } catch (error) {
                 showError('Ошибка сети');
                 console.error('Transfer error:', error);
+                logDebug(`Ошибка сети при переводе: ${error.message}`);
             }
         });
 
         // Обработчик кнопки топа
         document.getElementById('topBtn').addEventListener('click', async () => {
             try {
+                logDebug('Загрузка топа игроков...');
                 const result = await callApi('getTop', {
                     telegramId: userTelegramId
                 });
+                
+                logDebug(`Результат топа: ${JSON.stringify(result)}`);
                 
                 if (result.success && result.topPlayers) {
                     const topList = document.getElementById('topPlayersList');
                     topList.innerHTML = '';
                     
-                    result.topPlayers.forEach((player, index) => {
-                        const playerItem = document.createElement('div');
-                        playerItem.className = 'player-item';
-                        playerItem.innerHTML = `
-                            <div>
-                                <span class="player-rank">${index + 1}.</span>
-                                ${player.name} ${player.username ? `(@${player.username})` : ''}
-                            </div>
-                            <div><strong>${player.coins}</strong> монет</div>
-                        `;
-                        topList.appendChild(playerItem);
-                    });
-                    
-                    // Добавляем информацию о ранге пользователя
-                    if (result.userRank !== null) {
-                        const userInfo = document.createElement('div');
-                        userInfo.style.marginTop = '20px';
-                        userInfo.style.padding = '10px';
-                        userInfo.style.background = '#f8f9fa';
-                        userInfo.style.borderRadius = '5px';
-                        userInfo.innerHTML = `<strong>Ваше место:</strong> ${result.userRank} из ${result.totalPlayers}`;
-                        topList.appendChild(userInfo);
+                    if (result.topPlayers.length === 0) {
+                        topList.innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Пока нет игроков в топе</p>';
+                    } else {
+                        result.topPlayers.forEach((player, index) => {
+                            const playerItem = document.createElement('div');
+                            playerItem.className = 'player-item';
+                            
+                            // Определяем эмодзи для первых трех мест
+                            let rankEmoji = '';
+                            if (index === 0) rankEmoji = '🥇 ';
+                            else if (index === 1) rankEmoji = '🥈 ';
+                            else if (index === 2) rankEmoji = '🥉 ';
+                            
+                            playerItem.innerHTML = `
+                                <span class="player-rank">${rankEmoji}${index + 1}</span>
+                                <span class="player-name">${player.name} ${player.username ? `(@${player.username})` : ''}</span>
+                                <span class="player-coins">${player.coins} 🪙</span>
+                            `;
+                            topList.appendChild(playerItem);
+                        });
                     }
                     
+                    // Добавляем информацию о ранге пользователя
+                    const userInfo = document.createElement('div');
+                    userInfo.style.marginTop = '20px';
+                    userInfo.style.padding = '15px';
+                    userInfo.style.background = '#f8f9fa';
+                    userInfo.style.borderRadius = '10px';
+                    userInfo.style.textAlign = 'center';
+                    
+                    if (result.userRank !== null) {
+                        userInfo.innerHTML = `
+                            <strong>Ваше место:</strong> ${result.userRank} из ${result.totalPlayers}
+                            <br>
+                            <small>У вас: ${currentCoins} монет</small>
+                        `;
+                    } else {
+                        userInfo.innerHTML = `
+                            <strong>Вы еще не в рейтинге</strong>
+                            <br>
+                            <small>Кликайте по монетке чтобы попасть в топ!</small>
+                        `;
+                    }
+                    
+                    topList.appendChild(userInfo);
+                    
                     showModal();
+                    logDebug('Топ игроков успешно загружен');
                 } else {
-                    showError('Не удалось загрузить топ игроков: ' + (result.error || 'Unknown error'));
+                    const errorMsg = result.error || 'Unknown error';
+                    console.error('Top players error:', errorMsg);
+                    logDebug(`Ошибка топа: ${errorMsg}`);
+                    showError('Не удалось загрузить топ игроков: ' + errorMsg);
                 }
             } catch (error) {
-                showError('Ошибка загрузки топа');
-                console.error('Top players error:', error);
+                console.error('Top players request error:', error);
+                logDebug(`Ошибка запроса топа: ${error.message}`);
+                showError('Ошибка загрузки топа: ' + error.message);
+            }
+        });
+
+        // Закрытие модального окна по клику вне его
+        document.getElementById('topModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeModal();
             }
         });
 
