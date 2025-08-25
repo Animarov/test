@@ -23,26 +23,6 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        button { 
-            padding: 20px 40px; 
-            font-size: 20px; 
-            margin: 15px auto; /* Центрирование кнопки */
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white; 
-            border: none; 
-            border-radius: 50px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            font-weight: bold;
-            display: block; /* Для центрирования */
-        }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
-        }
-        button:active {
-            transform: translateY(0);
-        }
         .balance { 
             font-size: 24px; 
             margin: 25px 0;
@@ -84,6 +64,12 @@
             background: linear-gradient(45deg, #00d2d3, #54a0ff);
             padding: 12px 25px;
             font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            margin: 10px auto;
+            display: block;
         }
         #transferStatus {
             margin: 10px;
@@ -127,9 +113,52 @@
             align-items: center;
             z-index: 1000;
         }
+
+        /* Стили для золотой монетки */
+        .gold-coin {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #ffd700, #daa520);
+            border-radius: 50%;
+            margin: 30px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            cursor: pointer;
+            box-shadow: 
+                0 0 30px rgba(255, 215, 0, 0.6),
+                inset 0 0 20px rgba(255, 255, 255, 0.3),
+                0 8px 20px rgba(0, 0, 0, 0.3);
+            border: 4px solid #ffec8b;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        .gold-coin:active {
+            transform: scale(0.95);
+            box-shadow: 
+                0 0 20px rgba(255, 215, 0, 0.4),
+                inset 0 0 15px rgba(255, 255, 255, 0.2),
+                0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Стили для кнопки топа */
         .top-btn {
             background: linear-gradient(45deg, #ffd700, #ffa500);
-            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+        .top-btn:hover {
+            transform: translateY(-2px);
         }
 
         /* Стили для страницы топа */
@@ -146,9 +175,9 @@
             padding: 20px;
         }
         .top-header {
-            font-size: 28px;
+            font-size: 22px; /* Уменьшенный шрифт */
             font-weight: bold;
-            margin-bottom: 30px;
+            margin: 40px 0 20px 0;
             color: white;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
@@ -235,8 +264,13 @@
         <h1>🪙 Coin Clicker</h1>
         <div class="balance">Баланс: <span id="coins">0</span> монет</div>
         
-        <button id="clickBtn">🎯 Кликни меня!</button>
+        <!-- Кнопка топа (выше монетки) -->
         <button id="topBtn" class="top-btn">🏆 Топ игроков</button>
+
+        <!-- Золотая монетка для кликов -->
+        <div class="gold-coin" id="clickCoin">
+            🪙
+        </div>
 
         <div class="transfer-section">
             <h3>💸 Перевод монет</h3>
@@ -256,7 +290,7 @@
         <div class="top-header">Самые богатые игроки</div>
         
         <div id="topList">
-            <!-- Топ игроков будет здесь -->
+            <!-- Топ игроков будет загружаться здесь -->
         </div>
 
         <div class="bottom-player-card">
@@ -301,39 +335,52 @@
         }
 
         async function loadTopPlayers() {
-            // Заглушка для топа - в реальности нужно получать с сервера
-            const topPlayers = [
-                {id: 1, name: "Игрок 1", coins: 1500, avatar: "👑"},
-                {id: 2, name: "Игрок 2", coins: 1200, avatar: "💎"},
-                {id: 3, name: "Игрок 3", coins: 900, avatar: "⭐"},
-                {id: 4, name: "Игрок 4", coins: 750, avatar: "🔥"},
-                {id: 5, name: "Игрок 5", coins: 600, avatar: "🚀"}
-            ];
+            // Загрузка топа с сервера
+            try {
+                const result = await callApi('getTop', {
+                    telegramId: userTelegramId
+                });
 
-            const topList = document.getElementById('topList');
-            topList.innerHTML = '';
+                const topList = document.getElementById('topList');
+                topList.innerHTML = '';
 
-            topPlayers.forEach((player, index) => {
-                const playerCard = document.createElement('div');
-                playerCard.className = 'player-card';
-                playerCard.innerHTML = `
-                    <div class="player-rank">${index + 1}</div>
-                    <div class="player-avatar">${player.avatar}</div>
-                    <div class="player-info">
-                        <div class="player-name">${player.name}</div>
-                        <div class="player-balance">
-                            ${player.coins.toLocaleString()} 
-                            <span class="coin-icon">🪙</span>
-                        </div>
-                    </div>
-                `;
-                topList.appendChild(playerCard);
-            });
+                if (result.success && result.topPlayers) {
+                    // Отображаем реальный топ с сервера
+                    result.topPlayers.forEach((player, index) => {
+                        const playerCard = document.createElement('div');
+                        playerCard.className = 'player-card';
+                        playerCard.innerHTML = `
+                            <div class="player-rank">${index + 1}</div>
+                            <div class="player-avatar">${player.avatar || '👤'}</div>
+                            <div class="player-info">
+                                <div class="player-name">${player.name || 'Игрок'}</div>
+                                <div class="player-balance">
+                                    ${player.coins.toLocaleString()} 
+                                    <span class="coin-icon">🪙</span>
+                                </div>
+                            </div>
+                        `;
+                        topList.appendChild(playerCard);
+                    });
 
-            // Обновляем информацию о текущем пользователе внизу
-            document.getElementById('userTopBalance').textContent = currentCoins.toLocaleString();
-            document.getElementById('userTopName').textContent = tg.initDataUnsafe.user.first_name || 'Вы';
-            document.getElementById('userRank').textContent = '7'; // Пример места
+                    // Обновляем информацию о текущем пользователе
+                    if (result.userRank) {
+                        document.getElementById('userRank').textContent = result.userRank;
+                    }
+                } else {
+                    // Если топ недоступен, показываем заглушку
+                    topList.innerHTML = '<div style="text-align: center; color: #bdc3c7; margin: 50px 0;">Топ игроков скоро появится...</div>';
+                }
+
+                // Всегда обновляем баланс пользователя
+                document.getElementById('userTopBalance').textContent = currentCoins.toLocaleString();
+                document.getElementById('userTopName').textContent = tg.initDataUnsafe.user.first_name || 'Вы';
+
+            } catch (error) {
+                console.error('Error loading top:', error);
+                const topList = document.getElementById('topList');
+                topList.innerHTML = '<div style="text-align: center; color: #bdc3c7; margin: 50px 0;">Ошибка загрузки топа</div>';
+            }
         }
 
         tg.expand();
@@ -499,7 +546,8 @@
             }, 1000);
         }
 
-        document.getElementById('clickBtn').addEventListener('click', function(event) {
+        // Обработчик клика по золотой монетке
+        document.getElementById('clickCoin').addEventListener('click', function(event) {
             currentCoins++;
             document.getElementById('coins').textContent = currentCoins;
             unsyncedClicks++;
