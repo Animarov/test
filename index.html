@@ -113,16 +113,22 @@
             0% { transform: translateY(0); opacity: 1; }
             100% { transform: translateY(-50px); opacity: 0; }
         }
+        #loading {
+            font-size: 18px;
+            color: #feca57;
+            margin: 20px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🪙 Coin Clicker</h1>
-        <div class="balance">Баланс: <span id="coins">0</span> монет</div>
+        <div id="loading">⏳ Загрузка данных...</div>
+        <div class="balance" style="display: none;">Баланс: <span id="coins">0</span> монет</div>
         
-        <button id="clickBtn">🎯 Кликни меня!</button>
+        <button id="clickBtn" style="display: none;">🎯 Кликни меня!</button>
 
-        <div class="transfer-section">
+        <div class="transfer-section" style="display: none;">
             <h3>💸 Перевод монет</h3>
             <input type="number" id="receiverId" placeholder="ID получателя">
             <input type="number" id="transferAmount" placeholder="Количество">
@@ -130,8 +136,8 @@
             <p id="transferStatus"></p>
         </div>
 
-        <p>Ваш ID: <span id="userId"></span></p>
-        <p>👆 Используйте этот ID для переводов</p>
+        <p style="display: none;">Ваш ID: <span id="userId"></span></p>
+        <p style="display: none;">👆 Используйте этот ID для переводов</p>
     </div>
 
     <script>
@@ -147,6 +153,15 @@
         tg.expand();
         tg.enableClosingConfirmation();
         document.getElementById('userId').textContent = userTelegramId;
+
+        // Функция для показа интерфейса после загрузки
+        function showInterface() {
+            document.getElementById('loading').style.display = 'none';
+            document.querySelector('.balance').style.display = 'block';
+            document.getElementById('clickBtn').style.display = 'block';
+            document.querySelector('.transfer-section').style.display = 'block';
+            document.querySelectorAll('p').forEach(p => p.style.display = 'block');
+        }
 
         // Сохраняем состояние в localStorage
         function saveLocalState() {
@@ -207,9 +222,15 @@
 
         async function loadUser() {
             try {
-                // Пробуем загрузить из localStorage
+                // Сначала показываем локальные данные
                 const localCoins = loadLocalState();
+                if (localCoins !== null) {
+                    currentCoins = localCoins;
+                    document.getElementById('coins').textContent = currentCoins;
+                    showInterface(); // Показываем интерфейс сразу с локальными данными
+                }
                 
+                // Затем загружаем данные с сервера
                 let userData = await callApi('getUser', { 
                     telegramId: userTelegramId,
                     username: tg.initDataUnsafe.user.username || '',
@@ -218,10 +239,11 @@
                 
                 if (userData.error) {
                     showError('Ошибка загрузки: ' + userData.error);
-                    // Используем локальные данные если есть
-                    if (localCoins !== null) {
-                        currentCoins = localCoins;
+                    // Если локальных данных нет, показываем 0
+                    if (localCoins === null) {
+                        currentCoins = 0;
                         document.getElementById('coins').textContent = currentCoins;
+                        showInterface();
                     }
                     return;
                 }
@@ -231,7 +253,7 @@
                 lastServerCoins = serverCoins;
                 
                 if (localCoins !== null && localCoins > serverCoins) {
-                    // Локальные данные новее, синхронизируем с сервером
+                    // Локальные данные новее
                     currentCoins = localCoins;
                     await synchronizeWithServer();
                 } else {
@@ -240,7 +262,10 @@
                     saveLocalState();
                 }
                 
+                // Обновляем интерфейс
                 document.getElementById('coins').textContent = currentCoins;
+                showInterface();
+                
             } catch (error) {
                 console.error('Load user error:', error);
                 // Используем локальные данные при ошибке
@@ -248,8 +273,12 @@
                 if (localCoins !== null) {
                     currentCoins = localCoins;
                     document.getElementById('coins').textContent = currentCoins;
+                } else {
+                    currentCoins = 0;
+                    document.getElementById('coins').textContent = currentCoins;
                 }
-                showError('Ошибка подключения');
+                showInterface();
+                showError('Ошибка подключения к серверу');
             }
         }
 
@@ -276,7 +305,7 @@
         }
 
         // Периодическая синхронизация
-        setInterval(synchronizeWithServer, 30000); // Каждые 30 секунд
+        setInterval(synchronizeWithServer, 30000);
 
         function showError(message) {
             const statusEl = document.getElementById('transferStatus');
@@ -344,14 +373,12 @@
                         unsyncedClicks--;
                         lastServerCoins = result.newCoins;
                     } else {
-                        // Если ошибка, оставляем монеты но помечаем для повторной синхронизации
                         console.error('Ошибка синхронизации:', result.error);
                     }
                 } catch (error) {
                     console.error('Background click error:', error);
-                    // Ошибка сети - оставляем монеты, синхронизируем позже
                 }
-            }, 1000); // Отправляем через 1 секунду
+            }, 1000);
         });
 
         document.getElementById('transferBtn').addEventListener('click', async () => {
