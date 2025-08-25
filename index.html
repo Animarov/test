@@ -51,6 +51,7 @@
             font-size: 70px;
             transition: transform 0.1s;
             user-select: none;
+            position: relative;
         }
         .coin:active {
             transform: scale(0.95);
@@ -103,6 +104,29 @@
             border: none;
             border-radius: 5px;
             width: 80%;
+        }
+        
+        /* Анимация +1 */
+        .coin-gain {
+            position: absolute;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 24px;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            animation: gainAnimation 1s forwards;
+        }
+        
+        @keyframes gainAnimation {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.2);
+            }
         }
     </style>
 </head>
@@ -181,7 +205,11 @@
         }
         
         // Обработчик клика по монете
-        function handleCoinClick() {
+        function handleCoinClick(event) {
+            // Создаем анимацию +1
+            createGainAnimation(event);
+            
+            // Отправляем запрос на сервер
             fetch(API_URL, {
                 method: 'POST',
                 headers: {
@@ -200,6 +228,7 @@
                     console.error('Ошибка:', data.error);
                     return;
                 }
+                // Обновляем баланс
                 document.getElementById('coins').textContent = data.newCoins;
                 
                 // Анимация клика
@@ -212,6 +241,31 @@
             .catch(error => {
                 console.error('Ошибка:', error);
             });
+        }
+        
+        // Создание анимации +1
+        function createGainAnimation(event) {
+            const coin = document.getElementById('coin');
+            const rect = coin.getBoundingClientRect();
+            
+            // Вычисляем позицию клика относительно монеты
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            // Создаем элемент с текстом +1
+            const gainElement = document.createElement('div');
+            gainElement.className = 'coin-gain';
+            gainElement.textContent = '+1';
+            gainElement.style.left = `${x}px`;
+            gainElement.style.top = `${y}px`;
+            
+            // Добавляем элемент в монету
+            coin.appendChild(gainElement);
+            
+            // Удаляем элемент после завершения анимации
+            setTimeout(() => {
+                coin.removeChild(gainElement);
+            }, 1000);
         }
         
         // Показать топ игроков
