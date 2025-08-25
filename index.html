@@ -166,12 +166,66 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+
+        /* Стили для модального окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            color: #333;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .player-rank {
+            font-weight: bold;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <!-- Индикатор загрузки -->
     <div id="loading">
         <div class="loader"></div>
+    </div>
+
+    <!-- Модальное окно для топа -->
+    <div class="modal" id="topModal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <h2>🏆 Топ игроков</h2>
+            <div id="topPlayersList"></div>
+        </div>
     </div>
 
     <!-- Основная страница -->
@@ -200,7 +254,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzKM2z5d1gSO5ShuoAOj5d1JSTseN3vyLK7Vu67fPOJXZqHsHdW9NXqu9JbVRnPSIWJ/exec';
+        const API_URL = 'https://script.google.com/macros/s/ВАШ_URL_СКРИПТА/exec';
 
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
@@ -208,8 +262,18 @@
         let isRequestPending = false;
 
         tg.expand();
-        tg.enableClosingConfirmation();
+        // Убираем подтверждение закрытия
+        tg.disableClosingConfirmation();
         document.getElementById('userId').textContent = userTelegramId;
+
+        // Функции для модального окна
+        function showModal() {
+            document.getElementById('topModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('topModal').style.display = 'none';
+        }
 
         // Функция для показа интерфейса после загрузки
         function showInterface() {
@@ -436,18 +500,36 @@
                 });
                 
                 if (result.success && result.topPlayers) {
-                    let message = '🏆 Топ игроков:\n\n';
+                    const topList = document.getElementById('topPlayersList');
+                    topList.innerHTML = '';
+                    
                     result.topPlayers.forEach((player, index) => {
-                        message += `${index + 1}. ${player.name} (${player.username || 'без username'}) - ${player.coins} монет\n`;
+                        const playerItem = document.createElement('div');
+                        playerItem.className = 'player-item';
+                        playerItem.innerHTML = `
+                            <div>
+                                <span class="player-rank">${index + 1}.</span>
+                                ${player.name} ${player.username ? `(@${player.username})` : ''}
+                            </div>
+                            <div><strong>${player.coins}</strong> монет</div>
+                        `;
+                        topList.appendChild(playerItem);
                     });
                     
+                    // Добавляем информацию о ранге пользователя
                     if (result.userRank !== null) {
-                        message += `\nВаше место: ${result.userRank} из ${result.totalPlayers}`;
+                        const userInfo = document.createElement('div');
+                        userInfo.style.marginTop = '20px';
+                        userInfo.style.padding = '10px';
+                        userInfo.style.background = '#f8f9fa';
+                        userInfo.style.borderRadius = '5px';
+                        userInfo.innerHTML = `<strong>Ваше место:</strong> ${result.userRank} из ${result.totalPlayers}`;
+                        topList.appendChild(userInfo);
                     }
                     
-                    alert(message);
+                    showModal();
                 } else {
-                    showError('Не удалось загрузить топ игроков');
+                    showError('Не удалось загрузить топ игроков: ' + (result.error || 'Unknown error'));
                 }
             } catch (error) {
                 showError('Ошибка загрузки топа');
