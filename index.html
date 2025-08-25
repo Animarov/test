@@ -3,223 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кликер монет</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        #user-info {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        #user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            margin-right: 10px;
-            object-fit: cover;
-        }
-        #user-name, #user-id {
-            font-size: 18px;
-            margin-right: 10px;
-        }
-        #user-id {
-            color: #555;
-        }
-        #coin {
-            width: 100px;
-            height: 100px;
-            background-color: gold;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            user-select: none;
-            font-size: 24px;
-        }
-        #coin-count {
-            font-size: 32px;
-            margin-top: 20px;
-        }
-        #button-container {
-            margin-top: 20px;
-            display: flex;
-            gap: 10px;
-        }
-        #reset-button, #transfer-button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-        }
-        #reset-button:hover, #transfer-button:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <title>Coin Clicker</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="user-info">
-        <img id="user-avatar" src="" alt="Аватар">
-        <span id="user-name"></span>
-        <span id="user-id"></span>
+    <div class="container">
+        <h1>🪙 Coin Clicker</h1>
+        <div class="balance">Баланс: <span id="coins">0</span> монет</div>
+        <button id="clickBtn">Кликни меня!</button>
+        <div class="transfer-section">
+            <h3>Перевод монет</h3>
+            <input type="number" id="receiverId" placeholder="ID получателя">
+            <input type="number" id="transferAmount" placeholder="Количество">
+            <button id="transferBtn">Перевести</button>
+            <p id="transferStatus"></p>
+        </div>
+        <p>Ваш ID: <span id="userId"></span></p>
     </div>
-    <div id="coin">🪙</div>
-    <div id="coin-count">Монет: 0</div>
-    <div id="button-container">
-        <button id="reset-button">Сбросить</button>
-        <button id="transfer-button">Переводы</button>
-    </div>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-
-        // Получение данных пользователя
-        const user = tg.initDataUnsafe.user || {};
-        const userNameElement = document.getElementById('user-name');
-        const userIdElement = document.getElementById('user-id');
-        const userAvatarElement = document.getElementById('user-avatar');
-        const coinCountElement = document.getElementById('coin-count');
-        const coinElement = document.getElementById('coin');
-        const resetButton = document.getElementById('reset-button');
-        const transferButton = document.getElementById('transfer-button');
-
-        // Установка имени и ID пользователя
-        userNameElement.textContent = user.first_name || 'Пользователь';
-        userIdElement.textContent = `ID: ${user.id || 'Неизвестно'}`;
-
-        // Установка аватарки
-        if (user.photo_url) {
-            userAvatarElement.src = user.photo_url;
-        } else {
-            userAvatarElement.src = 'https://via.placeholder.com/50';
-            userAvatarElement.alt = 'Аватар не доступен';
-        }
-
-        // URL сервера (замените на ваш серверный адрес)
-        const SERVER_URL = 'https://your-server-url.com';
-
-        // Получение баланса с сервера
-        async function fetchBalance() {
-            try {
-                const response = await fetch(`${SERVER_URL}/balance/${user.id}`);
-                const data = await response.json();
-                coinCountElement.textContent = `Монет: ${data.coins || 0}`;
-            } catch (error) {
-                tg.showAlert('Ошибка связи с сервером');
-            }
-        }
-
-        // Обновление баланса после клика
-        async function addCoin() {
-            try {
-                const response = await fetch(`${SERVER_URL}/add-coin`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id })
-                });
-                const data = await response.json();
-                coinCountElement.textContent = `Монет: ${data.coins}`;
-            } catch (error) {
-                tg.showAlert('Ошибка при добавлении монеты');
-            }
-        }
-
-        // Сброс баланса
-        async function resetBalance() {
-            try {
-                const response = await fetch(`${SERVER_URL}/reset`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: user.id })
-                });
-                const data = await response.json();
-                coinCountElement.textContent = `Монет: ${data.coins}`;
-                tg.showAlert('Монеты сброшены!');
-            } catch (error) {
-                tg.showAlert('Ошибка при сбросе монет');
-            }
-        }
-
-        // Перевод монет
-        async function transferCoins(recipientId, amount) {
-            try {
-                const response = await fetch(`${SERVER_URL}/transfer`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ senderId: user.id, recipientId, amount })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    coinCountElement.textContent = `Монет: ${data.senderCoins}`;
-                    tg.showAlert(`Переведено ${amount} монет пользователю с ID ${recipientId}`);
-                } else {
-                    tg.showAlert(data.message || 'Ошибка перевода');
-                }
-            } catch (error) {
-                tg.showAlert('Ошибка связи с сервером');
-            }
-        }
-
-        // Обработка клика по монете
-        coinElement.addEventListener('click', async () => {
-            await addCoin();
-            coinElement.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                coinElement.style.transform = 'scale(1)';
-            }, 100);
-        });
-
-        // Обработка сброса монет
-        resetButton.addEventListener('click', () => {
-            tg.showConfirm('Сбросить все монеты?', async (confirmed) => {
-                if (confirmed) {
-                    await resetBalance();
-                }
-            });
-        });
-
-        // Обработка нажатия на кнопку "Переводы"
-        transferButton.addEventListener('click', () => {
-            tg.showPopup({
-                title: 'Перевод монет',
-                message: 'Введите ID пользователя и сумму для перевода:',
-                buttons: [
-                    { id: 'recipient_id', type: 'text', placeholder: 'ID получателя' },
-                    { id: 'amount', type: 'text', placeholder: 'Сумма' },
-                    { type: 'ok', text: 'Перевести' },
-                    { type: 'cancel', text: 'Отмена' }
-                ]
-            }, async (buttonId, data) => {
-                if (buttonId === 'ok') {
-                    const recipientId = data.recipient_id;
-                    const amount = parseInt(data.amount);
-                    if (!recipientId || isNaN(amount) || amount <= 0) {
-                        tg.showAlert('Укажите корректный ID получателя и сумму!');
-                        return;
-                    }
-                    await transferCoins(recipientId, amount);
-                }
-            });
-        });
-
-        // Инициализация баланса при загрузке
-        fetchBalance();
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
