@@ -267,6 +267,16 @@
             margin: 15px 0;
             border: 1px solid #ff6b6b;
         }
+        
+        /* Стили для оффлайн режима */
+        .offline-mode {
+            background: rgba(255, 193, 7, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            border: 1px solid #ffc107;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -278,6 +288,9 @@
     <!-- Главный экран -->
     <div class="container screen" id="mainScreen">
         <h1>🪙 animarovs Coin</h1>
+        <div class="offline-mode" id="offlineWarning" style="display: none;">
+            ⚠️ Оффлайн режим. Данные сохранятся локально.
+        </div>
         <div class="balance">Баланс: <span id="coins">0</span> монет</div>
         
         <!-- Кнопка топа -->
@@ -301,6 +314,7 @@
         
         <!-- Кнопка отладки -->
         <button onclick="debugSheet()" class="debug-btn">🐞 Debug Table</button>
+        <button onclick="clearLocalData()" class="debug-btn">🗑️ Clear Local Data</button>
     </div>
 
     <!-- Экран топа игроков -->
@@ -322,16 +336,45 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbw7IWIDXlhdoJjsHplWojRCjl_ZDyd0SjsrfRQosAJHaYscdIKJJU_0t7VvQjRAaxRW/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxsJJQH1-Iat9xgZ7tCY6yVX6MrYnqdHbWcH8YW70oyFZujNsyjOE0MEtqmJYPt-Skt/exec';
 
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
         let currentCoins = 0;
         let isRequestPending = false;
+        let isOfflineMode = false;
+        let localCoins = 0;
 
         tg.expand();
         tg.disableClosingConfirmation();
         document.getElementById('userId').textContent = userTelegramId;
+
+        // Загрузка локальных данных
+        function loadLocalData() {
+            const savedData = localStorage.getItem(`coinApp_${userTelegramId}`);
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                localCoins = data.coins || 0;
+                return true;
+            }
+            return false;
+        }
+
+        function saveLocalData() {
+            const data = {
+                coins: localCoins,
+                lastUpdate: new Date().toISOString()
+            };
+            localStorage.setItem(`coinApp_${userTelegramId}`, JSON.stringify(data));
+        }
+
+        function clearLocalData() {
+            localStorage.removeItem(`coinApp_${userTelegramId}`);
+            localCoins = 0;
+            currentCoins = 0;
+            document.getElementById('coins').textContent = currentCoins;
+            showSuccess('Локальные данные очищены');
+        }
 
         // Функции переключения экранов
         function showMainScreen() {
@@ -342,7 +385,17 @@
         function showTopScreen() {
             document.getElementById('mainScreen').style.display = 'none';
             document.getElementById('topScreen').style.display = 'block';
-            loadTopPlayers();
+            if (!isOfflineMode) {
+                loadTopPlayers();
+            } else {
+                document.getElementById('topPlayersList').innerHTML = `
+                    <div class="error-message">
+                        <div style="font-size: 24px; margin-bottom: 10px;">🌐</div>
+                        <div style="font-size: 16px; margin-bottom: 10px;">Топ недоступен в оффлайн режиме</div>
+                        <div style="font-size: 12px; opacity: 0.7;">Подключитесь к интернету для просмотра топа</div>
+                    </div>
+                `;
+            }
         }
 
         // Функция для показа интерфейса после загрузки
@@ -395,12 +448,19 @@
                 const url = API_URL + '?' + params.toString();
                 console.log('Request URL:', url);
                 
+                // Таймаут 10 секунд
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                
                 let response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         'Accept': 'application/json'
-                    }
+                    },
+                    signal: controller.signal
                 });
+                
+                clearTimeout(timeoutId);
                 
                 // Проверяем статус ответа
                 if (!response.ok) {
@@ -414,12 +474,21 @@
                 
             } catch (error) {
                 console.error('API Error:', error);
+                
+                // Если это первая ошибка, переходим в оффлайн режим
+                if (!isOfflineMode && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) {
+                    isOfflineMode = true;
+                    document.getElementById('offlineWarning').style.display = 'block';
+                    showError('Сервер недоступен. Переход в оффлайн режим.');
+                }
+                
                 return { 
                     error: error.message,
                     success: false 
                 };
             }
         }
+
         async function loadUser() {
             try {
                 let userData = await callApi('getUser', { 
@@ -430,9 +499,20 @@
                 
                 if (userData.error) {
                     console.error('Error loading user:', userData.error);
-                    currentCoins = 0;
+                    
+                    // Пробуем загрузить локальные данные
+                    if (loadLocalData()) {
+                        currentCoins = localCoins;
+                        showSuccess('Загружены локальные данные');
+                    } else {
+                        currentCoins = 0;
+                    }
                 } else {
                     currentCoins = userData.coins || 0;
+                    localCoins = currentCoins;
+                    saveLocalData();
+                    isOfflineMode = false;
+                    document.getElementById('offlineWarning').style.display = 'none';
                 }
                 
                 document.getElementById('coins').textContent = currentCoins;
@@ -440,7 +520,15 @@
                 
             } catch (error) {
                 console.error('Load user error:', error);
-                currentCoins = 0;
+                
+                // Пробуем загрузить локальные данные
+                if (loadLocalData()) {
+                    currentCoins = localCoins;
+                    showSuccess('Загружены локальные данные (ошибка сети)');
+                } else {
+                    currentCoins = 0;
+                }
+                
                 document.getElementById('coins').textContent = currentCoins;
                 showInterface();
             }
@@ -488,6 +576,7 @@
             const originalCoins = currentCoins;
             
             currentCoins++;
+            localCoins = currentCoins;
             document.getElementById('coins').textContent = currentCoins;
             
             const rect = this.getBoundingClientRect();
@@ -502,32 +591,40 @@
                 this.style.transform = 'scale(1)';
             }, 100);
             
-            try {
-                let result = await callApi('click', { 
-                    telegramId: userTelegramId,
-                    username: tg.initDataUnsafe.user.username || '',
-                    first_name: tg.initDataUnsafe.user.first_name || ''
-                });
-                
-                if (result.error) {
-                    currentCoins = originalCoins;
-                    document.getElementById('coins').textContent = currentCoins;
-                    showError('Ошибка сервера: ' + result.error);
-                } else if (result.newCoins !== undefined) {
-                    currentCoins = result.newCoins;
-                    document.getElementById('coins').textContent = currentCoins;
+            // Сохраняем локально в любом случае
+            saveLocalData();
+            
+            if (!isOfflineMode) {
+                try {
+                    let result = await callApi('click', { 
+                        telegramId: userTelegramId,
+                        username: tg.initDataUnsafe.user.username || '',
+                        first_name: tg.initDataUnsafe.user.first_name || ''
+                    });
+                    
+                    if (result.error) {
+                        showError('Ошибка сервера: ' + result.error);
+                    } else if (result.newCoins !== undefined) {
+                        currentCoins = result.newCoins;
+                        localCoins = currentCoins;
+                        document.getElementById('coins').textContent = currentCoins;
+                        saveLocalData();
+                    }
+                } catch (error) {
+                    showError('Ошибка сети, данные сохранены локально');
                 }
-            } catch (error) {
-                currentCoins = originalCoins;
-                document.getElementById('coins').textContent = currentCoins;
-                showError('Ошибка сети');
-            } finally {
-                isRequestPending = false;
-                this.classList.remove('disabled');
             }
+            
+            isRequestPending = false;
+            this.classList.remove('disabled');
         });
 
         document.getElementById('transferBtn').addEventListener('click', async () => {
+            if (isOfflineMode) {
+                showError('Переводы недоступны в оффлайн режиме');
+                return;
+            }
+
             const receiverId = document.getElementById('receiverId').value;
             const amount = parseInt(document.getElementById('transferAmount').value);
             const statusEl = document.getElementById('transferStatus');
@@ -562,8 +659,10 @@
                 if (result.success) {
                     showSuccess(`Успешно переведено ${amount} монет!`);
                     currentCoins -= amount;
+                    localCoins = currentCoins;
                     document.getElementById('coins').textContent = currentCoins;
                     tg.HapticFeedback.notificationOccurred('success');
+                    saveLocalData();
                     
                     document.getElementById('receiverId').value = '';
                     document.getElementById('transferAmount').value = '';
