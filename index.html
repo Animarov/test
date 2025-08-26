@@ -322,7 +322,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbx0BuOX2KKLu0fT5U3eWf74ahDPb6S9pqukj_Y0g7f7z8CbQq0x1o1E28P8DYxykOoO/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyIJejRiuix247VP_ksaKun5N47gmdS9RteEtlt9Z_tCm16Mi2ymy6hr0x9YyWIlmM8/exec';
 
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
@@ -402,20 +402,24 @@
                     }
                 });
                 
+                // Проверяем статус ответа
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
                 console.log('API Response:', data);
                 
-                if (!response.ok) {
-                    throw new Error(data.error || `HTTP error! status: ${response.status}`);
-                }
-                
                 return data;
+                
             } catch (error) {
                 console.error('API Error:', error);
-                return { error: error.message };
+                return { 
+                    error: error.message,
+                    success: false 
+                };
             }
         }
-
         async function loadUser() {
             try {
                 let userData = await callApi('getUser', { 
@@ -585,9 +589,9 @@
                     telegramId: userTelegramId
                 });
                 
-                console.log('Top players result:', result);
+                console.log('Top players API response:', result);
                 
-                if (result.success && result.topPlayers) {
+                if (result && result.success && result.topPlayers) {
                     topList.innerHTML = '';
                     
                     if (result.topPlayers.length === 0) {
@@ -595,7 +599,7 @@
                             <div style="padding: 40px; color: #ccc; text-align: center;">
                                 <div style="font-size: 48px; margin-bottom: 20px;">🏆</div>
                                 <div style="font-size: 18px; margin-bottom: 10px;">Топ игроков пуст</div>
-                                <div style="font-size: 14px; opacity: 0.7;">Будьте первым кто начнет собирать монеты!</div>
+                                <div style="font-size: 14px; opacity: 0.7;">Будьте первым кто попадет в топ!</div>
                             </div>
                         `;
                     } else {
@@ -648,14 +652,16 @@
                     }
                     
                 } else {
-                    const errorMsg = result.error || 'Неизвестная ошибка';
+                    const errorMsg = result?.error || 'Неизвестная ошибка сервера';
+                    console.error('Top players error:', errorMsg);
+                    
                     topList.innerHTML = `
                         <div class="error-message">
                             <div style="font-size: 24px; margin-bottom: 10px;">❌</div>
                             <div style="font-size: 16px; margin-bottom: 10px;">Не удалось загрузить топ игроков</div>
                             <div style="font-size: 12px; opacity: 0.7;">${errorMsg}</div>
                             <div style="font-size: 12px; margin-top: 10px; opacity: 0.5;">
-                                Нажмите 🐞 Debug Table для диагностики
+                                Ответ сервера: ${JSON.stringify(result)}
                             </div>
                         </div>
                     `;
@@ -667,9 +673,6 @@
                         <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
                         <div style="font-size: 16px; margin-bottom: 10px;">Ошибка загрузки топа</div>
                         <div style="font-size: 12px; opacity: 0.7;">${error.message}</div>
-                        <div style="font-size: 12px; margin-top: 10px; opacity: 0.5;">
-                            Нажмите 🐞 Debug Table для диагностики
-                        </div>
                     </div>
                 `;
             }
