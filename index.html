@@ -322,7 +322,7 @@
     </div>
 
     <script>
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzPHCFHOLSSubmWMoS1vk2dgSzRdeZZlKwhzYEREq9h-MR6FRvwWnoRzRjJoCdkkkUQ/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw7IWIDXlhdoJjsHplWojRCjl_ZDyd0SjsrfRQosAJHaYscdIKJJU_0t7VvQjRAaxRW/exec';
 
         let tg = window.Telegram.WebApp;
         let userTelegramId = tg.initDataUnsafe.user.id;
@@ -603,25 +603,27 @@
                             </div>
                         `;
                     } else {
-                        result.topPlayers.forEach((player, index) => {
-                            const playerItem = document.createElement('div');
-                            playerItem.className = `player-item ${index < 3 ? 'top-' + (index + 1) : ''}`;
-                            
-                            let rankEmoji = '';
-                            if (index === 0) rankEmoji = '🥇 ';
-                            else if (index === 1) rankEmoji = '🥈 ';
-                            else if (index === 2) rankEmoji = '🥉 ';
-                            
-                            playerItem.innerHTML = `
-                                <div class="player-rank">${rankEmoji}${index + 1}</div>
-                                <div class="player-info">
-                                    <div class="player-name">${player.name || 'Игрок'}</div>
-                                    ${player.username ? `<div class="player-username">@${player.username}</div>` : ''}
-                                </div>
-                                <div class="player-coins">${player.coins} 🪙</div>
-                            `;
-                            topList.appendChild(playerItem);
-                        });
+                        // Отображаем только чемпиона
+                        const champion = result.topPlayers[0];
+                        const championItem = document.createElement('div');
+                        championItem.className = 'player-item top-1';
+                        championItem.style.textAlign = 'center';
+                        championItem.style.padding = '30px';
+                        
+                        championItem.innerHTML = `
+                            <div style="font-size: 64px; margin-bottom: 20px;">👑</div>
+                            <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color: gold;">
+                                ${champion.name || 'Чемпион'}
+                            </div>
+                            ${champion.username ? `<div style="font-size: 16px; margin-bottom: 15px; opacity: 0.8;">@${champion.username}</div>` : ''}
+                            <div style="font-size: 32px; color: #feca57; font-weight: bold;">
+                                ${champion.coins} 🪙
+                            </div>
+                            <div style="font-size: 14px; margin-top: 20px; opacity: 0.7;">
+                                ID: ${champion.id}
+                            </div>
+                        `;
+                        topList.appendChild(championItem);
                     }
                     
                     // Показываем информацию о ранге пользователя
@@ -634,6 +636,11 @@
                                 <div style="font-size: 14px; opacity: 0.8;">
                                     У вас: ${currentCoins} монет
                                 </div>
+                                ${result.userRank === 1 ? `
+                                <div style="font-size: 16px; color: gold; margin-top: 10px; font-weight: bold;">
+                                    🎉 Вы чемпион!
+                                </div>
+                                ` : ''}
                             </div>
                         `;
                         userRankInfo.style.display = 'block';
@@ -660,9 +667,6 @@
                             <div style="font-size: 24px; margin-bottom: 10px;">❌</div>
                             <div style="font-size: 16px; margin-bottom: 10px;">Не удалось загрузить топ игроков</div>
                             <div style="font-size: 12px; opacity: 0.7;">${errorMsg}</div>
-                            <div style="font-size: 12px; margin-top: 10px; opacity: 0.5;">
-                                Ответ сервера: ${JSON.stringify(result)}
-                            </div>
                         </div>
                     `;
                 }
