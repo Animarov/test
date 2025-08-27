@@ -251,7 +251,7 @@
 
     <script>
         // Конфигурация
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxonasAJEwvD25m-s_YXNVFUMorpQm0eNDYB9ix3FbNJmZEO1omXzHplHJVMaRfJrQsIw/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby20NF-dMKapOg8s_ebJHbClQ5s1DpeB5OocYJWdTIhITStvD6syuRpVYn4Lw4beebR/exec";
 
         // Инициализация Telegram Web App
         let tg = window.Telegram.WebApp;
@@ -259,7 +259,7 @@
         let totalClicks = 0;
         let topPlayers = [];
         let lastTopUpdate = 0;
-        const TOP_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 минут в миллисекундах
+        const TOP_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 минут
 
         // Элементы DOM
         const coinsDisplay = document.getElementById('coins');
@@ -305,44 +305,23 @@
             }
 
             try {
-                // Здесь нужно добавить функцию в Google Apps Script для получения топа
-                // Пока используем заглушку
                 topList.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
                 
-                // Имитация загрузки данных (замените на реальный запрос)
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Запрос к Google Apps Script для получения топа
+                const response = await fetch(`${SCRIPT_URL}?function=getTopPlayers`);
+                const players = await response.json();
                 
-                // Заглушка с тестовыми данными
-                const mockTop = [];
-                for (let i = 1; i <= 20; i++) {
-                    mockTop.push({
-                        rank: i,
-                        username: `Игрок ${i}`,
-                        coins: Math.floor(Math.random() * 1000) + 100,
-                        isYou: false
-                    });
-                }
-                
-                // Добавляем текущего пользователя в топ, если его там нет
-                const userInTop = mockTop.find(player => player.username === `User ${user_id}`);
-                if (!userInTop) {
-                    mockTop.push({
-                        rank: 15,
-                        username: `User ${user_id}`,
-                        coins: parseInt(coinsDisplay.textContent) || 0,
-                        isYou: true
-                    });
+                if (players.error) {
+                    throw new Error(players.error);
                 }
 
-                // Сортируем по убыванию монет
-                mockTop.sort((a, b) => b.coins - a.coins);
-                
-                // Обновляем ранги
-                mockTop.forEach((player, index) => {
-                    player.rank = index + 1;
-                });
+                // Помечаем текущего пользователя
+                const playersWithYou = players.map(player => ({
+                    ...player,
+                    isYou: player.user_id == user_id
+                }));
 
-                topPlayers = mockTop;
+                topPlayers = playersWithYou;
                 lastTopUpdate = currentTime;
                 updateRefreshTime();
                 return topPlayers;
@@ -361,7 +340,7 @@
             }
 
             let html = '';
-            players.slice(0, 20).forEach(player => {
+            players.forEach(player => {
                 html += `
                     <div class="top-item ${player.isYou ? 'top-you' : ''}">
                         <div class="top-rank">${player.rank}</div>
@@ -413,11 +392,10 @@
                 const newBalance = await response.text();
                 coinsDisplay.textContent = newBalance;
                 
-                // Анимация клика
                 totalClicks++;
                 totalClicksSpan.textContent = totalClicks;
                 
-                // Создаем летающую монету
+                // Анимация клика
                 const flyingCoin = document.createElement('div');
                 flyingCoin.textContent = '+1';
                 flyingCoin.style.position = 'fixed';
@@ -427,14 +405,12 @@
                 flyingCoin.style.pointerEvents = 'none';
                 flyingCoin.style.zIndex = '1000';
                 
-                // Позиционируем относительно кнопки
                 const rect = clickButton.getBoundingClientRect();
                 flyingCoin.style.left = rect.left + rect.width/2 + 'px';
                 flyingCoin.style.top = rect.top + 'px';
                 
                 document.body.appendChild(flyingCoin);
                 
-                // Анимация полета монеты
                 flyingCoin.animate([
                     { transform: 'translateY(0)', opacity: 1 },
                     { transform: 'translateY(-50px)', opacity: 0 }
@@ -443,7 +419,6 @@
                     easing: 'ease-out'
                 });
                 
-                // Удаляем элемент после анимации
                 setTimeout(() => {
                     flyingCoin.remove();
                 }, 1000);
@@ -462,26 +437,21 @@
                 tg.expand();
                 tg.enableClosingConfirmation();
                 
-                // Получаем ID пользователя
                 user_id = tg.initDataUnsafe.user.id;
                 userIdSpan.textContent = user_id;
                 
-                // Загружаем начальный баланс
                 loadCoins();
                 
-                // Назначаем обработчики кликов
                 clickButton.addEventListener('click', handleClick);
                 topButton.addEventListener('click', openTopModal);
                 closeModal.addEventListener('click', closeTopModal);
                 
-                // Закрытие модального окна по клику вне его
                 window.addEventListener('click', (event) => {
                     if (event.target === topModal) {
                         closeTopModal();
                     }
                 });
                 
-                // Добавляем вибрацию при клике
                 clickButton.addEventListener('click', () => {
                     if (navigator.vibrate) {
                         navigator.vibrate(10);
@@ -490,7 +460,6 @@
                 
             } catch (error) {
                 showError('Ошибка инициализации: ' + error.message);
-                // Режим тестирования
                 user_id = 'test_user_' + Math.random().toString(36).substr(2, 9);
                 userIdSpan.textContent = user_id + ' (тестовый режим)';
                 loadCoins();
@@ -500,7 +469,6 @@
             }
         }
 
-        // Запускаем приложение когда страница загрузится
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
