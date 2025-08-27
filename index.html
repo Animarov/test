@@ -198,6 +198,8 @@
             text-align: left;
             padding: 0 10px;
             word-break: break-word;
+            font-family: monospace;
+            font-size: 14px;
         }
 
         .top-coins {
@@ -218,6 +220,21 @@
             color: #7f8c8d;
             margin-top: 15px;
             font-style: italic;
+        }
+
+        .medal-gold {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .medal-silver {
+            color: #c0c0c0;
+            font-weight: bold;
+        }
+
+        .medal-bronze {
+            color: #cd7f32;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -259,7 +276,7 @@
         let totalClicks = 0;
         let topPlayers = [];
         let lastTopUpdate = 0;
-        const TOP_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 минут
+        const TOP_UPDATE_INTERVAL = 5 * 60 * 1000;
 
         // Элементы DOM
         const coinsDisplay = document.getElementById('coins');
@@ -299,7 +316,6 @@
         async function loadTopPlayers(forceUpdate = false) {
             const currentTime = Date.now();
             
-            // Если данные актуальны и не принудительное обновление
             if (!forceUpdate && topPlayers.length > 0 && (currentTime - lastTopUpdate) < TOP_UPDATE_INTERVAL) {
                 return topPlayers;
             }
@@ -307,8 +323,12 @@
             try {
                 topList.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
                 
-                // Запрос к Google Apps Script для получения топа
+                // Правильный запрос для получения топа
                 const response = await fetch(`${SCRIPT_URL}?function=getTopPlayers`);
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера: ' + response.status);
+                }
+                
                 const players = await response.json();
                 
                 if (players.error) {
@@ -327,6 +347,7 @@
                 return topPlayers;
                 
             } catch (error) {
+                console.error('Ошибка загрузки топа:', error);
                 showError('Ошибка загрузки топа: ' + error.message);
                 return [];
             }
@@ -335,16 +356,22 @@
         // Функция для отображения топа игроков
         function displayTopPlayers(players) {
             if (players.length === 0) {
-                topList.innerHTML = '<div class="loading">Нет данных о игроках</div>';
+                topList.innerHTML = '<div class="loading">Пока нет игроков в рейтинге</div>';
                 return;
             }
 
             let html = '';
             players.forEach(player => {
+                // Добавляем медали для первых трех мест
+                let rankClass = '';
+                if (player.rank === 1) rankClass = 'medal-gold';
+                else if (player.rank === 2) rankClass = 'medal-silver';
+                else if (player.rank === 3) rankClass = 'medal-bronze';
+
                 html += `
                     <div class="top-item ${player.isYou ? 'top-you' : ''}">
-                        <div class="top-rank">${player.rank}</div>
-                        <div class="top-username">${player.username}</div>
+                        <div class="top-rank ${rankClass}">${player.rank}</div>
+                        <div class="top-username">${player.user_id}</div>
                         <div class="top-coins">${player.coins} 🪙</div>
                     </div>
                 `;
