@@ -1,16 +1,246 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            width: 400px;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .coins-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .click-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(238, 90, 36, 0.4);
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .click-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 10px rgba(238, 90, 36, 0.3);
+        }
+
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .user-id {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 20px;
+            word-break: break-all;
+        }
+
+        .loading {
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .error {
+            color: #e74c3c;
+            background: #ffeaea;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Ваши монеты:</h1>
-        <h2 id="coins">0</h2>
-        <button id="clickBtn">КЛИКНУТЬ!</button>
+        <h1>💰 Ваши монеты:</h1>
+        <div class="coins-display" id="coins">0</div>
+        
+        <button class="click-btn" id="clickBtn">🎯 КЛИКНУТЬ! +1</button>
+        
+        <div class="stats">
+            <div>Всего кликов: <span id="totalClicks">0</span></div>
+        </div>
+        
+        <div class="error" id="error"></div>
+        <div class="user-id">User ID: <span id="userId">загрузка...</span></div>
     </div>
+
+    <script>
+        // Конфигурация
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxonasAJEwvD25m-s_YXNVFUMorpQm0eNDYB9ix3FbNJmZEO1omXzHplHJVMaRfJrQsIw/exec";
+
+        // Инициализация Telegram Web App
+        let tg = window.Telegram.WebApp;
+        let user_id = null;
+        let totalClicks = 0;
+
+        // Элементы DOM
+        const coinsDisplay = document.getElementById('coins');
+        const clickButton = document.getElementById('clickBtn');
+        const userIdSpan = document.getElementById('userId');
+        const totalClicksSpan = document.getElementById('totalClicks');
+        const errorDiv = document.getElementById('error');
+
+        // Функция для показа ошибок
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Функция для загрузки баланса
+        async function loadCoins() {
+            try {
+                coinsDisplay.textContent = '...';
+                const response = await fetch(`${SCRIPT_URL}?user_id=${user_id}`);
+                const data = await response.text();
+                coinsDisplay.textContent = data;
+            } catch (error) {
+                showError('Ошибка загрузки баланса: ' + error.message);
+                coinsDisplay.textContent = '0';
+            }
+        }
+
+        // Функция для обработки клика
+        async function handleClick() {
+            try {
+                clickButton.disabled = true;
+                clickButton.textContent = 'Загрузка...';
+                
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `user_id=${user_id}`
+                });
+                
+                const newBalance = await response.text();
+                coinsDisplay.textContent = newBalance;
+                
+                // Анимация клика
+                totalClicks++;
+                totalClicksSpan.textContent = totalClicks;
+                
+                // Создаем летающую монету
+                const flyingCoin = document.createElement('div');
+                flyingCoin.textContent = '+1';
+                flyingCoin.style.position = 'fixed';
+                flyingCoin.style.color = '#27ae60';
+                flyingCoin.style.fontWeight = 'bold';
+                flyingCoin.style.fontSize = '20px';
+                flyingCoin.style.pointerEvents = 'none';
+                flyingCoin.style.zIndex = '1000';
+                
+                // Позиционируем относительно кнопки
+                const rect = clickButton.getBoundingClientRect();
+                flyingCoin.style.left = rect.left + rect.width/2 + 'px';
+                flyingCoin.style.top = rect.top + 'px';
+                
+                document.body.appendChild(flyingCoin);
+                
+                // Анимация полета монеты
+                flyingCoin.animate([
+                    { transform: 'translateY(0)', opacity: 1 },
+                    { transform: 'translateY(-50px)', opacity: 0 }
+                ], {
+                    duration: 1000,
+                    easing: 'ease-out'
+                });
+                
+                // Удаляем элемент после анимации
+                setTimeout(() => {
+                    flyingCoin.remove();
+                }, 1000);
+                
+            } catch (error) {
+                showError('Ошибка: ' + error.message);
+            } finally {
+                clickButton.disabled = false;
+                clickButton.textContent = '🎯 КЛИКНУТЬ! +1';
+            }
+        }
+
+        // Инициализация приложения
+        function initApp() {
+            try {
+                tg.expand();
+                tg.enableClosingConfirmation();
+                
+                // Получаем ID пользователя
+                user_id = tg.initDataUnsafe.user.id;
+                userIdSpan.textContent = user_id;
+                
+                // Загружаем начальный баланс
+                loadCoins();
+                
+                // Назначаем обработчик клика
+                clickButton.addEventListener('click', handleClick);
+                
+                // Добавляем вибрацию при клике (если поддерживается)
+                clickButton.addEventListener('click', () => {
+                    if (navigator.vibrate) {
+                        navigator.vibrate(10);
+                    }
+                });
+                
+            } catch (error) {
+                showError('Ошибка инициализации: ' + error.message);
+                // Режим тестирования (если не в Telegram)
+                user_id = 'test_user_' + Math.random().toString(36).substr(2, 9);
+                userIdSpan.textContent = user_id + ' (тестовый режим)';
+                loadCoins();
+                clickButton.addEventListener('click', handleClick);
+            }
+        }
+
+        // Запускаем приложение когда страница загрузится
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
