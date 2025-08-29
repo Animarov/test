@@ -112,6 +112,14 @@
             margin-top: 10px;
             border: 1px solid rgba(255, 215, 0, 0.3);
         }
+        
+        .error {
+            color: #ff6b6b;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -134,6 +142,223 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+        class CoinClicker {
+            constructor() {
+                this.userId = null;
+                this.balance = 0;
+                this.telegram = null;
+                this.scriptURL = 'https://script.google.com/macros/s/AKfycbx6yjFzfZLZdCrhmNZnC-Jrk1tMnWCMFCR15M3F2KwgweSXR1zyhYszOVYi4ZCXErgM/exec';
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Инициализация Telegram Web App
+                    this.telegram = window.Telegram.WebApp;
+                    if (this.telegram) {
+                        this.telegram.expand();
+                        this.telegram.enableClosingConfirmation();
+                        this.userId = this.telegram.initDataUnsafe.user?.id;
+                    }
+                    
+                    // Если нет Telegram user ID, создаем гостевой
+                    if (!this.userId) {
+                        this.userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+                    }
+
+                    await this.loadBalance();
+                    await this.loadLeaderboard();
+                    
+                    // Добавляем обработчик клика
+                    document.getElementById('coin').addEventListener('click', () => this.handleClick());
+                    
+                } catch (error) {
+                    console.error('Ошибка инициализации:', error);
+                    document.getElementById('balance').textContent = 'Ошибка загрузки';
+                    document.getElementById('balance').className = 'error';
+                }
+            }
+
+            async handleClick() {
+                this.balance++;
+                document.getElementById('balance').textContent = `${this.balance} монет`;
+                
+                try {
+                    await this.updateBalance();
+                    await this.loadLeaderboard();
+                } catch (error) {
+                    console.warn('Ошибка при обновлении:', error);
+                    // Сохраняем локально при ошибке сети
+                    localStorage.setItem(`coin_balance_${this.userId}`, this.balance);
+                }
+            }
+
+            async makeRequest(url, options = {}) {
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            ...options.headers
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error('Ошибка сети');
+                    
+                    const text = await response.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        return { success: false, error: 'Неверный формат ответа' };
+                    }
+                    
+                } catch (error) {
+                    console.error('Ошибка запроса:', error);
+                    throw error;
+                }
+            }
+
+            async updateBalance() {
+                const data = {
+                    action: 'update',
+                    userId: this.userId,
+                    balance: this.balance,
+                    username: this.telegram?.initDataUnsafe.user?.username || 'Гость',
+                    firstName: this.telegram?.initDataUnsafe.user?.first_name || 'Игрок'
+                };
+
+                // Преобразуем данные в form-data
+                const formData = new URLSearchParams();
+                for (const key in data) {
+                    formData.append(key, data[key]);
+                }
+
+                const response = await this.makeRequest(this.scriptURL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.success) {
+                    throw new Error('Ошибка обновления баланса');
+                }
+            }
+
+            async loadBalance() {
+                try {
+                    const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
+                    const data = await this.makeRequest(url);
+                    
+                    if (data.success && data.balance !== undefined) {
+                        this.balance = data.balance;
+                    } else {
+                        // Пробуем загрузить из localStorage
+                        const saved = localStorage.getItem(`coin_balance_${this.userId}`);
+                        this.balance = saved ? parseInt(saved) : 0;
+                    }
+                    
+                    document.getElementById('balance').textContent = `${this.balance} монет`;
+                    
+                } catch (error) {
+                    console.error('Ошибка загрузки баланса:', error);
+                    const saved = localStorage.getItem(`coin_balance_${this.userId}`);
+                    this.balance = saved ? parseInt(saved) : 0;
+                    document.getElementById('balance').textContent = `${this.balance} монет`;
+                }
+            }
+
+            async loadLeaderboard() {
+                try {
+                    const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
+                    const data = await this.makeRequest(url);
+                    
+                    if (data.success) {
+                        this.displayLeaderboard(data.leaderboard);
+                        this.displayUserRank(data.leaderboard);
+                    } else {
+                        throw new Error('Не удалось загрузить рейтинг');
+                    }
+                } catch (error) {
+                    console.error('Ошибка загрузки таблицы лидеров:', error);
+                    document.getElementById('leaderboard').innerHTML = 
+                        '<div class="error">Не удалось загрузить рейтинг</div>';
+                }
+            }
+
+            displayLeaderboard(leaderboard) {
+                const leaderboardElement = document.getElementById('leaderboard');
+                
+                if (!leaderboard || leaderboard.length === 0) {
+                    leaderboardElement.innerHTML = '<div class="loading">Рейтинг пуст</div>';
+                    return;
+                }
+
+                let html = '';
+                leaderboard.slice(0, 100).forEach((player, index) => {
+                    const displayName = player.username || player.firstName || `Игрок ${player.userId?.substr(0, 6) || 'unknown'}`;
+                    
+                    html += `
+                        <div class="leaderboard-item">
+                            <span class="rank">${index + 1}.</span>
+                            <span class="username">${this.escapeHtml(displayName)}</span>
+                            <span class="user-balance">${player.balance || 0} ₿</span>
+                        </div>
+                    `;
+                });
+                
+                leaderboardElement.innerHTML = html;
+            }
+
+            displayUserRank(leaderboard) {
+                const userRankElement = document.getElementById('user-rank');
+                const userPositionElement = document.getElementById('user-position');
+                
+                if (!leaderboard) {
+                    userRankElement.style.display = 'none';
+                    return;
+                }
+
+                const userIndex = leaderboard.findIndex(player => player.userId === this.userId);
+                
+                if (userIndex !== -1) {
+                    userPositionElement.textContent = `${userIndex + 1} место`;
+                    userRankElement.style.display = 'block';
+                } else {
+                    userRankElement.style.display = 'none';
+                }
+            }
+
+            escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+
+        // Запуск приложения после загрузки DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            // Проверяем, есть ли уже экземпляр приложения
+            if (!window.coinApp) {
+                window.coinApp = new CoinClicker();
+            }
+        });
+
+        // Функция для ручного обновления рейтинга (можно вызвать из консоли)
+        function refreshLeaderboard() {
+            if (window.coinApp) {
+                window.coinApp.loadLeaderboard();
+            }
+        }
+
+        // Функция для сброса локальных данных
+        function resetLocalData() {
+            if (window.coinApp) {
+                localStorage.removeItem(`coin_balance_${window.coinApp.userId}`);
+                window.coinApp.balance = 0;
+                document.getElementById('balance').textContent = '0 монет';
+            }
+        }
+    </script>
 </body>
 </html>
