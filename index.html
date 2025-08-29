@@ -149,6 +149,15 @@
             margin: 15px 0;
             flex-wrap: wrap;
         }
+        
+        .debug-info {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 11px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -164,7 +173,7 @@
         <div class="controls">
             <button class="btn" onclick="saveToCloud()">💾 Сохранить</button>
             <button class="btn" onclick="loadFromCloud()">☁️ Загрузить</button>
-            <button class="btn" onclick="refreshLeaderboard()">🔄 Обновить рейтинг</button>
+            <button class="btn" onclick="refreshLeaderboard()">🔄 Рейтинг</button>
         </div>
         
         <div id="user-rank" class="user-rank" style="display: none;">
@@ -177,6 +186,11 @@
         </div>
         
         <div id="status" class="status"></div>
+        
+        <div class="debug-info" style="display: none;" id="debug-info">
+            <strong>Отладка:</strong>
+            <div id="debug-content"></div>
+        </div>
     </div>
 
     <script>
@@ -185,8 +199,9 @@
                 this.userId = null;
                 this.balance = 0;
                 this.telegram = null;
-                this.scriptURL = 'https://script.google.com/macros/s/AKfycbwz4eJfYe3nk4zXnsp4GNcaPbkylzPms6mQha0CSvWQ0LlKtZFO8K-V5TdHeYFgRsj9/exec';
+                this.scriptURL = 'https://script.google.com/macros/s/AKfycbwsgeC79rC_7Gl0sPpMZ_bIQgpQGTsJXxMmLqHpDGmhyRbxGNUQ7LngaTJbPZY1UoRczg/exec';
                 this.lastSaveTime = 0;
+                this.isSaving = false;
                 this.init();
             }
 
@@ -238,7 +253,7 @@
                 this.showStatus('+1 монета! 💰', 'success');
                 
                 // Автосохранение в облако каждые 5 кликов
-                if (this.balance % 5 === 0) {
+                if (this.balance % 5 === 0 && !this.isSaving) {
                     await this.saveToCloud();
                 }
             }
@@ -271,11 +286,18 @@
             }
 
             async saveToCloud() {
+                if (this.isSaving) {
+                    this.showStatus('Уже сохраняем...', 'warning');
+                    return false;
+                }
+
                 if (Date.now() - this.lastSaveTime < 2000) {
                     this.showStatus('Подождите немного...', 'warning');
                     return false;
                 }
 
+                this.isSaving = true;
+                
                 try {
                     this.showStatus('Сохранение в облако... 📡', 'loading');
                     
@@ -304,6 +326,9 @@
                     if (response && response.success) {
                         this.lastSaveTime = Date.now();
                         this.showStatus('Сохранено в облако! ✅', 'success');
+                        
+                        // После сохранения сразу обновляем рейтинг
+                        setTimeout(() => this.loadLeaderboard(), 1000);
                         return true;
                     } else {
                         throw new Error(response?.error || 'Ошибка сохранения');
@@ -312,6 +337,8 @@
                     console.error('Ошибка сохранения в облако:', error);
                     this.showStatus('Ошибка сохранения: ' + error.message, 'error');
                     return false;
+                } finally {
+                    this.isSaving = false;
                 }
             }
 
@@ -364,9 +391,8 @@
             }
 
             async autoSave() {
-                if (this.balance > 0) {
+                if (this.balance > 0 && !this.isSaving) {
                     await this.saveToCloud();
-                    await this.loadLeaderboard();
                 }
             }
 
@@ -440,6 +466,15 @@
                     statusElement.style.color = type === 'error' ? '#ff6b6b' : 
                                               type === 'success' ? '#51cf66' : 
                                               type === 'warning' ? '#fcc419' : '#ccc';
+                    
+                    // Автоочистка статуса через 5 секунд
+                    if (type !== 'loading') {
+                        setTimeout(() => {
+                            if (statusElement.textContent === message) {
+                                statusElement.textContent = '';
+                            }
+                        }, 5000);
+                    }
                 }
             }
 
@@ -480,6 +515,25 @@
             }
         }
 
+        function toggleDebug() {
+            const debugInfo = document.getElementById('debug-info');
+            const debugContent = document.getElementById('debug-content');
+            
+            if (debugInfo.style.display === 'none') {
+                if (window.coinApp) {
+                    debugContent.innerHTML = `
+                        User ID: ${window.coinApp.userId}<br>
+                        Balance: ${window.coinApp.balance}<br>
+                        Last Save: ${new Date(window.coinApp.lastSaveTime).toLocaleTimeString()}<br>
+                        Script URL: ${window.coinApp.scriptURL}
+                    `;
+                }
+                debugInfo.style.display = 'block';
+            } else {
+                debugInfo.style.display = 'none';
+            }
+        }
+
         // Запуск приложения
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing app...');
@@ -491,6 +545,10 @@
                     e.preventDefault();
                     resetLocalData();
                 }
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                    toggleDebug();
+                }
             });
         });
 
@@ -500,7 +558,8 @@
                 return window.coinApp ? {
                     userId: window.coinApp.userId,
                     balance: window.coinApp.balance,
-                    lastSaveTime: window.coinApp.lastSaveTime
+                    lastSaveTime: window.coinApp.lastSaveTime,
+                    scriptURL: window.coinApp.scriptURL
                 } : 'App not initialized';
             },
             forceSave: function() {
@@ -512,6 +571,22 @@
                 if (window.coinApp) {
                     window.coinApp.loadFromCloud();
                 }
+            },
+            testConnection: async function() {
+                if (window.coinApp) {
+                    try {
+                        const testUrl = `${window.coinApp.scriptURL}?action=leaderboard&t=${Date.now()}`;
+                        const response = await fetch(testUrl);
+                        return {
+                            status: response.status,
+                            statusText: response.statusText,
+                            ok: response.ok
+                        };
+                    } catch (error) {
+                        return { error: error.message };
+                    }
+                }
+                return { error: 'App not initialized' };
             }
         };
     </script>
