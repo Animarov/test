@@ -8,495 +8,132 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            text-align: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             margin: 0;
             padding: 20px;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #333;
+            color: white;
         }
-
+        
         .container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            max-width: 90%;
-            width: 400px;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
         }
-
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 10px;
+        
+        .coin {
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle at 30% 30%, #ffd700, #daa520);
+            border-radius: 50%;
+            margin: 30px auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 24px;
-        }
-
-        .coins-display {
-            font-size: 48px;
             font-weight: bold;
-            color: #e74c3c;
-            margin: 20px 0;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+            border: 4px solid #ffed85;
+            color: #8b7500;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
         }
-
-        .click-btn {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 20px 40px;
-            font-size: 20px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 10px 0;
-            box-shadow: 0 5px 15px rgba(238, 90, 36, 0.4);
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-
-        .top-btn {
-            background: linear-gradient(45deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 10px 0;
-            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-
-        .click-btn:active, .top-btn:active {
+        
+        .coin:active {
             transform: scale(0.95);
         }
-
-        .stats {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-        }
-
-        .user-id {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-top: 20px;
-            word-break: break-all;
-        }
-
-        .loading {
-            color: #7f8c8d;
-            font-style: italic;
-        }
-
-        .error {
-            color: #e74c3c;
-            background: #ffeaea;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-            display: none;
-        }
-
-        /* Модальное окно топа */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background: white;
-            margin: 10% auto;
-            padding: 20px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
+        
+        .balance {
             font-size: 28px;
             font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
+            margin: 20px 0;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
         }
-
-        .close:hover {
-            color: #000;
+        
+        .leaderboard {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
         }
-
-        .top-title {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 20px;
-            font-weight: bold;
+        
+        .leaderboard h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
         }
-
-        .top-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .top-item {
-            display: grid;
-            grid-template-columns: 50px 1fr 80px;
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
             align-items: center;
-            padding: 12px 10px;
-            border-bottom: 1px solid #eee;
-            transition: background-color 0.2s ease;
         }
-
-        .top-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        .top-item:last-child {
+        
+        .leaderboard-item:last-child {
             border-bottom: none;
         }
-
-        .top-rank {
+        
+        .rank {
             font-weight: bold;
-            font-size: 18px;
-            color: #7f8c8d;
+            width: 30px;
             text-align: center;
         }
-
-        .top-username {
-            font-weight: 500;
+        
+        .username {
+            flex: 1;
             text-align: left;
             padding: 0 10px;
-            word-break: break-word;
-            font-family: monospace;
-            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
-
-        .top-coins {
+        
+        .user-balance {
             font-weight: bold;
-            color: #e74c3c;
-            text-align: right;
-        }
-
-        .top-you {
-            background: linear-gradient(45deg, #fff3cd, #ffeaa7);
-            border-radius: 8px;
-            font-weight: bold;
-        }
-
-        .refresh-time {
-            text-align: center;
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-top: 15px;
-            font-style: italic;
-        }
-
-        .medal-gold {
             color: #ffd700;
-            font-weight: bold;
         }
-
-        .medal-silver {
-            color: #c0c0c0;
-            font-weight: bold;
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #ccc;
         }
-
-        .medal-bronze {
-            color: #cd7f32;
-            font-weight: bold;
+        
+        .user-rank {
+            background: rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>💰 Ваши монеты:</h1>
-        <div class="coins-display" id="coins">0</div>
+        <h1>💰 Coin Clicker</h1>
         
-        <button class="click-btn" id="clickBtn">🎯 КЛИКНУТЬ! +1</button>
-        <button class="top-btn" id="topBtn">🏆 ТОП 20 ИГРОКОВ</button>
+        <div class="balance" id="balance">Загрузка...</div>
         
-        <div class="stats">
-            <div>Всего кликов: <span id="totalClicks">0</span></div>
+        <div class="coin" id="coin">
+            КЛИК!
         </div>
         
-        <div class="error" id="error"></div>
-        <div class="user-id">User ID: <span id="userId">загрузка...</span></div>
-    </div>
-
-    <!-- Модальное окно топа игроков -->
-    <div id="topModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <div class="top-title">🏆 ТОП 20 ИГРОКОВ</div>
-            <div id="topList" class="top-list">
-                <div class="loading">Загрузка рейтинга...</div>
-            </div>
-            <div class="refresh-time" id="refreshTime">Обновлено: сейчас</div>
+        <div id="user-rank" class="user-rank" style="display: none;">
+            <strong>Ваше место:</strong> <span id="user-position">-</span>
+        </div>
+        
+        <div class="leaderboard">
+            <h2>🏆 Топ 100 игроков</h2>
+            <div id="leaderboard" class="loading">Загрузка рейтинга...</div>
         </div>
     </div>
 
-    <script>
-        // Конфигурация
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwzKx0F3UKtPaWx2ZJqdhusY6dkPiDjSVSjc081eK7ot49rMpm_qG4t3gMHZMSgXzeK/exec";
-
-        // Инициализация Telegram Web App
-        let tg = window.Telegram.WebApp;
-        let user_id = null;
-        let totalClicks = 0;
-        let topPlayers = [];
-        let lastTopUpdate = 0;
-        const TOP_UPDATE_INTERVAL = 5 * 60 * 1000;
-
-        // Элементы DOM
-        const coinsDisplay = document.getElementById('coins');
-        const clickButton = document.getElementById('clickBtn');
-        const topButton = document.getElementById('topBtn');
-        const userIdSpan = document.getElementById('userId');
-        const totalClicksSpan = document.getElementById('totalClicks');
-        const errorDiv = document.getElementById('error');
-        const topModal = document.getElementById('topModal');
-        const topList = document.getElementById('topList');
-        const refreshTime = document.getElementById('refreshTime');
-        const closeModal = document.querySelector('.close');
-
-        // Функция для показа ошибок
-        function showError(message) {
-            errorDiv.textContent = message;
-            errorDiv.style.display = 'block';
-            setTimeout(() => {
-                errorDiv.style.display = 'none';
-            }, 5000);
-        }
-
-        // Функция для загрузки баланса
-        async function loadCoins() {
-            try {
-                coinsDisplay.textContent = '...';
-                const response = await fetch(`${SCRIPT_URL}?user_id=${user_id}`);
-                const data = await response.text();
-                coinsDisplay.textContent = data;
-            } catch (error) {
-                showError('Ошибка загрузки баланса: ' + error.message);
-                coinsDisplay.textContent = '0';
-            }
-        }
-
-        // Функция для загрузки топа игроков
-        async function loadTopPlayers(forceUpdate = false) {
-            const currentTime = Date.now();
-            
-            if (!forceUpdate && topPlayers.length > 0 && (currentTime - lastTopUpdate) < TOP_UPDATE_INTERVAL) {
-                return topPlayers;
-            }
-
-            try {
-                topList.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
-                
-                // Правильный запрос для получения топа
-                const response = await fetch(`${SCRIPT_URL}?function=getTopPlayers`);
-                if (!response.ok) {
-                    throw new Error('Ошибка сервера: ' + response.status);
-                }
-                
-                const players = await response.json();
-                
-                if (players.error) {
-                    throw new Error(players.error);
-                }
-
-                // Помечаем текущего пользователя
-                const playersWithYou = players.map(player => ({
-                    ...player,
-                    isYou: player.user_id == user_id
-                }));
-
-                topPlayers = playersWithYou;
-                lastTopUpdate = currentTime;
-                updateRefreshTime();
-                return topPlayers;
-                
-            } catch (error) {
-                console.error('Ошибка загрузки топа:', error);
-                showError('Ошибка загрузки топа: ' + error.message);
-                return [];
-            }
-        }
-
-        // Функция для отображения топа игроков
-        function displayTopPlayers(players) {
-            if (players.length === 0) {
-                topList.innerHTML = '<div class="loading">Пока нет игроков в рейтинге</div>';
-                return;
-            }
-
-            let html = '';
-            players.forEach(player => {
-                // Добавляем медали для первых трех мест
-                let rankClass = '';
-                if (player.rank === 1) rankClass = 'medal-gold';
-                else if (player.rank === 2) rankClass = 'medal-silver';
-                else if (player.rank === 3) rankClass = 'medal-bronze';
-
-                html += `
-                    <div class="top-item ${player.isYou ? 'top-you' : ''}">
-                        <div class="top-rank ${rankClass}">${player.rank}</div>
-                        <div class="top-username">${player.user_id}</div>
-                        <div class="top-coins">${player.coins} 🪙</div>
-                    </div>
-                `;
-            });
-
-            topList.innerHTML = html;
-        }
-
-        // Функция для обновления времени обновления
-        function updateRefreshTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('ru-RU', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            refreshTime.textContent = `Обновлено: ${timeString}`;
-        }
-
-        // Функция для открытия модального окна топа
-        async function openTopModal() {
-            topModal.style.display = 'block';
-            const players = await loadTopPlayers(true);
-            displayTopPlayers(players);
-        }
-
-        // Функция для закрытия модального окна
-        function closeTopModal() {
-            topModal.style.display = 'none';
-        }
-
-        // Функция для обработки клика
-        async function handleClick() {
-            try {
-                clickButton.disabled = true;
-                clickButton.textContent = 'Загрузка...';
-                
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `user_id=${user_id}`
-                });
-                
-                const newBalance = await response.text();
-                coinsDisplay.textContent = newBalance;
-                
-                totalClicks++;
-                totalClicksSpan.textContent = totalClicks;
-                
-                // Анимация клика
-                const flyingCoin = document.createElement('div');
-                flyingCoin.textContent = '+1';
-                flyingCoin.style.position = 'fixed';
-                flyingCoin.style.color = '#27ae60';
-                flyingCoin.style.fontWeight = 'bold';
-                flyingCoin.style.fontSize = '20px';
-                flyingCoin.style.pointerEvents = 'none';
-                flyingCoin.style.zIndex = '1000';
-                
-                const rect = clickButton.getBoundingClientRect();
-                flyingCoin.style.left = rect.left + rect.width/2 + 'px';
-                flyingCoin.style.top = rect.top + 'px';
-                
-                document.body.appendChild(flyingCoin);
-                
-                flyingCoin.animate([
-                    { transform: 'translateY(0)', opacity: 1 },
-                    { transform: 'translateY(-50px)', opacity: 0 }
-                ], {
-                    duration: 1000,
-                    easing: 'ease-out'
-                });
-                
-                setTimeout(() => {
-                    flyingCoin.remove();
-                }, 1000);
-                
-            } catch (error) {
-                showError('Ошибка: ' + error.message);
-            } finally {
-                clickButton.disabled = false;
-                clickButton.textContent = '🎯 КЛИКНУТЬ! +1';
-            }
-        }
-
-        // Инициализация приложения
-        function initApp() {
-            try {
-                tg.expand();
-                tg.enableClosingConfirmation();
-                
-                user_id = tg.initDataUnsafe.user.id;
-                userIdSpan.textContent = user_id;
-                
-                loadCoins();
-                
-                clickButton.addEventListener('click', handleClick);
-                topButton.addEventListener('click', openTopModal);
-                closeModal.addEventListener('click', closeTopModal);
-                
-                window.addEventListener('click', (event) => {
-                    if (event.target === topModal) {
-                        closeTopModal();
-                    }
-                });
-                
-                clickButton.addEventListener('click', () => {
-                    if (navigator.vibrate) {
-                        navigator.vibrate(10);
-                    }
-                });
-                
-            } catch (error) {
-                showError('Ошибка инициализации: ' + error.message);
-                user_id = 'test_user_' + Math.random().toString(36).substr(2, 9);
-                userIdSpan.textContent = user_id + ' (тестовый режим)';
-                loadCoins();
-                clickButton.addEventListener('click', handleClick);
-                topButton.addEventListener('click', openTopModal);
-                closeModal.addEventListener('click', closeTopModal);
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', initApp);
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
