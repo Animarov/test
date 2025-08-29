@@ -67,10 +67,19 @@
             margin-bottom: 15px;
         }
         
-        .leaderboard-item {
+        .leaderboard-header {
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
             border-bottom: 1px solid rgba(255,255,255,0.2);
             align-items: center;
         }
@@ -81,7 +90,7 @@
         
         .rank {
             font-weight: bold;
-            width: 30px;
+            width: 40px;
             text-align: center;
         }
         
@@ -97,6 +106,8 @@
         .user-balance {
             font-weight: bold;
             color: #ffd700;
+            width: 80px;
+            text-align: right;
         }
         
         .loading {
@@ -162,7 +173,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>💰анимарка?</h1>
+        <h1>💰 Coin Clicker</h1>
         
         <div class="balance" id="balance">Загрузка...</div>
         
@@ -182,6 +193,14 @@
         
         <div class="leaderboard">
             <h2>🏆 Топ 100 игроков</h2>
+            
+            <!-- Заголовок таблицы -->
+            <div class="leaderboard-header">
+                <span class="rank">Место</span>
+                <span class="username">Никнейм</span>
+                <span class="user-balance">Баланс</span>
+            </div>
+            
             <div id="leaderboard" class="loading">Загрузка рейтинга...</div>
         </div>
         
@@ -247,7 +266,8 @@
             }
 
             async handleClick() {
-                this.balance++;
+                // Увеличиваем баланс на 1, не более!
+                this.balance = Math.max(0, this.balance + 1);
                 document.getElementById('balance').textContent = `${this.balance} монет`;
                 this.saveToLocal();
                 this.showStatus('+1 монета! 💰', 'success');
@@ -351,9 +371,12 @@
                     
                     if (data && data.success && data.balance !== undefined && data.balance !== null) {
                         const cloudBalance = parseInt(data.balance) || 0;
+                        // Защита от огромных чисел - максимум 1 миллион
+                        const safeBalance = Math.min(cloudBalance, 1000000);
+                        
                         // Используем максимальное значение между локальным и облачным
-                        if (cloudBalance > this.balance) {
-                            this.balance = cloudBalance;
+                        if (safeBalance > this.balance) {
+                            this.balance = safeBalance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                             this.saveToLocal();
                         }
@@ -372,7 +395,9 @@
                 try {
                     const saved = localStorage.getItem(`coin_balance_${this.userId}`);
                     if (saved) {
-                        this.balance = parseInt(saved) || 0;
+                        const balance = parseInt(saved) || 0;
+                        // Защита от огромных чисел
+                        this.balance = Math.min(balance, 1000000);
                         document.getElementById('balance').textContent = `${this.balance} монет`;
                         console.log('Loaded from local storage:', this.balance);
                     }
@@ -431,9 +456,9 @@
                     
                     html += `
                         <div class="leaderboard-item">
-                            <span class="rank">${index + 1}.</span>
+                            <span class="rank">${index + 1}</span>
                             <span class="username">${this.escapeHtml(displayName)}</span>
-                            <span class="user-balance">${balance} ₿</span>
+                            <span class="user-balance">${balance}</span>
                         </div>
                     `;
                 });
@@ -464,7 +489,7 @@
                 if (statusElement) {
                     statusElement.textContent = message;
                     statusElement.style.color = type === 'error' ? '#ff6b6b' : 
-                                              type === 'success' ? '#51cf66' : 
+                                              type === 'success' => '#51cf66' : 
                                               type === 'warning' ? '#fcc419' : '#ccc';
                     
                     // Автоочистка статуса через 5 секунд
