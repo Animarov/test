@@ -135,6 +135,9 @@
             user-select: none;
             overflow: hidden;
             position: relative;
+            background-image: url('https://i.postimg.cc/MKDXT0T1/photo-2025-08-30-12-22-24.jpg');
+            background-size: cover;
+            background-position: center;
         }
         
         .coin-img:active {
@@ -144,8 +147,9 @@
         .coin-content {
             font-size: 24px;
             font-weight: bold;
-            color: #8b7500;
+            color: #ffffff;
             text-align: center;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
         }
         
         .screen {
@@ -227,6 +231,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
         
         .user-balance {
@@ -234,6 +240,15 @@
             color: #c2410c;
             width: 80px;
             text-align: right;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 10px;
+            object-fit: cover;
+            border: 2px solid rgba(251, 146, 60, 0.3);
         }
         
         .loading {
@@ -454,10 +469,40 @@
         // Глобальные переменные
         let balance = 0;
         let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let userName = generateRandomName();
+        let userAvatar = generateRandomAvatar();
         let scriptURL = 'https://script.google.com/macros/s/AKfycby0jP0bpzlVyVoIqFGGoWI1dqrVVit7c18JQf2XE6mLJcxRfK_XvQvYbiq1Xts1c60ANw/exec';
         let scriptAvailable = false;
         let lastSaveTime = 0;
         let isSaving = false;
+        
+        // Списки для генерации случайных имен и аватарок
+        const names = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Иван', 'Екатерина', 'Сергей', 'Ольга', 'Андрей', 'Наталья', 'Максим', 'Юлия', 'Артем', 'Ирина', 'Владимир', 'Светлана', 'Павел', 'Татьяна', 'Николай', 'Елена'];
+        const surnames = ['Иванов', 'Петров', 'Сидоров', 'Смирнов', 'Кузнецов', 'Попов', 'Васильев', 'Павлов', 'Семенов', 'Голубев', 'Виноградов', 'Богданов', 'Воробьев', 'Федоров', 'Михайлов', 'Беляев', 'Тарасов', 'Белов', 'Комаров', 'Орлов'];
+        const avatars = [
+            'https://i.pravatar.cc/150?img=1',
+            'https://i.pravatar.cc/150?img=2',
+            'https://i.pravatar.cc/150?img=3',
+            'https://i.pravatar.cc/150?img=4',
+            'https://i.pravatar.cc/150?img=5',
+            'https://i.pravatar.cc/150?img=6',
+            'https://i.pravatar.cc/150?img=7',
+            'https://i.pravatar.cc/150?img=8',
+            'https://i.pravatar.cc/150?img=9',
+            'https://i.pravatar.cc/150?img=10'
+        ];
+        
+        // Генерация случайного имени
+        function generateRandomName() {
+            const name = names[Math.floor(Math.random() * names.length)];
+            const surname = surnames[Math.floor(Math.random() * surnames.length)];
+            return name + ' ' + surname;
+        }
+        
+        // Генерация случайного аватара
+        function generateRandomAvatar() {
+            return avatars[Math.floor(Math.random() * avatars.length)];
+        }
         
         // Глобальные функции для навигации
         function showScreen(screenId) {
@@ -579,6 +624,10 @@
         function saveToLocal() {
             try {
                 localStorage.setItem(`coin_balance_${userId}`, balance.toString());
+                localStorage.setItem(`coin_user_${userId}`, JSON.stringify({
+                    name: userName,
+                    avatar: userAvatar
+                }));
             } catch (error) {
                 console.error('Ошибка сохранения в localStorage:', error);
             }
@@ -593,6 +642,14 @@
                     if (!isNaN(savedBalance) && savedBalance >= 0 && savedBalance <= 1000000) {
                         balance = savedBalance;
                     }
+                }
+                
+                // Загружаем данные пользователя
+                const userData = localStorage.getItem(`coin_user_${userId}`);
+                if (userData) {
+                    const parsedData = JSON.parse(userData);
+                    userName = parsedData.name || userName;
+                    userAvatar = parsedData.avatar || userAvatar;
                 }
             } catch (error) {
                 balance = 0;
@@ -614,10 +671,26 @@
                         const userId = key.replace('coin_balance_', '');
                         const balance = parseInt(localStorage.getItem(key));
                         if (!isNaN(balance)) {
+                            // Пытаемся загрузить данные пользователя
+                            let username = 'Игрок';
+                            let avatar = 'https://i.pravatar.cc/150?img=6';
+                            
+                            try {
+                                const userData = localStorage.getItem(`coin_user_${userId}`);
+                                if (userData) {
+                                    const parsedData = JSON.parse(userData);
+                                    username = parsedData.name || username;
+                                    avatar = parsedData.avatar || avatar;
+                                }
+                            } catch (e) {
+                                console.error('Ошибка загрузки данных пользователя:', e);
+                            }
+                            
                             users.push({
                                 userId: userId,
                                 balance: balance,
-                                username: userId.startsWith('user_') ? 'Игрок' : 'Гость'
+                                username: username,
+                                avatar: avatar
                             });
                         }
                     }
@@ -636,7 +709,8 @@
                     users.push({
                         userId: userId,
                         balance: balance,
-                        username: 'Вы'
+                        username: userName,
+                        avatar: userAvatar
                     });
                 }
                 
@@ -667,11 +741,15 @@
             topPlayers.forEach((player, index) => {
                 const displayName = player.username || `Игрок ${(player.userId || '').substr(0, 6)}`;
                 const balance = player.balance || 0;
+                const avatar = player.avatar || 'https://i.pravatar.cc/150?img=6';
                 
                 html += `
                     <div class="leaderboard-item">
                         <span class="rank">${index + 1}</span>
-                        <span class="username">${escapeHtml(displayName)}</span>
+                        <span class="username">
+                            <img src="${avatar}" class="user-avatar" alt="${displayName}">
+                            ${escapeHtml(displayName)}
+                        </span>
                         <span class="user-balance">${balance}</span>
                     </div>
                 `;
