@@ -13,12 +13,17 @@
             padding: 20px;
             min-height: 100vh;
             color: white;
+            display: flex;
+            flex-direction: column;
         }
         
         .container {
             max-width: 400px;
             margin: 0 auto;
             text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         
         .header {
@@ -36,17 +41,24 @@
         }
         
         .main-menu {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            display: flex;
+            flex-direction: column;
             gap: 15px;
             margin: 20px 0;
+            flex: 1;
+        }
+        
+        .menu-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
         }
         
         .menu-btn {
             background: rgba(255, 255, 255, 0.15);
             border: 2px solid rgba(255, 255, 255, 0.2);
             border-radius: 15px;
-            padding: 20px 15px;
+            padding: 20px 10px;
             color: white;
             cursor: pointer;
             font-size: 16px;
@@ -74,14 +86,46 @@
             margin-bottom: 8px;
         }
         
+        .coin-section {
+            margin-top: auto;
+            padding: 20px 0;
+        }
+        
+        .coin {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle at 30% 30%, #ffd700, #daa520);
+            border-radius: 50%;
+            margin: 0 auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            transition: transform 0.1s ease;
+            border: 4px solid #ffed85;
+            color: #8b7500;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            user-select: none;
+        }
+        
+        .coin:active {
+            transform: scale(0.95);
+        }
+        
         /* Стили для экрана рейтинга */
         .screen {
             display: none;
             animation: fadeIn 0.3s ease;
+            flex: 1;
+            overflow-y: auto;
         }
         
         .screen.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
         }
         
         .back-btn {
@@ -93,6 +137,7 @@
             cursor: pointer;
             margin-bottom: 15px;
             font-size: 14px;
+            align-self: flex-start;
         }
         
         .leaderboard {
@@ -101,6 +146,8 @@
             padding: 20px;
             margin-top: 15px;
             backdrop-filter: blur(10px);
+            flex: 1;
+            overflow-y: auto;
         }
         
         .leaderboard h2 {
@@ -212,35 +259,48 @@
             </div>
             
             <div class="main-menu">
-                <button class="menu-btn" onclick="showScreen('top-screen')">
-                    <div class="menu-icon">🏆</div>
-                    Топ
-                </button>
+                <!-- Первый ряд из 3 кнопок -->
+                <div class="menu-row">
+                    <button class="menu-btn" onclick="showScreen('top-screen')">
+                        <div class="menu-icon">🏆</div>
+                        Топ
+                    </button>
+                    
+                    <button class="menu-btn" onclick="showScreen('shop-screen')">
+                        <div class="menu-icon">🛒</div>
+                        Магазин
+                    </button>
+                    
+                    <button class="menu-btn" onclick="showScreen('games-screen')">
+                        <div class="menu-icon">🎮</div>
+                        Игры
+                    </button>
+                </div>
                 
-                <button class="menu-btn" onclick="showScreen('shop-screen')">
-                    <div class="menu-icon">🛒</div>
-                    Магазин
-                </button>
-                
-                <button class="menu-btn" onclick="showScreen('games-screen')">
-                    <div class="menu-icon">🎮</div>
-                    Игры
-                </button>
-                
-                <button class="menu-btn" onclick="showScreen('transfer-screen')">
-                    <div class="menu-icon">↗️</div>
-                    Перевести
-                </button>
-                
-                <button class="menu-btn" onclick="showScreen('catalog-screen')">
-                    <div class="menu-icon">📦</div>
-                    Каталог
-                </button>
-                
-                <button class="menu-btn" onclick="showScreen('referrals-screen')">
-                    <div class="menu-icon">👥</div>
-                    Рефералы
-                </button>
+                <!-- Второй ряд из 3 кнопок -->
+                <div class="menu-row">
+                    <button class="menu-btn" onclick="showScreen('transfer-screen')">
+                        <div class="menu-icon">↗️</div>
+                        Перевести
+                    </button>
+                    
+                    <button class="menu-btn" onclick="showScreen('catalog-screen')">
+                        <div class="menu-icon">📦</div>
+                        Каталог
+                    </button>
+                    
+                    <button class="menu-btn" onclick="showScreen('referrals-screen')">
+                        <div class="menu-icon">👥</div>
+                        Рефералы
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Монета внизу -->
+            <div class="coin-section">
+                <div class="coin" id="coin">
+                    КЛИК!
+                </div>
             </div>
             
             <div class="status" id="status"></div>
@@ -353,15 +413,41 @@
                     // Показываем текущий баланс
                     this.updateBalanceDisplay();
                     
+                    // Настраиваем обработчик клика на монету
+                    this.setupCoinClick();
+                    
                     // Проверяем доступность скрипта
                     this.checkScriptAvailability();
                     
-                    this.showStatus('Добро пожаловать!', 'success');
+                    this.showStatus('Кликайте на монету!', 'success');
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
                     this.debugLog('Ошибка инициализации: ' + error.message);
                 }
+            }
+
+            setupCoinClick() {
+                const coin = document.getElementById('coin');
+                let lastClickTime = 0;
+                
+                const handleClick = () => {
+                    const now = Date.now();
+                    if (now - lastClickTime < 100) return;
+                    lastClickTime = now;
+                    
+                    this.balance++;
+                    this.updateBalanceDisplay();
+                    this.saveToLocal();
+                    
+                    this.showStatus('+1 монета! 💰', 'success');
+                };
+                
+                coin.addEventListener('click', handleClick);
+                coin.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleClick();
+                }, { passive: false });
             }
 
             debugLog(message) {
