@@ -163,6 +163,7 @@
             margin-top: 15px;
             font-size: 12px;
             min-height: 20px;
+            text-align: center;
         }
         
         .controls {
@@ -172,6 +173,11 @@
             margin: 15px 0;
             flex-wrap: wrap;
         }
+        
+        .success { color: #51cf66; }
+        .error { color: #ff6b6b; }
+        .warning { color: #fcc419; }
+        .info { color: #339af0; }
     </style>
 </head>
 <body>
@@ -215,7 +221,7 @@
                 this.userId = null;
                 this.balance = 0;
                 this.telegram = null;
-                // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL!
+                // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL Google Apps Script!
                 this.scriptURL = 'https://script.google.com/macros/s/AKfycby0jP0bpzlVyVoIqFGGoWI1dqrVVit7c18JQf2XE6mLJcxRfK_XvQvYbiq1Xts1c60ANw/exec';
                 this.lastSaveTime = 0;
                 this.isSaving = false;
@@ -231,10 +237,6 @@
                     this.scriptAvailable = await this.testScriptConnection();
                     console.log('Script available:', this.scriptAvailable);
                     
-                    if (!this.scriptAvailable) {
-                        this.showStatus('Работаем в оффлайн-режиме 📴', 'warning');
-                    }
-
                     // Инициализация Telegram Web App
                     if (window.Telegram && window.Telegram.WebApp) {
                         this.telegram = window.Telegram.WebApp;
@@ -259,6 +261,8 @@
                         } catch (error) {
                             console.log('Ошибка загрузки из облака:', error);
                         }
+                    } else {
+                        this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
                     }
                     
                     // Загружаем рейтинг (если доступно)
@@ -285,17 +289,16 @@
 
             async testScriptConnection() {
                 try {
-                    // Простая проверка доступности скрипта
                     const testUrl = `${this.scriptURL}?action=test&t=${Date.now()}`;
                     const response = await fetch(testUrl, { 
                         method: 'GET',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'text/plain'
                         }
                     });
                     
-                    // Если ответ получен (даже с ошибкой), значит скрипт доступен
-                    return true;
+                    const text = await response.text();
+                    return text === 'OK' || response.ok;
                 } catch (error) {
                     console.log('Google Apps Script недоступен:', error);
                     return false;
@@ -322,7 +325,7 @@
             async makeRequest(url, options = {}) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
                     
                     const response = await fetch(url, {
                         ...options,
@@ -336,7 +339,7 @@
                     clearTimeout(timeoutId);
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+                        throw new Error(`HTTP error: ${response.status}`);
                     }
                     
                     const text = await response.text();
@@ -396,7 +399,7 @@
                     }
                 } catch (error) {
                     console.error('Ошибка сохранения в облако:', error);
-                    this.showStatus('Ошибка сохранения ⚠️', 'error');
+                    this.showStatus('Ошибка сохранения: ' + error.message, 'error');
                     return false;
                 } finally {
                     this.isSaving = false;
@@ -430,21 +433,24 @@
                         const cloudBalance = parseInt(data.balance);
                         
                         if (!isNaN(cloudBalance) && cloudBalance >= 0) {
-                            const safeBalance = Math.min(cloudBalance, 1000);
+                            const safeBalance = Math.min(cloudBalance, 1000000);
                             
                             if (safeBalance > this.balance) {
                                 this.balance = safeBalance;
                                 document.getElementById('balance').textContent = `${this.balance} монет`;
                                 this.saveToLocal();
+                                this.showStatus('Данные загружены ✅', 'success');
+                            } else {
+                                this.showStatus('Локальные данные актуальны ✅', 'success');
                             }
-                            this.showStatus('Данные загружены ✅', 'success');
                             return true;
                         }
                     }
+                    this.showStatus('Нет данных в облаке', 'info');
                     return false;
                 } catch (error) {
                     console.log('Не удалось загрузить из облака:', error.message);
-                    this.showStatus('Ошибка загрузки ⚠️', 'error');
+                    this.showStatus('Ошибка загрузки: ' + error.message, 'error');
                     return false;
                 } finally {
                     this.toggleButtons(true);
@@ -457,7 +463,7 @@
                     if (saved) {
                         const balance = parseInt(saved);
                         if (!isNaN(balance) && balance >= 0) {
-                            this.balance = Math.min(balance, 1000);
+                            this.balance = Math.min(balance, 1000000);
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                         }
                     }
@@ -564,14 +570,13 @@
                 const statusElement = document.getElementById('status');
                 if (statusElement) {
                     statusElement.textContent = message;
-                    statusElement.style.color = type === 'error' ? '#ff6b6b' : 
-                                              type === 'success' ? '#51cf66' : 
-                                              type === 'warning' ? '#fcc419' : '#ccc';
+                    statusElement.className = `status ${type}`;
                     
                     if (type !== 'loading') {
                         setTimeout(() => {
                             if (statusElement.textContent === message) {
                                 statusElement.textContent = '';
+                                statusElement.className = 'status';
                             }
                         }, 3000);
                     }
