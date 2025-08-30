@@ -30,6 +30,7 @@
             z-index: 0;
             top: -50px;
             animation: fall linear infinite;
+            pointer-events: none; /* Добавлено: листья не блокируют клики */
         }
         
         .leaf1 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ea580c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
@@ -66,6 +67,8 @@
         
         .header {
             margin-bottom: 20px;
+            z-index: 2; /* Добавлено: чтобы кнопки были поверх других элементов */
+            position: relative;
         }
         
         .balance {
@@ -99,6 +102,8 @@
             gap: 15px;
             margin: 20px 0;
             flex: 1;
+            z-index: 2; /* Добавлено: чтобы кнопки были поверх других элементов */
+            position: relative;
         }
         
         .menu-row {
@@ -124,6 +129,8 @@
             min-height: 80px;
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10; /* Увеличено: чтобы кнопки были кликабельны */
+            position: relative;
         }
         
         .menu-btn:hover {
@@ -144,6 +151,8 @@
         .coin-section {
             margin-top: auto;
             padding: 20px 0;
+            z-index: 1; /* Уменьшено: чтобы монета была под кнопками */
+            position: relative;
         }
         
         .coin-img {
@@ -162,6 +171,7 @@
             user-select: none;
             overflow: hidden;
             position: relative;
+            z-index: 1;
         }
         
         .coin-img:before {
@@ -190,6 +200,9 @@
             animation: fadeIn 0.3s ease;
             flex: 1;
             overflow-y: auto;
+            z-index: 5; /* Добавлено: чтобы экраны были поверх */
+            position: relative;
+            background: inherit; /* Добавлено: наследует фон */
         }
         
         .screen.active {
@@ -208,6 +221,7 @@
             font-size: 14px;
             align-self: flex-start;
             backdrop-filter: blur(10px);
+            z-index: 10;
         }
         
         .leaderboard {
@@ -305,6 +319,8 @@
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(251, 146, 60, 0.3);
+            z-index: 2; /* Добавлено: чтобы статус был поверх */
+            position: relative;
         }
         
         .success { color: #166534; background: rgba(220, 252, 231, 0.7); }
@@ -600,11 +616,20 @@
                     this.showStatus('+1 монета! 💰', 'success');
                 };
                 
+                // Исправлено: правильное добавление обработчиков событий
                 coin.addEventListener('click', handleClick);
                 coin.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     handleClick();
                 }, { passive: false });
+                
+                // Добавлено: обработка ошибок при загрузке изображения
+                const coinImage = coin.querySelector('img');
+                if (coinImage) {
+                    coinImage.onerror = function() {
+                        this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSIjZmZkNzAwIiBzdHJva2U9IiNkYWE1MjAiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOGI3NTAwIj5DTElDSyE8L3RleHQ+PC9zdmc+';
+                    };
+                }
             }
 
             debugLog(message) {
