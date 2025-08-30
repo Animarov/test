@@ -8,13 +8,47 @@
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(to bottom, #ffffff, #fff5e6, #ffedd5, #ffe4bc);
             margin: 0;
             padding: 20px;
             min-height: 100vh;
-            color: white;
+            color: #7c2d12;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Анимированные падающие листья */
+        .leaf {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            opacity: 0.7;
+            z-index: -1;
+        }
+        
+        .leaf1 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ea580c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
+        .leaf2 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dc2626'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
+        .leaf3 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c2410c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
+        
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.8;
+            }
+            90% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(100vh) translateX(100px) rotate(360deg);
+                opacity: 0;
+            }
         }
         
         .container {
@@ -24,6 +58,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            z-index: 1;
         }
         
         .header {
@@ -34,10 +69,25 @@
             font-size: 28px;
             font-weight: bold;
             margin: 20px 0;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.7);
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 15px;
             backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            color: #7c2d12;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .balance-label {
+            font-size: 18px;
+            color: #ea580c;
+            margin-bottom: 5px;
+        }
+        
+        .balance-amount {
+            font-size: 32px;
+            color: #c2410c;
+            font-weight: 800;
         }
         
         .main-menu {
@@ -55,11 +105,11 @@
         }
         
         .menu-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid rgba(251, 146, 60, 0.3);
             border-radius: 15px;
             padding: 20px 10px;
-            color: white;
+            color: #7c2d12;
             cursor: pointer;
             font-size: 16px;
             font-weight: bold;
@@ -70,11 +120,13 @@
             justify-content: center;
             min-height: 80px;
             backdrop-filter: blur(10px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         
         .menu-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 237, 213, 0.8);
             transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
         
         .menu-btn:active {
@@ -92,27 +144,37 @@
         }
         
         .coin-img {
-            width: 360px;
-            height: 360px;
+            width: 240px;
+            height: 240px;
             border-radius: 50%;
             margin: 0 auto;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
             transition: transform 0.1s ease;
-            border: 4px solid #ffed85;
-            background-size: cover;
-            background-position: center;
+            border: 6px solid #ffd54f;
+            background: radial-gradient(circle, #ffd54f 0%, #f59e0b 100%);
             user-select: none;
             overflow: hidden;
+            position: relative;
+        }
+        
+        .coin-img:before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.1) 90%);
+            border-radius: 50%;
         }
         
         .coin-img img {
-            width: 100%;
-            height: 100%;
+            width: 90%;
+            height: 90%;
             object-fit: cover;
+            border-radius: 50%;
         }
         
         .coin-img:active {
@@ -133,47 +195,52 @@
         }
         
         .back-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
+            background: rgba(255, 255, 255, 0.7);
+            border: 2px solid rgba(251, 146, 60, 0.3);
             padding: 10px 15px;
-            border-radius: 8px;
-            color: white;
+            border-radius: 10px;
+            color: #7c2d12;
             cursor: pointer;
             margin-bottom: 15px;
             font-size: 14px;
             align-self: flex-start;
+            backdrop-filter: blur(10px);
         }
         
         .leaderboard {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.7);
             border-radius: 15px;
             padding: 20px;
             margin-top: 15px;
             backdrop-filter: blur(10px);
             flex: 1;
             overflow-y: auto;
+            border: 2px solid rgba(251, 146, 60, 0.3);
         }
         
         .leaderboard h2 {
             margin-top: 0;
             margin-bottom: 15px;
+            color: #7c2d12;
         }
         
         .leaderboard-header {
             display: flex;
             justify-content: space-between;
             padding: 10px 0;
-            border-bottom: 2px solid rgba(255,255,255,0.3);
+            border-bottom: 2px solid rgba(124, 45, 18, 0.3);
             font-weight: bold;
             margin-bottom: 5px;
+            color: #7c2d12;
         }
         
         .leaderboard-item {
             display: flex;
             justify-content: space-between;
             padding: 8px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(124, 45, 18, 0.2);
             align-items: center;
+            color: #7c2d12;
         }
         
         .leaderboard-item:last-child {
@@ -184,6 +251,7 @@
             font-weight: bold;
             width: 40px;
             text-align: center;
+            color: #ea580c;
         }
         
         .username {
@@ -197,7 +265,7 @@
         
         .user-balance {
             font-weight: bold;
-            color: #ffd700;
+            color: #c2410c;
             width: 80px;
             text-align: right;
         }
@@ -205,22 +273,23 @@
         .loading {
             text-align: center;
             padding: 20px;
-            color: #ccc;
+            color: #a8a29e;
         }
         
         .empty-state {
             text-align: center;
             padding: 30px;
-            color: #ccc;
+            color: #a8a29e;
             font-style: italic;
         }
         
         .user-rank {
-            background: rgba(255, 215, 0, 0.2);
-            border-radius: 8px;
+            background: rgba(255, 237, 213, 0.7);
+            border-radius: 10px;
             padding: 10px;
             margin-top: 10px;
-            border: 1px solid rgba(255, 215, 0, 0.3);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            color: #7c2d12;
         }
         
         .status {
@@ -228,12 +297,17 @@
             font-size: 12px;
             min-height: 20px;
             text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(251, 146, 60, 0.3);
         }
         
-        .success { color: #51cf66; }
-        .error { color: #ff6b6b; }
-        .warning { color: #fcc419; }
-        .info { color: #339af0; }
+        .success { color: #166534; background: rgba(220, 252, 231, 0.7); }
+        .error { color: #dc2626; background: rgba(254, 226, 226, 0.7); }
+        .warning { color: #ca8a04; background: rgba(254, 249, 195, 0.7); }
+        .info { color: #1d4ed8; background: rgba(219, 234, 254, 0.7); }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -243,9 +317,9 @@
         .debug-info {
             display: none;
             font-size: 10px;
-            color: #ccc;
+            color: #a8a29e;
             margin-top: 10px;
-            background: rgba(0,0,0,0.3);
+            background: rgba(0,0,0,0.1);
             padding: 10px;
             border-radius: 5px;
             max-height: 100px;
@@ -258,8 +332,10 @@
         <!-- Главное меню -->
         <div id="main-menu-screen" class="screen active">
             <div class="header">
-                <h1>💰 Coin Clicker</h1>
-                <div class="balance" id="balance">0 монет</div>
+                <div class="balance">
+                    <div class="balance-label">Ваш счёт:</div>
+                    <div class="balance-amount" id="balance">0 монет</div>
+                </div>
             </div>
             
             <div class="main-menu">
@@ -424,11 +500,39 @@
                     // Проверяем доступность скрипта
                     this.checkScriptAvailability();
                     
+                    // Создаем падающие листья
+                    this.createFallingLeaves();
+                    
                     this.showStatus('Кликайте на монету!', 'success');
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
                     this.debugLog('Ошибка инициализации: ' + error.message);
+                }
+            }
+
+            createFallingLeaves() {
+                const leafTypes = ['leaf1', 'leaf2', 'leaf3'];
+                const body = document.body;
+                
+                // Создаем 15 листьев
+                for (let i = 0; i < 15; i++) {
+                    const leaf = document.createElement('div');
+                    leaf.className = 'leaf ' + leafTypes[Math.floor(Math.random() * leafTypes.length)];
+                    
+                    // Случайная позиция по горизонтали
+                    const left = Math.random() * 100;
+                    leaf.style.left = left + 'vw';
+                    
+                    // Случайная задержка анимации
+                    const delay = Math.random() * 15;
+                    leaf.style.animationDelay = delay + 's';
+                    
+                    // Случайная длительность анимации
+                    const duration = 10 + Math.random() * 20;
+                    leaf.style.animation = `fall ${duration}s linear infinite`;
+                    
+                    body.appendChild(leaf);
                 }
             }
 
@@ -704,7 +808,7 @@
                     return;
                 }
                 
-                topPlayers.forEach((player, index) => {
+                topPlayers.forEach((player, index) {
                     const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
                     const balance = player.balance || 0;
                     
