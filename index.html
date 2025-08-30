@@ -631,6 +631,12 @@
                     name: userName,
                     avatar: userAvatar
                 }));
+                
+                // Сохраняем в облако каждые 10 кликов или каждую минуту
+                if (balance % 10 === 0 || Date.now() - lastSaveTime > 60000) {
+                    saveToCloud();
+                    lastSaveTime = Date.now();
+                }
             } catch (error) {
                 console.error('Ошибка сохранения в localStorage:', error);
             }
@@ -777,6 +783,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Загружаем сохраненный баланс
             loadFromLocal();
+
             
             // Показываем текущий баланс
             updateBalanceDisplay();
