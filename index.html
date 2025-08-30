@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -344,17 +345,17 @@
             <div class="main-menu">
                 <!-- Первый ряд из 3 кнопок -->
                 <div class="menu-row">
-                    <button class="menu-btn" data-screen="top-screen">
+                    <button class="menu-btn" onclick="showScreen('top-screen')">
                         <div class="menu-icon">🏆</div>
                         Топ
                     </button>
                     
-                    <button class="menu-btn" data-screen="shop-screen">
+                    <button class="menu-btn" onclick="showScreen('shop-screen')">
                         <div class="menu-icon">🛒</div>
                         Магазин
                     </button>
                     
-                    <button class="menu-btn" data-screen="games-screen">
+                    <button class="menu-btn" onclick="showScreen('games-screen')">
                         <div class="menu-icon">🎮</div>
                         Игры
                     </button>
@@ -362,17 +363,17 @@
                 
                 <!-- Второй ряд из 3 кнопок -->
                 <div class="menu-row">
-                    <button class="menu-btn" data-screen="transfer-screen">
+                    <button class="menu-btn" onclick="showScreen('transfer-screen')">
                         <div class="menu-icon">↗️</div>
                         Перевести
                     </button>
                     
-                    <button class="menu-btn" data-screen="catalog-screen">
+                    <button class="menu-btn" onclick="showScreen('catalog-screen')">
                         <div class="menu-icon">📦</div>
                         Каталог
                     </button>
                     
-                    <button class="menu-btn" data-screen="referrals-screen">
+                    <button class="menu-btn" onclick="showScreen('referrals-screen')">
                         <div class="menu-icon">👥</div>
                         Рефералы
                     </button>
@@ -382,7 +383,7 @@
             <!-- Монета внизу -->
             <div class="coin-section">
                 <div class="coin-img" id="coin">
-                    <img src="https://i.postimg.cc/MKDXT0T1/photo-2025-08-30-12-22-24.jpg" alt="Coin" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIi fmaWxsPSIjZmZkNzAwIiBzdHJva2U9IiNkYWE1MjAiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOGI3NTAwIj5DTElDSyE8L3RleHQ+PC9zdmc+'">
+                    <img src="https://i.postimg.cc/MKDXT0T1/photo-2025-08-30-12-22-24.jpg" alt="Coin" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSIjZmZkNzAwIiBzdHJva2U9IiNkYWE1MjAiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOGI3NTAwIj5DTElDSyE8L3RleHQ+PC9zdmc+'">
                 </div>
             </div>
             
@@ -391,7 +392,7 @@
 
         <!-- Экран Топ (Рейтинг) -->
         <div id="top-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>🏆 Топ игроков</h2>
             
             <div class="user-rank" id="user-rank" style="display: none;">
@@ -413,7 +414,7 @@
 
         <!-- Заглушки для остальных экранов -->
         <div id="shop-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>🛒 Магазин</h2>
             <div class="empty-state">
                 Магазин скоро откроется!<br>
@@ -422,7 +423,7 @@
         </div>
 
         <div id="games-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>🎮 Игры</h2>
             <div class="empty-state">
                 Игры скоро появятся!<br>
@@ -431,7 +432,7 @@
         </div>
 
         <div id="transfer-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>↗️ Перевести</h2>
             <div class="empty-state">
                 Переводы скоро будут доступны!<br>
@@ -440,7 +441,7 @@
         </div>
 
         <div id="catalog-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>📦 Каталог</h2>
             <div class="empty-state">
                 Каталог в разработке!<br>
@@ -449,7 +450,7 @@
         </div>
 
         <div id="referrals-screen" class="screen">
-            <button class="back-btn" data-screen="main-menu-screen">← Назад</button>
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>👥 Рефералы</h2>
             <div class="empty-state">
                 Реферальная система скоро!<br>
@@ -484,13 +485,13 @@
 
         function refreshLeaderboard() {
             if (window.coinApp) {
-                window.coinApp.loadLeaderboard().catch(() => {});
+                window.coinApp.loadLeaderboard();
             }
         }
 
         function saveToCloud() {
             if (window.coinApp) {
-                window.coinApp.saveToCloud().catch(() => {});
+                window.coinApp.saveToCloud();
             }
         }
 
@@ -539,9 +540,6 @@
                     // Настраиваем обработчик клика на монету
                     this.setupCoinClick();
                     
-                    // Настраиваем обработчики кнопок
-                    this.setupButtonHandlers();
-                    
                     // Проверяем доступность скрипта
                     this.checkScriptAvailability();
                     
@@ -554,28 +552,6 @@
                     console.error('Ошибка инициализации:', error);
                     this.debugLog('Ошибка инициализации: ' + error.message);
                 }
-            }
-
-            setupButtonHandlers() {
-                // Обработчики для кнопок меню
-                document.querySelectorAll('.menu-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const screenId = e.currentTarget.getAttribute('data-screen');
-                        if (screenId) {
-                            showScreen(screenId);
-                        }
-                    });
-                });
-
-                // Обработчики для кнопок назад
-                document.querySelectorAll('.back-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const screenId = e.currentTarget.getAttribute('data-screen');
-                        if (screenId) {
-                            showScreen(screenId);
-                        }
-                    });
-                });
             }
 
             createFallingLeaves() {
@@ -957,10 +933,10 @@
             // Автосохранение каждые 30 секунд
             setInterval(() => {
                 if (window.coinApp) {
-                    window.coinApp.saveToCloud().catch(() => {});
+                    window.coinApp.saveToCloud();
                 }
             }, 30000);
         });
     </script>
 </body>
-    </html>
+        </html>
