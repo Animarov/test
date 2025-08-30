@@ -433,16 +433,11 @@
                         const cloudBalance = parseInt(data.balance);
                         
                         if (!isNaN(cloudBalance) && cloudBalance >= 0) {
-                            const safeBalance = Math.min(cloudBalance, 1000000);
-                            
-                            if (safeBalance > this.balance) {
-                                this.balance = safeBalance;
-                                document.getElementById('balance').textContent = `${this.balance} монет`;
-                                this.saveToLocal();
-                                this.showStatus('Данные загружены ✅', 'success');
-                            } else {
-                                this.showStatus('Локальные данные актуальны ✅', 'success');
-                            }
+                            // ВАЖНОЕ ИСПРАВЛЕНИЕ: Всегда используем баланс из облака
+                            this.balance = cloudBalance;
+                            document.getElementById('balance').textContent = `${this.balance} монет`;
+                            this.saveToLocal();
+                            this.showStatus('Данные загружены ✅', 'success');
                             return true;
                         }
                     }
@@ -463,7 +458,8 @@
                     if (saved) {
                         const balance = parseInt(saved);
                         if (!isNaN(balance) && balance >= 0) {
-                            this.balance = Math.min(balance, 1000000);
+                            // Убираем ограничение в 1,000,000 монет
+                            this.balance = balance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                         }
                     }
@@ -521,7 +517,7 @@
                 const leaderboardElement = document.getElementById('leaderboard');
                 
                 let html = '';
-                leaderboard.slice(0, 100).forEach((player, index) => {
+                leaderboard.slice(0, 100).forEach((player, index) {
                     const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
                     const balance = player.balance || 0;
                     
