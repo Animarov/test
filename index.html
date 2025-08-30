@@ -27,7 +27,9 @@
             background-size: contain;
             background-repeat: no-repeat;
             opacity: 0.7;
-            z-index: -1;
+            z-index: 0;
+            top: -50px;
+            animation: fall linear infinite;
         }
         
         .leaf1 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ea580c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
@@ -59,6 +61,7 @@
             display: flex;
             flex-direction: column;
             z-index: 1;
+            position: relative;
         }
         
         .header {
@@ -144,8 +147,8 @@
         }
         
         .coin-img {
-            width: 360px;
-            height: 360px;
+            width: 240px;
+            height: 240px;
             border-radius: 50%;
             margin: 0 auto;
             cursor: pointer;
@@ -530,7 +533,7 @@
                     
                     // Случайная длительность анимации
                     const duration = 10 + Math.random() * 20;
-                    leaf.style.animation = `fall ${duration}s linear infinite`;
+                    leaf.style.animationDuration = duration + 's';
                     
                     body.appendChild(leaf);
                 }
@@ -934,4 +937,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
