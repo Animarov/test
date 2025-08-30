@@ -38,6 +38,7 @@
             border: 4px solid #ffed85;
             color: #8b7500;
             text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            position: relative;
         }
         
         .coin:active {
@@ -154,6 +155,11 @@
             background: rgba(255,255,255,0.3);
         }
         
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .status {
             margin-top: 15px;
             font-size: 12px;
@@ -167,6 +173,17 @@
             margin: 15px 0;
             flex-wrap: wrap;
         }
+        
+        .click-guard {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,0,0,0.1);
+            display: none;
+            border-radius: 50%;
+        }
     </style>
 </head>
 <body>
@@ -177,12 +194,13 @@
         
         <div class="coin" id="coin">
             КЛИК!
+            <div class="click-guard" id="click-guard"></div>
         </div>
         
         <div class="controls">
-            <button class="btn" onclick="saveToCloud()">💾 Сохранить</button>
-            <button class="btn" onclick="loadFromCloud()">☁️ Загрузить</button>
-            <button class="btn" onclick="refreshLeaderboard()">🔄 Рейтинг</button>
+            <button class="btn" id="save-btn" onclick="saveToCloud()">💾 Сохранить</button>
+            <button class="btn" id="load-btn" onclick="loadFromCloud()">☁️ Загрузить</button>
+            <button class="btn" id="refresh-btn" onclick="refreshLeaderboard()">🔄 Рейтинг</button>
         </div>
         
         <div id="user-rank" class="user-rank" style="display: none;">
@@ -210,9 +228,11 @@
                 this.userId = null;
                 this.balance = 0;
                 this.telegram = null;
-                this.scriptURL = 'https://script.google.com/macros/s/AKfycbxRBvEBR-4yzCJhUDM08Ba6N0enBZcqD7PYidYtN5KcsKL1HI3_uY-vAJzkcTEWHfMISQ/exec';
+                this.scriptURL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgINXPiOILQhCWeTWDBspdGCMrLqiFgPUfQ-krTFXTH0KoCtJPLXhses0GJwz0nU87R9iCVbjvQunJjmKtrX5Yfh0VZQwtnIUZvMTxCfPyen0zRWyfL7nAaDzo_BW6BujR7PQCE3t7EumoJfN_qFUUtiBHEpc3iQOTYYqbqU2fRe87MOseaopgbRy-QehT_Ny0lhh79A86GNB7kpfu1NOIcpd9Ineqgm71zSa_rc0qZsga7kTyzSMh4Nyp4qBK8epDeQnTyFLuwVemx6attBxHjvUUittPSQYbOC4kO&lib=M8jfKJC7B-mOtFqIFjrnKhu_eJkRYzjVc';
                 this.lastSaveTime = 0;
                 this.isSaving = false;
+                this.lastClickTime = 0;
+                this.clickCount = 0;
                 this.init();
             }
 
@@ -260,8 +280,8 @@
                         console.log('Загрузка рейтинга пропущена');
                     }
                     
-                    // Добавляем обработчик клика
-                    document.getElementById('coin').addEventListener('click', () => this.handleClick());
+                    // Добавляем обработчик клика с защитой
+                    this.setupClickHandler();
                     
                     this.showStatus('Готово! Кликайте по монете 🎯', 'success');
                     
@@ -270,14 +290,48 @@
                 }
             }
 
+            setupClickHandler() {
+                const coin = document.getElementById('coin');
+                const clickGuard = document.getElementById('click-guard');
+                
+                coin.addEventListener('click', (e) => {
+                    // Защита от быстрых кликов
+                    const now = Date.now();
+                    if (now - this.lastClickTime < 100) { // Максимум 10 кликов в секунду
+                        return;
+                    }
+                    this.lastClickTime = now;
+                    
+                    // Защита от множественных кликов
+                    if (this.clickCount > 50) { // Лимит кликов за сессию
+                        this.showStatus('Слишком много кликов! Подождите ⏳', 'warning');
+                        clickGuard.style.display = 'block';
+                        setTimeout(() => {
+                            clickGuard.style.display = 'none';
+                            this.clickCount = 0;
+                        }, 5000);
+                        return;
+                    }
+                    
+                    this.clickCount++;
+                    this.handleClick();
+                });
+            }
+
             async handleClick() {
+                // ТОЛЬКО +1 монета за клик!
                 this.balance++;
                 document.getElementById('balance').textContent = `${this.balance} монет`;
                 this.saveToLocal();
-                this.showStatus('+1 монета! 💰', 'success');
                 
-                // Автосохранение в облако каждые 10 кликов
-                if (this.balance % 10 === 0 && !this.isSaving) {
+                if (this.balance % 10 === 0) {
+                    this.showStatus(`🎉 ${this.balance} монет!`, 'success');
+                } else {
+                    this.showStatus('+1 монета! 💰', 'success');
+                }
+                
+                // Автосохранение в облако каждые 20 кликов
+                if (this.balance % 20 === 0 && !this.isSaving) {
                     await this.saveToCloud();
                 }
             }
@@ -319,6 +373,9 @@
                 if (this.isSaving) return false;
                 this.isSaving = true;
                 
+                // Блокируем кнопки на время сохранения
+                this.toggleButtons(false);
+                
                 try {
                     this.showStatus('Сохранение...', 'loading');
                     
@@ -354,47 +411,68 @@
                     return false;
                 } finally {
                     this.isSaving = false;
+                    this.toggleButtons(true);
                 }
             }
 
+            toggleButtons(enabled) {
+                const buttons = ['save-btn', 'load-btn', 'refresh-btn'];
+                buttons.forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) {
+                        btn.disabled = !enabled;
+                    }
+                });
+            }
+
             async loadFromCloud() {
+                // Блокируем кнопки на время загрузки
+                this.toggleButtons(false);
+                
                 try {
+                    this.showStatus('Загрузка...', 'loading');
+                    
                     const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
                     console.log('Cloud response:', data);
                     
-                    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: правильная проверка баланса
                     if (data && data.success) {
-                        // Если баланс undefined или null, это новый пользователь
+                        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: только если баланс есть и он валидный
                         if (data.balance === undefined || data.balance === null) {
                             console.log('Новый пользователь, баланс не установлен');
+                            this.showStatus('Новый игрок! Начинайте с 0 🎮', 'success');
                             return false;
                         }
                         
                         const cloudBalance = parseInt(data.balance);
                         
-                        // Защита от NaN и отрицательных значений
+                        // Защита от невалидных значений
                         if (isNaN(cloudBalance) || cloudBalance < 0) {
                             console.log('Неверный баланс из облака:', data.balance);
+                            this.showStatus('Ошибка загрузки баланса ⚠️', 'error');
                             return false;
                         }
                         
-                        // Защита от огромных чисел
-                        const safeBalance = Math.min(cloudBalance, 10000);
+                        // Максимальный баланс - 1000 монет при загрузке
+                        const safeBalance = Math.min(cloudBalance, 1000);
                         
-                        if (safeBalance > this.balance) {
+                        if (safeBalance !== this.balance) {
                             this.balance = safeBalance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                             this.saveToLocal();
                             console.log('Баланс загружен из облака:', this.balance);
+                            this.showStatus(`Загружено: ${this.balance} монет ✅`, 'success');
                         }
                         return true;
                     }
                     return false;
                 } catch (error) {
                     console.log('Не удалось загрузить из облака:', error.message);
+                    this.showStatus('Ошибка загрузки ⚠️', 'error');
                     return false;
+                } finally {
+                    this.toggleButtons(true);
                 }
             }
 
@@ -404,7 +482,8 @@
                     if (saved) {
                         const balance = parseInt(saved);
                         if (!isNaN(balance) && balance >= 0) {
-                            this.balance = Math.min(balance, 10000);
+                            // Локально тоже ограничиваем
+                            this.balance = Math.min(balance, 1000);
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                         }
                     }
@@ -422,19 +501,28 @@
             }
 
             async loadLeaderboard() {
+                this.toggleButtons(false);
+                
                 try {
+                    this.showStatus('Загрузка рейтинга...', 'loading');
+                    
                     const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
                     if (data && data.success && data.leaderboard && data.leaderboard.length > 0) {
                         this.displayLeaderboard(data.leaderboard);
                         this.displayUserRank(data.leaderboard);
+                        this.showStatus('Рейтинг обновлен ✅', 'success');
                     } else {
                         this.showEmptyLeaderboard();
+                        this.showStatus('Рейтинг пуст 🏆', 'info');
                     }
                 } catch (error) {
                     console.log('Ошибка загрузки рейтинга:', error.message);
                     this.showEmptyLeaderboard();
+                    this.showStatus('Рейтинг недоступен ⚠️', 'warning');
+                } finally {
+                    this.toggleButtons(true);
                 }
             }
 
@@ -497,7 +585,9 @@
                     
                     if (type !== 'loading') {
                         setTimeout(() => {
-                            statusElement.textContent = '';
+                            if (statusElement.textContent === message) {
+                                statusElement.textContent = '';
+                            }
                         }, 3000);
                     }
                 }
