@@ -195,6 +195,7 @@
             <button class="btn" id="save-btn" onclick="saveToCloud()">💾 Сохранить</button>
             <button class="btn" id="load-btn" onclick="loadFromCloud()">☁️ Загрузить</button>
             <button class="btn" id="refresh-btn" onclick="refreshLeaderboard()">🔄 Рейтинг</button>
+            <button class="btn" id="reset-btn" onclick="resetBalance()">🔄 Сбросить</button>
         </div>
         
         <div id="user-rank" class="user-rank" style="display: none;">
@@ -214,6 +215,7 @@
         </div>
         
         <div id="status" class="status"></div>
+        <div id="debug" style="display: none; font-size: 10px; color: #ccc; margin-top: 10px;"></div>
     </div>
 
     <script>
@@ -233,25 +235,30 @@
             async init() {
                 try {
                     console.log('Инициализация приложения...');
+                    this.debugLog('Начало инициализации');
                     
                     // Сначала инициализируем базовые функции
                     this.setupClickHandler();
-                    this.loadFromLocal();
-                    
-                    // Показываем текущий баланс
-                    document.getElementById('balance').textContent = `${this.balance} монет`;
                     
                     // Инициализация Telegram Web App
                     if (window.Telegram && window.Telegram.WebApp) {
                         this.telegram = window.Telegram.WebApp;
                         this.telegram.expand();
                         this.userId = this.telegram.initDataUnsafe.user?.id;
+                        this.debugLog('Telegram user ID: ' + this.userId);
                     }
                     
                     if (!this.userId) {
                         this.userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+                        this.debugLog('Generated guest ID: ' + this.userId);
                     }
 
+                    // Загружаем из локального хранилища
+                    this.loadFromLocal();
+                    
+                    // Показываем текущий баланс
+                    this.updateBalanceDisplay();
+                    
                     // Затем проверяем доступность скрипта (асинхронно)
                     this.checkScriptAvailability();
                     
@@ -259,25 +266,36 @@
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
+                    this.debugLog('Ошибка инициализации: ' + error.message);
                     this.showStatus('Ошибка загрузки приложения', 'error');
                 }
+            }
+
+            debugLog(message) {
+                const debugElement = document.getElementById('debug');
+                if (debugElement) {
+                    debugElement.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+                    debugElement.scrollTop = debugElement.scrollHeight;
+                }
+                console.log(message);
             }
 
             async checkScriptAvailability() {
                 try {
                     this.scriptAvailable = await this.testScriptConnection();
-                    console.log('Script available:', this.scriptAvailable);
+                    this.debugLog('Script available: ' + this.scriptAvailable);
                     
                     if (this.scriptAvailable) {
                         // Загружаем из облака и рейтинг в фоне
-                        this.loadFromCloud().catch(() => {});
-                        this.loadLeaderboard().catch(() => {});
+                        setTimeout(() => this.loadFromCloud().catch(() => {}), 1000);
+                        setTimeout(() => this.loadLeaderboard().catch(() => {}), 2000);
                     } else {
                         this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
                         this.showEmptyLeaderboard();
                     }
                 } catch (error) {
                     console.log('Ошибка проверки скрипта:', error);
+                    this.debugLog('Ошибка проверки скрипта: ' + error.message);
                     this.scriptAvailable = false;
                 }
             }
@@ -301,23 +319,31 @@
 
             setupClickHandler() {
                 const coin = document.getElementById('coin');
-                let lastClickTime = 0;
                 
                 const handleClick = () => {
-                    const now = Date.now();
-                    if (now - lastClickTime < 100) return;
-                    lastClickTime = now;
-                    
                     this.balance++;
-                    document.getElementById('balance').textContent = `${this.balance} монет`;
+                    this.updateBalanceDisplay();
                     this.saveToLocal();
                     
                     this.showStatus('+1 монета! 💰', 'success');
                 };
                 
-                // Добавляем несколько обработчиков для надежности
+                // Добавляем обработчики событий
                 coin.addEventListener('click', handleClick);
-                coin.addEventListener('touchstart', handleClick, { passive: true });
+                coin.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleClick();
+                }, { passive: false });
+            }
+
+            updateBalanceDisplay() {
+                // Защита от огромных чисел
+                if (this.balance > 1000000) {
+                    this.debugLog('Обнаружен слишком большой баланс: ' + this.balance + ', сбрасываем до 0');
+                    this.balance = 0;
+                }
+                
+                document.getElementById('balance').textContent = `${this.balance} монет`;
             }
 
             async makeRequest(url, options = {}) {
@@ -361,6 +387,7 @@
                 
                 try {
                     this.showStatus('Сохранение...', 'loading');
+                    this.debugLog('Сохранение в облако: ' + this.balance);
                     
                     const data = {
                         action: 'update',
@@ -383,12 +410,14 @@
                     if (response && response.success) {
                         this.lastSaveTime = Date.now();
                         this.showStatus('Сохранено в облако! ✅', 'success');
+                        this.debugLog('Успешно сохранено в облако');
                         return true;
                     } else {
                         throw new Error(response?.error || 'Ошибка сохранения');
                     }
                 } catch (error) {
                     console.error('Ошибка сохранения в облако:', error);
+                    this.debugLog('Ошибка сохранения: ' + error.message);
                     this.showStatus('Ошибка сохранения', 'error');
                     return false;
                 } finally {
@@ -398,7 +427,7 @@
             }
 
             toggleButtons(enabled) {
-                const buttons = ['save-btn', 'load-btn', 'refresh-btn'];
+                const buttons = ['save-btn', 'load-btn', 'refresh-btn', 'reset-btn'];
                 buttons.forEach(id => {
                     const btn = document.getElementById(id);
                     if (btn) btn.disabled = !enabled;
@@ -414,6 +443,7 @@
                 
                 try {
                     this.showStatus('Загрузка из облака...', 'loading');
+                    this.debugLog('Загрузка из облака...');
                     
                     const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
@@ -422,16 +452,27 @@
                         const cloudBalance = parseInt(data.balance);
                         
                         if (!isNaN(cloudBalance) && cloudBalance >= 0) {
+                            this.debugLog('Получен баланс из облака: ' + cloudBalance);
+                            
+                            // Защита от некорректных значений
+                            if (cloudBalance > 1000000) {
+                                this.debugLog('Слишком большой баланс из облака, игнорируем');
+                                this.showStatus('Ошибка данных из облака', 'error');
+                                return false;
+                            }
+                            
                             this.balance = cloudBalance;
-                            document.getElementById('balance').textContent = `${this.balance} монет`;
+                            this.updateBalanceDisplay();
                             this.saveToLocal();
                             this.showStatus('Данные загружены ✅', 'success');
                             return true;
                         }
                     }
+                    this.debugLog('Нет данных в облаке или неверный формат');
                     return false;
                 } catch (error) {
                     console.log('Не удалось загрузить из облака:', error);
+                    this.debugLog('Ошибка загрузки из облака: ' + error.message);
                     return false;
                 } finally {
                     this.toggleButtons(true);
@@ -443,22 +484,40 @@
                     const saved = localStorage.getItem(`coin_balance_${this.userId}`);
                     if (saved) {
                         const balance = parseInt(saved);
-                        if (!isNaN(balance) && balance >= 0) {
+                        if (!isNaN(balance) && balance >= 0 && balance <= 1000000) {
                             this.balance = balance;
-                            document.getElementById('balance').textContent = `${this.balance} монет`;
+                            this.debugLog('Загружено из localStorage: ' + balance);
+                        } else {
+                            this.debugLog('Некорректное значение в localStorage: ' + saved);
+                            this.balance = 0;
                         }
+                    } else {
+                        this.debugLog('Нет данных в localStorage');
+                        this.balance = 0;
                     }
                 } catch (error) {
                     console.error('Ошибка загрузки из localStorage:', error);
+                    this.debugLog('Ошибка localStorage: ' + error.message);
+                    this.balance = 0;
                 }
             }
 
             saveToLocal() {
                 try {
                     localStorage.setItem(`coin_balance_${this.userId}`, this.balance.toString());
+                    this.debugLog('Сохранено в localStorage: ' + this.balance);
                 } catch (error) {
                     console.error('Ошибка сохранения в localStorage:', error);
+                    this.debugLog('Ошибка сохранения localStorage: ' + error.message);
                 }
+            }
+
+            resetBalance() {
+                this.balance = 0;
+                this.updateBalanceDisplay();
+                this.saveToLocal();
+                this.showStatus('Баланс сброшен 🔄', 'info');
+                this.debugLog('Баланс сброшен вручную');
             }
 
             async loadLeaderboard() {
@@ -485,6 +544,7 @@
                     }
                 } catch (error) {
                     console.log('Ошибка загрузки рейтинга:', error);
+                    this.debugLog('Ошибка рейтинга: ' + error.message);
                     this.showEmptyLeaderboard();
                 } finally {
                     this.toggleButtons(true);
@@ -495,7 +555,7 @@
                 const leaderboardElement = document.getElementById('leaderboard');
                 
                 let html = '';
-                const topPlayers = leaderboard.slice(0, 10); // Показываем только топ-10
+                const topPlayers = leaderboard.slice(0, 10);
                 
                 if (topPlayers.length === 0) {
                     this.showEmptyLeaderboard();
@@ -593,21 +653,25 @@
             }
         }
 
+        function resetBalance() {
+            if (window.coinApp) {
+                window.coinApp.resetBalance();
+            }
+        }
+
+        function toggleDebug() {
+            const debugElement = document.getElementById('debug');
+            if (debugElement) {
+                debugElement.style.display = debugElement.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
             window.coinApp = new CoinClicker();
             
-            // Добавляем обработчик клика на монету для мобильных устройств
-            const coin = document.getElementById('coin');
-            coin.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                if (window.coinApp) {
-                    window.coinApp.balance++;
-                    document.getElementById('balance').textContent = `${window.coinApp.balance} монет`;
-                    window.coinApp.saveToLocal();
-                    window.coinApp.showStatus('+1 монета! 💰', 'success');
-                }
-            }, { passive: false });
+            // Добавляем двойной клик для отладки
+            document.addEventListener('dblclick', toggleDebug);
         });
     </script>
 </body>
