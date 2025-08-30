@@ -215,10 +215,11 @@
                 this.userId = null;
                 this.balance = 0;
                 this.telegram = null;
-                // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL Google Apps Script!
-                this.scriptURL = 'https://script.googleusercontent.com/macros/echo?user_content_key=AehSKLgINXPiOILQhCWeTWDBspdGCMrLqiFgPUfQ-krTFXTH0KoCtJPLXhses0GJwz0nU87R9iCVbjvQunJjmKtrX5Yfh0VZQwtnIUZvMTxCfPyen0zRWyfL7nAaDzo_BW6BujR7PQCE3t7EumoJfN_qFUUtiBHEpc3iQOTYYqbqU2fRe87MOseaopgbRy-QehT_Ny0lhh79A86GNB7kpfu1NOIcpd9Ineqgm71zSa_rc0qZsga7kTyzSMh4Nyp4qBK8epDeQnTyFLuwVemx6attBxHjvUUittPSQYbOC4kO&lib=M8jfKJC7B-mOtFqIFjrnKhu_eJkRYzjVc';
+                // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL!
+                this.scriptURL = 'https://script.google.com/macros/s/AKfycbx0JF4DsLZrb0SSCbo2wtudfEk-Ws56o-WvJbMfU01DYa_ZcG4wL51DWFCTy6Cql-lngg/exec';
                 this.lastSaveTime = 0;
                 this.isSaving = false;
+                this.scriptAvailable = false;
                 this.init();
             }
 
@@ -227,10 +228,11 @@
                     console.log('Инициализация приложения...');
                     
                     // Проверяем доступность Google Apps Script
-                    const isScriptAvailable = await this.testScriptConnection();
-                    if (!isScriptAvailable) {
-                        this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
-                        // Продолжаем работу в оффлайн-режиме
+                    this.scriptAvailable = await this.testScriptConnection();
+                    console.log('Script available:', this.scriptAvailable);
+                    
+                    if (!this.scriptAvailable) {
+                        this.showStatus('Работаем в оффлайн-режиме 📴', 'warning');
                     }
 
                     // Инициализация Telegram Web App
@@ -251,7 +253,7 @@
                     this.loadFromLocal();
                     
                     // Пробуем загрузить из облака (если доступно)
-                    if (isScriptAvailable) {
+                    if (this.scriptAvailable) {
                         try {
                             await this.loadFromCloud();
                         } catch (error) {
@@ -260,11 +262,12 @@
                     }
                     
                     // Загружаем рейтинг (если доступно)
-                    if (isScriptAvailable) {
+                    if (this.scriptAvailable) {
                         try {
                             await this.loadLeaderboard();
                         } catch (error) {
                             console.log('Ошибка загрузки рейтинга:', error);
+                            this.showEmptyLeaderboard();
                         }
                     } else {
                         this.showEmptyLeaderboard();
@@ -282,9 +285,17 @@
 
             async testScriptConnection() {
                 try {
+                    // Простая проверка доступности скрипта
                     const testUrl = `${this.scriptURL}?action=test&t=${Date.now()}`;
-                    const response = await fetch(testUrl, { method: 'GET' });
-                    return response.ok;
+                    const response = await fetch(testUrl, { 
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    // Если ответ получен (даже с ошибкой), значит скрипт доступен
+                    return true;
                 } catch (error) {
                     console.log('Google Apps Script недоступен:', error);
                     return false;
@@ -297,7 +308,7 @@
                 
                 coin.addEventListener('click', () => {
                     const now = Date.now();
-                    if (now - lastClickTime < 100) return; // Защита от спама
+                    if (now - lastClickTime < 100) return;
                     lastClickTime = now;
                     
                     this.balance++;
@@ -311,17 +322,21 @@
             async makeRequest(url, options = {}) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
                     
                     const response = await fetch(url, {
                         ...options,
-                        signal: controller.signal
+                        signal: controller.signal,
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            ...options.headers
+                        }
                     });
                     
                     clearTimeout(timeoutId);
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP error: ${response.status}`);
+                        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
                     }
                     
                     const text = await response.text();
@@ -342,6 +357,11 @@
             }
 
             async saveToCloud() {
+                if (!this.scriptAvailable) {
+                    this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
+                    return false;
+                }
+                
                 if (this.isSaving) return false;
                 this.isSaving = true;
                 this.toggleButtons(false);
@@ -364,9 +384,6 @@
 
                     const response = await this.makeRequest(this.scriptURL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
                         body: formData
                     });
 
@@ -379,7 +396,7 @@
                     }
                 } catch (error) {
                     console.error('Ошибка сохранения в облако:', error);
-                    this.showStatus('Не удалось сохранить в облако ⚠️', 'error');
+                    this.showStatus('Ошибка сохранения ⚠️', 'error');
                     return false;
                 } finally {
                     this.isSaving = false;
@@ -396,6 +413,11 @@
             }
 
             async loadFromCloud() {
+                if (!this.scriptAvailable) {
+                    this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
+                    return false;
+                }
+                
                 this.toggleButtons(false);
                 
                 try {
@@ -422,7 +444,7 @@
                     return false;
                 } catch (error) {
                     console.log('Не удалось загрузить из облака:', error.message);
-                    this.showStatus('Ошибка загрузки из облака ⚠️', 'error');
+                    this.showStatus('Ошибка загрузки ⚠️', 'error');
                     return false;
                 } finally {
                     this.toggleButtons(true);
@@ -453,6 +475,12 @@
             }
 
             async loadLeaderboard() {
+                if (!this.scriptAvailable) {
+                    this.showEmptyLeaderboard();
+                    this.showStatus('Рейтинг недоступен в оффлайн-режиме 📴', 'warning');
+                    return;
+                }
+                
                 this.toggleButtons(false);
                 
                 try {
@@ -461,13 +489,18 @@
                     const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
-                    if (data && data.success && data.leaderboard) {
-                        this.displayLeaderboard(data.leaderboard);
-                        this.displayUserRank(data.leaderboard);
-                        this.showStatus('Рейтинг обновлен ✅', 'success');
+                    if (data && data.success) {
+                        if (data.leaderboard && data.leaderboard.length > 0) {
+                            this.displayLeaderboard(data.leaderboard);
+                            this.displayUserRank(data.leaderboard);
+                            this.showStatus('Рейтинг обновлен ✅', 'success');
+                        } else {
+                            this.showEmptyLeaderboard();
+                            this.showStatus('Рейтинг пуст 🏆', 'info');
+                        }
                     } else {
                         this.showEmptyLeaderboard();
-                        this.showStatus('Рейтинг пуст 🏆', 'info');
+                        this.showStatus('Ошибка загрузки рейтинга ⚠️', 'error');
                     }
                 } catch (error) {
                     console.log('Ошибка загрузки рейтинга:', error.message);
@@ -481,11 +514,6 @@
             displayLeaderboard(leaderboard) {
                 const leaderboardElement = document.getElementById('leaderboard');
                 
-                if (!leaderboard || leaderboard.length === 0) {
-                    this.showEmptyLeaderboard();
-                    return;
-                }
-
                 let html = '';
                 leaderboard.slice(0, 100).forEach((player, index) => {
                     const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
