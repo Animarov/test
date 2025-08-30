@@ -241,28 +241,32 @@
                     this.loadFromLocal();
                     
                     // Пробуем загрузить из облака с таймаутом
-                    await Promise.race([
-                        this.loadFromCloud(),
-                        new Promise(resolve => setTimeout(resolve, 3000)) // Таймаут 3 секунды
-                    ]);
+                    try {
+                        await Promise.race([
+                            this.loadFromCloud(),
+                            new Promise(resolve => setTimeout(resolve, 3000))
+                        ]);
+                    } catch (error) {
+                        console.log('Загрузка из облака пропущена');
+                    }
                     
                     // Загружаем рейтинг с таймаутом
-                    await Promise.race([
-                        this.loadLeaderboard(),
-                        new Promise(resolve => setTimeout(resolve, 5000)) // Таймаут 5 секунд
-                    ]);
+                    try {
+                        await Promise.race([
+                            this.loadLeaderboard(),
+                            new Promise(resolve => setTimeout(resolve, 5000))
+                        ]);
+                    } catch (error) {
+                        console.log('Загрузка рейтинга пропущена');
+                    }
                     
                     // Добавляем обработчик клика
                     document.getElementById('coin').addEventListener('click', () => this.handleClick());
-                    
-                    // Автосохранение каждые 30 секунд
-                    setInterval(() => this.autoSave(), 30000);
                     
                     this.showStatus('Готово! Кликайте по монете 🎯', 'success');
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
-                    this.showStatus('Ошибка загрузки', 'error');
                 }
             }
 
@@ -281,7 +285,7 @@
             async makeRequest(url, options = {}) {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 8000); // Таймаут 8 секунд
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
                     
                     const response = await fetch(url, {
                         ...options,
@@ -307,21 +311,16 @@
                     if (error.name === 'AbortError') {
                         throw new Error('Request timeout');
                     }
-                    console.error('Request error:', error);
                     throw error;
                 }
             }
 
             async saveToCloud() {
-                if (this.isSaving) {
-                    this.showStatus('Уже сохраняем...', 'warning');
-                    return false;
-                }
-
+                if (this.isSaving) return false;
                 this.isSaving = true;
                 
                 try {
-                    this.showStatus('Сохранение в облако... 📡', 'loading');
+                    this.showStatus('Сохранение...', 'loading');
                     
                     const data = {
                         action: 'update',
@@ -339,21 +338,19 @@
                     const response = await this.makeRequest(this.scriptURL, {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                            'Content-Type': 'application/x-www-form-urlencoded'
                         },
                         body: formData
                     });
 
                     if (response && response.success) {
                         this.lastSaveTime = Date.now();
-                        this.showStatus('Сохранено в облако! ✅', 'success');
+                        this.showStatus('Сохранено! ✅', 'success');
                         return true;
-                    } else {
-                        throw new Error(response?.error || 'Ошибка сохранения');
                     }
+                    return false;
                 } catch (error) {
-                    console.error('Ошибка сохранения в облако:', error);
-                    this.showStatus('Не удалось сохранить в облако ⚠️', 'warning');
+                    console.error('Ошибка сохранения:', error);
                     return false;
                 } finally {
                     this.isSaving = false;
@@ -362,26 +359,41 @@
 
             async loadFromCloud() {
                 try {
-                    this.showStatus('Загрузка из облака... 📡', 'loading');
-                    
                     const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
-                    if (data && data.success && data.balance !== undefined && data.balance !== null) {
-                        const cloudBalance = parseInt(data.balance) || 0;
-                        const safeBalance = Math.min(cloudBalance, 1000000);
+                    console.log('Cloud response:', data);
+                    
+                    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: правильная проверка баланса
+                    if (data && data.success) {
+                        // Если баланс undefined или null, это новый пользователь
+                        if (data.balance === undefined || data.balance === null) {
+                            console.log('Новый пользователь, баланс не установлен');
+                            return false;
+                        }
+                        
+                        const cloudBalance = parseInt(data.balance);
+                        
+                        // Защита от NaN и отрицательных значений
+                        if (isNaN(cloudBalance) || cloudBalance < 0) {
+                            console.log('Неверный баланс из облака:', data.balance);
+                            return false;
+                        }
+                        
+                        // Защита от огромных чисел
+                        const safeBalance = Math.min(cloudBalance, 10000);
                         
                         if (safeBalance > this.balance) {
                             this.balance = safeBalance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                             this.saveToLocal();
+                            console.log('Баланс загружен из облака:', this.balance);
                         }
-                        this.showStatus('Данные загружены ✅', 'success');
                         return true;
                     }
                     return false;
                 } catch (error) {
-                    console.warn('Ошибка загрузки из облака:', error);
+                    console.log('Не удалось загрузить из облака:', error.message);
                     return false;
                 }
             }
@@ -390,9 +402,11 @@
                 try {
                     const saved = localStorage.getItem(`coin_balance_${this.userId}`);
                     if (saved) {
-                        const balance = parseInt(saved) || 0;
-                        this.balance = Math.min(balance, 1000000);
-                        document.getElementById('balance').textContent = `${this.balance} монет`;
+                        const balance = parseInt(saved);
+                        if (!isNaN(balance) && balance >= 0) {
+                            this.balance = Math.min(balance, 10000);
+                            document.getElementById('balance').textContent = `${this.balance} монет`;
+                        }
                     }
                 } catch (error) {
                     console.error('Ошибка загрузки из localStorage:', error);
@@ -407,41 +421,26 @@
                 }
             }
 
-            async autoSave() {
-                if (this.balance > 0 && !this.isSaving) {
-                    await this.saveToCloud();
-                }
-            }
-
             async loadLeaderboard() {
                 try {
-                    this.showStatus('Загрузка рейтинга... 📊', 'loading');
-                    
                     const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
-                    if (data && data.success) {
+                    if (data && data.success && data.leaderboard && data.leaderboard.length > 0) {
                         this.displayLeaderboard(data.leaderboard);
                         this.displayUserRank(data.leaderboard);
-                        this.showStatus('Рейтинг обновлен ✅', 'success');
                     } else {
                         this.showEmptyLeaderboard();
                     }
                 } catch (error) {
-                    console.error('Ошибка загрузки рейтинга:', error);
+                    console.log('Ошибка загрузки рейтинга:', error.message);
                     this.showEmptyLeaderboard();
-                    this.showStatus('Рейтинг временно недоступен ⚠️', 'warning');
                 }
             }
 
             displayLeaderboard(leaderboard) {
                 const leaderboardElement = document.getElementById('leaderboard');
                 
-                if (!leaderboard || leaderboard.length === 0) {
-                    this.showEmptyLeaderboard();
-                    return;
-                }
-
                 let html = '';
                 leaderboard.forEach((player, index) => {
                     const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
@@ -473,7 +472,7 @@
                 const userRankElement = document.getElementById('user-rank');
                 const userPositionElement = document.getElementById('user-position');
                 
-                if (!leaderboard || !userRankElement || !userPositionElement) {
+                if (!leaderboard || leaderboard.length === 0) {
                     userRankElement.style.display = 'none';
                     return;
                 }
@@ -498,10 +497,8 @@
                     
                     if (type !== 'loading') {
                         setTimeout(() => {
-                            if (statusElement.textContent === message) {
-                                statusElement.textContent = '';
-                            }
-                        }, 4000);
+                            statusElement.textContent = '';
+                        }, 3000);
                     }
                 }
             }
@@ -514,26 +511,18 @@
             }
         }
 
-        // Глобальные функции для кнопок
         function saveToCloud() {
-            if (window.coinApp) {
-                window.coinApp.saveToCloud();
-            }
+            if (window.coinApp) window.coinApp.saveToCloud();
         }
 
         function loadFromCloud() {
-            if (window.coinApp) {
-                window.coinApp.loadFromCloud();
-            }
+            if (window.coinApp) window.coinApp.loadFromCloud();
         }
 
         function refreshLeaderboard() {
-            if (window.coinApp) {
-                window.coinApp.loadLeaderboard();
-            }
+            if (window.coinApp) window.coinApp.loadLeaderboard();
         }
 
-        // Запуск приложения
         document.addEventListener('DOMContentLoaded', function() {
             window.coinApp = new CoinClicker();
         });
