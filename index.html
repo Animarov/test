@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(to bottom, #ffffff, #fff5e6, #ffedd5, #ffe4bc);
@@ -15,43 +20,8 @@
             color: #7c2d12;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow-x: hidden;
             position: relative;
-        }
-        
-        /* Анимированные падающие листья */
-        .leaf {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            opacity: 0.7;
-            z-index: 0;
-            top: -50px;
-            animation: fall linear infinite;
-            pointer-events: none; /* Добавлено: листья не блокируют клики */
-        }
-        
-        .leaf1 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ea580c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
-        .leaf2 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23dc2626'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
-        .leaf3 { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23c2410c'%3E%3Cpath d='M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM15.9 8.1C15.5 7.7 14.8 7.5 14.2 7.8L12 9L9.8 7.8C9.2 7.5 8.5 7.7 8.1 8.1C7.7 8.5 7.5 9.2 7.8 9.8L9 12L7.8 14.2C7.5 14.8 7.7 15.5 8.1 15.9C8.5 16.3 9.2 16.5 9.8 16.2L12 15L14.2 16.2C14.8 16.5 15.5 16.3 15.9 15.9C16.3 15.5 16.5 14.8 16.2 14.2L15 12L16.2 9.8C16.5 9.2 16.3 8.5 15.9 8.1Z'/%3E%3C/svg%3E"); }
-        
-        @keyframes fall {
-            0% {
-                transform: translateY(-100px) translateX(0) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.8;
-            }
-            90% {
-                opacity: 0.6;
-            }
-            100% {
-                transform: translateY(100vh) translateX(100px) rotate(360deg);
-                opacity: 0;
-            }
         }
         
         .container {
@@ -67,8 +37,6 @@
         
         .header {
             margin-bottom: 20px;
-            z-index: 2; /* Добавлено: чтобы кнопки были поверх других элементов */
-            position: relative;
         }
         
         .balance {
@@ -102,8 +70,6 @@
             gap: 15px;
             margin: 20px 0;
             flex: 1;
-            z-index: 2; /* Добавлено: чтобы кнопки были поверх других элементов */
-            position: relative;
         }
         
         .menu-row {
@@ -129,8 +95,6 @@
             min-height: 80px;
             backdrop-filter: blur(10px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            z-index: 10; /* Увеличено: чтобы кнопки были кликабельны */
-            position: relative;
         }
         
         .menu-btn:hover {
@@ -151,13 +115,13 @@
         .coin-section {
             margin-top: auto;
             padding: 20px 0;
-            z-index: 1; /* Уменьшено: чтобы монета была под кнопками */
             position: relative;
+            z-index: 2;
         }
         
         .coin-img {
-            width: 240px;
-            height: 240px;
+            width: 200px;
+            height: 200px;
             border-radius: 50%;
             margin: 0 auto;
             cursor: pointer;
@@ -171,38 +135,24 @@
             user-select: none;
             overflow: hidden;
             position: relative;
-            z-index: 1;
-        }
-        
-        .coin-img:before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.1) 90%);
-            border-radius: 50%;
-        }
-        
-        .coin-img img {
-            width: 90%;
-            height: 90%;
-            object-fit: cover;
-            border-radius: 50%;
         }
         
         .coin-img:active {
             transform: scale(0.95);
         }
         
-        /* Стили для экрана рейтинга */
+        .coin-content {
+            font-size: 24px;
+            font-weight: bold;
+            color: #8b7500;
+            text-align: center;
+        }
+        
         .screen {
             display: none;
             animation: fadeIn 0.3s ease;
             flex: 1;
             overflow-y: auto;
-            z-index: 5; /* Добавлено: чтобы экраны были поверх */
-            position: relative;
-            background: inherit; /* Добавлено: наследует фон */
         }
         
         .screen.active {
@@ -221,7 +171,6 @@
             font-size: 14px;
             align-self: flex-start;
             backdrop-filter: blur(10px);
-            z-index: 10;
         }
         
         .leaderboard {
@@ -319,8 +268,6 @@
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
             border: 1px solid rgba(251, 146, 60, 0.3);
-            z-index: 2; /* Добавлено: чтобы статус был поверх */
-            position: relative;
         }
         
         .success { color: #166534; background: rgba(220, 252, 231, 0.7); }
@@ -331,6 +278,28 @@
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .click-animation {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 215, 0, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: clickEffect 0.5s ease-out;
+            z-index: 10;
+        }
+        
+        @keyframes clickEffect {
+            0% {
+                transform: scale(0);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
         }
         
         .debug-info {
@@ -398,7 +367,7 @@
             <!-- Монета внизу -->
             <div class="coin-section">
                 <div class="coin-img" id="coin">
-                    <img src="https://i.postimg.cc/MKDXT0T1/photo-2025-08-30-12-22-24.jpg" alt="Coin" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSIjZmZkNzAwIiBzdHJva2U9IiNkYWE1MjAiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOGI3NTAwIj5DTElDSyE8L3RleHQ+PC9zdmc+'">
+                    <div class="coin-content">CLICK!</div>
                 </div>
             </div>
             
@@ -421,7 +390,12 @@
                     <span class="user-balance">Баланс</span>
                 </div>
                 
-                <div id="leaderboard" class="loading">Загрузка рейтинга...</div>
+                <div id="leaderboard-content">
+                    <div class="empty-state">
+                        Рейтинг скоро появится!<br>
+                        <small>Здесь будет отображаться топ игроков</small>
+                    </div>
+                </div>
             </div>
             
             <button class="back-btn" onclick="refreshLeaderboard()">🔄 Обновить</button>
@@ -477,6 +451,14 @@
     </div>
 
     <script>
+        // Глобальные переменные
+        let balance = 0;
+        let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let scriptURL = 'https://script.google.com/macros/s/AKfycby0jP0bpzlVyVoIqFGGoWI1dqrVVit7c18JQf2XE6mLJcxRfK_XvQvYbiq1Xts1c60ANw/exec';
+        let scriptAvailable = false;
+        let lastSaveTime = 0;
+        let isSaving = false;
+        
         // Глобальные функции для навигации
         function showScreen(screenId) {
             console.log('Показываем экран:', screenId);
@@ -499,343 +481,131 @@
         }
 
         function refreshLeaderboard() {
-            if (window.coinApp) {
-                window.coinApp.loadLeaderboard();
-            }
+            loadLeaderboard();
         }
 
         function saveToCloud() {
-            if (window.coinApp) {
-                window.coinApp.saveToCloud();
-            }
+            // Заглушка для облачного сохранения
+            console.log("Сохранение в облако...");
         }
 
-        function toggleDebug() {
-            const debugElement = document.getElementById('debug');
-            if (debugElement) {
-                debugElement.style.display = debugElement.style.display === 'none' ? 'block' : 'none';
-            }
+        // Функция для создания анимации клика
+        function createClickAnimation(x, y) {
+            const animation = document.createElement('div');
+            animation.className = 'click-animation';
+            animation.style.left = `${x - 20}px`;
+            animation.style.top = `${y - 20}px`;
+            document.body.appendChild(animation);
+            
+            // Удаляем анимацию после завершения
+            setTimeout(() => {
+                animation.remove();
+            }, 500);
         }
-
-        class CoinClicker {
-            constructor() {
-                this.userId = null;
-                this.balance = 0;
-                this.telegram = null;
-                this.scriptURL = 'https://script.google.com/macros/s/AKfycby0jP0bpzlVyVoIqFGGoWI1dqrVVit7c18JQf2XE6mLJcxRfK_XvQvYbiq1Xts1c60ANw/exec';
-                this.lastSaveTime = 0;
-                this.isSaving = false;
-                this.scriptAvailable = false;
-                this.init();
+        
+        // Обновление отображения баланса
+        function updateBalanceDisplay() {
+            if (balance > 1000000) {
+                console.log('Обнаружен слишком большой баланс: ' + balance + ', сбрасываем до 0');
+                balance = 0;
             }
-
-            async init() {
-                try {
-                    this.debugLog('Начало инициализации');
-                    
-                    // Инициализация Telegram Web App
-                    if (window.Telegram && window.Telegram.WebApp) {
-                        this.telegram = window.Telegram.WebApp;
-                        this.telegram.expand();
-                        this.userId = this.telegram.initDataUnsafe.user?.id;
-                        this.debugLog('Telegram user ID: ' + this.userId);
-                    }
-                    
-                    if (!this.userId) {
-                        this.userId = 'guest_' + Math.random().toString(36).substr(2, 9);
-                        this.debugLog('Generated guest ID: ' + this.userId);
-                    }
-
-                    // Загружаем из локального хранилища
-                    this.loadFromLocal();
-                    
-                    // Показываем текущий баланс
-                    this.updateBalanceDisplay();
-                    
-                    // Настраиваем обработчик клика на монету
-                    this.setupCoinClick();
-                    
-                    // Проверяем доступность скрипта
-                    this.checkScriptAvailability();
-                    
-                    // Создаем падающие листья
-                    this.createFallingLeaves();
-                    
-                    this.showStatus('Кликайте на монету!', 'success');
-                    
-                } catch (error) {
-                    console.error('Ошибка инициализации:', error);
-                    this.debugLog('Ошибка инициализации: ' + error.message);
-                }
-            }
-
-            createFallingLeaves() {
-                const leafTypes = ['leaf1', 'leaf2', 'leaf3'];
-                const body = document.body;
+            
+            document.getElementById('balance').textContent = `${balance} монет`;
+        }
+        
+        // Обработчик клика по монете
+        function setupCoinClick() {
+            const coin = document.getElementById('coin');
+            let lastClickTime = 0;
+            
+            const handleClick = (e) => {
+                const now = Date.now();
+                if (now - lastClickTime < 100) return;
+                lastClickTime = now;
                 
-                // Создаем 15 листьев
-                for (let i = 0; i < 15; i++) {
-                    const leaf = document.createElement('div');
-                    leaf.className = 'leaf ' + leafTypes[Math.floor(Math.random() * leafTypes.length)];
-                    
-                    // Случайная позиция по горизонтали
-                    const left = Math.random() * 100;
-                    leaf.style.left = left + 'vw';
-                    
-                    // Случайная задержка анимации
-                    const delay = Math.random() * 15;
-                    leaf.style.animationDelay = delay + 's';
-                    
-                    // Случайная длительность анимации
-                    const duration = 10 + Math.random() * 20;
-                    leaf.style.animationDuration = duration + 's';
-                    
-                    body.appendChild(leaf);
-                }
-            }
-
-            setupCoinClick() {
-                const coin = document.getElementById('coin');
-                let lastClickTime = 0;
+                // Получаем координаты клика
+                const rect = coin.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
                 
-                const handleClick = () => {
-                    const now = Date.now();
-                    if (now - lastClickTime < 100) return;
-                    lastClickTime = now;
-                    
-                    this.balance++;
-                    this.updateBalanceDisplay();
-                    this.saveToLocal();
-                    
-                    // Анимация клика
-                    coin.style.transform = 'scale(0.95)';
+                // Создаем анимацию
+                createClickAnimation(e.clientX, e.clientY);
+                
+                balance++;
+                updateBalanceDisplay();
+                saveToLocal();
+                
+                // Анимация клика
+                coin.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    coin.style.transform = 'scale(1)';
+                }, 100);
+                
+                showStatus('+1 монета! 💰', 'success');
+            };
+            
+            // Добавляем обработчики
+            coin.addEventListener('click', handleClick);
+            coin.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const simulatedEvent = new MouseEvent('click', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                handleClick(simulatedEvent);
+            }, { passive: false });
+        }
+        
+        // Показать статус
+        function showStatus(message, type = 'info') {
+            const statusElement = document.getElementById('status');
+            if (statusElement) {
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+                
+                if (type !== 'loading') {
                     setTimeout(() => {
-                        coin.style.transform = 'scale(1)';
-                    }, 100);
-                    
-                    this.showStatus('+1 монета! 💰', 'success');
-                };
-                
-                // Исправлено: правильное добавление обработчиков событий
-                coin.addEventListener('click', handleClick);
-                coin.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    handleClick();
-                }, { passive: false });
-                
-                // Добавлено: обработка ошибок при загрузке изображения
-                const coinImage = coin.querySelector('img');
-                if (coinImage) {
-                    coinImage.onerror = function() {
-                        this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjkwIiBmaWxsPSIjZmZkNzAwIiBzdHJva2U9IiNkYWE1MjAiIHN0cm9rZS13aWR0aD0iNCIvPjx0ZXh0IHg9IjEwMCIgeT0iMTEwIiBmb250LXNpemU9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOGI3NTAwIj5DTElDSyE8L3RleHQ+PC9zdmc+';
-                    };
-                }
-            }
-
-            debugLog(message) {
-                const debugElement = document.getElementById('debug');
-                if (debugElement) {
-                    debugElement.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
-                    debugElement.scrollTop = debugElement.scrollHeight;
-                }
-                console.log(message);
-            }
-
-            async checkScriptAvailability() {
-                try {
-                    this.scriptAvailable = await this.testScriptConnection();
-                    this.debugLog('Script available: ' + this.scriptAvailable);
-                    
-                    if (this.scriptAvailable) {
-                        // Загружаем из облака в фоне
-                        setTimeout(() => this.loadFromCloud().catch(() => {}), 1000);
-                    }
-                } catch (error) {
-                    this.debugLog('Ошибка проверки скрипта: ' + error.message);
-                    this.scriptAvailable = false;
-                }
-            }
-
-            async testScriptConnection() {
-                try {
-                    const testUrl = `${this.scriptURL}?action=test&t=${Date.now()}`;
-                    const response = await fetch(testUrl, { 
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'text/plain'
+                        if (statusElement.textContent === message) {
+                            statusElement.textContent = '';
+                            statusElement.className = 'status';
                         }
-                    });
-                    
-                    return response.ok;
-                } catch (error) {
-                    return false;
+                    }, 3000);
                 }
             }
-
-            updateBalanceDisplay() {
-                if (this.balance > 1000000) {
-                    this.debugLog('Обнаружен слишком большой баланс: ' + this.balance + ', сбрасываем до 0');
-                    this.balance = 0;
-                }
-                
-                document.getElementById('balance').textContent = `${this.balance} монет`;
+        }
+        
+        // Сохранение в локальное хранилище
+        function saveToLocal() {
+            try {
+                localStorage.setItem(`coin_balance_${userId}`, balance.toString());
+            } catch (error) {
+                console.error('Ошибка сохранения в localStorage:', error);
             }
-
-            async makeRequest(url, options = {}) {
-                try {
-                    const response = await fetch(url, {
-                        ...options,
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            ...options.headers
-                        }
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error: ${response.status}`);
+        }
+        
+        // Загрузка из локального хранилища
+        function loadFromLocal() {
+            try {
+                const saved = localStorage.getItem(`coin_balance_${userId}`);
+                if (saved) {
+                    const savedBalance = parseInt(saved);
+                    if (!isNaN(savedBalance) && savedBalance >= 0 && savedBalance <= 1000000) {
+                        balance = savedBalance;
                     }
-                    
-                    const text = await response.text();
-                    
-                    try {
-                        return JSON.parse(text);
-                    } catch (e) {
-                        return { success: false, error: 'Invalid JSON response' };
-                    }
-                    
-                } catch (error) {
-                    throw error;
                 }
+            } catch (error) {
+                balance = 0;
             }
-
-            async saveToCloud() {
-                if (!this.scriptAvailable) {
-                    this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
-                    return false;
-                }
-                
-                if (this.isSaving) return false;
-                this.isSaving = true;
-                
-                try {
-                    this.showStatus('Сохранение...', 'loading');
-                    this.debugLog('Сохранение в облако: ' + this.balance);
-                    
-                    const data = {
-                        action: 'update',
-                        userId: this.userId,
-                        balance: this.balance,
-                        username: this.telegram?.initDataUnsafe.user?.username || 'Гость',
-                        firstName: this.telegram?.initDataUnsafe.user?.first_name || 'Игрок'
-                    };
-
-                    const formData = new URLSearchParams();
-                    for (const key in data) {
-                        formData.append(key, data[key]);
-                    }
-
-                    const response = await this.makeRequest(this.scriptURL, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    if (response && response.success) {
-                        this.lastSaveTime = Date.now();
-                        this.showStatus('Сохранено! ✅', 'success');
-                        return true;
-                    } else {
-                        throw new Error(response?.error || 'Ошибка сохранения');
-                    }
-                } catch (error) {
-                    this.showStatus('Ошибка сохранения', 'error');
-                    return false;
-                } finally {
-                    this.isSaving = false;
-                }
-            }
-
-            async loadFromCloud() {
-                if (!this.scriptAvailable) {
-                    return false;
-                }
-                
-                try {
-                    this.debugLog('Загрузка из облака...');
-                    
-                    const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
-                    const data = await this.makeRequest(url);
-                    
-                    if (data && data.success && data.balance !== undefined && data.balance !== null) {
-                        const cloudBalance = parseInt(data.balance);
-                        
-                        if (!isNaN(cloudBalance) && cloudBalance >= 0 && cloudBalance <= 1000000) {
-                            this.balance = cloudBalance;
-                            this.updateBalanceDisplay();
-                            this.saveToLocal();
-                            return true;
-                        }
-                    }
-                    return false;
-                } catch (error) {
-                    return false;
-                }
-            }
-
-            loadFromLocal() {
-                try {
-                    const saved = localStorage.getItem(`coin_balance_${this.userId}`);
-                    if (saved) {
-                        const balance = parseInt(saved);
-                        if (!isNaN(balance) && balance >= 0 && balance <= 1000000) {
-                            this.balance = balance;
-                        }
-                    }
-                } catch (error) {
-                    this.balance = 0;
-                }
-            }
-
-            saveToLocal() {
-                try {
-                    localStorage.setItem(`coin_balance_${this.userId}`, this.balance.toString());
-                } catch (error) {
-                    console.error('Ошибка сохранения в localStorage:', error);
-                }
-            }
-
-            async loadLeaderboard() {
-                if (!this.scriptAvailable) {
-                    // Показываем локальный рейтинг, если облачный недоступен
-                    this.showLocalLeaderboard();
-                    return;
-                }
-                
-                try {
-                    const leaderboardElement = document.getElementById('leaderboard');
-                    leaderboardElement.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
-                    
-                    const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
-                    const data = await this.makeRequest(url);
-                    
-                    if (data && data.success) {
-                        if (data.leaderboard && data.leaderboard.length > 0) {
-                            this.displayLeaderboard(data.leaderboard);
-                            this.displayUserRank(data.leaderboard);
-                        } else {
-                            this.showLocalLeaderboard();
-                        }
-                    } else {
-                        this.showLocalLeaderboard();
-                    }
-                } catch (error) {
-                    this.showLocalLeaderboard();
-                }
-            }
-
-            // Показать локальный рейтинг (если облачный недоступен)
-            showLocalLeaderboard() {
-                const leaderboardElement = document.getElementById('leaderboard');
-                
+        }
+        
+        // Загрузка рейтинга
+        function loadLeaderboard() {
+            const leaderboardElement = document.getElementById('leaderboard-content');
+            leaderboardElement.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
+            
+            // Имитация загрузки рейтинга
+            setTimeout(() => {
                 // Получаем всех пользователей из localStorage
                 const users = [];
                 for (let i = 0; i < localStorage.length; i++) {
@@ -847,118 +617,127 @@
                             users.push({
                                 userId: userId,
                                 balance: balance,
-                                username: userId.startsWith('guest_') ? 'Гость' : 'Игрок'
+                                username: userId.startsWith('user_') ? 'Игрок' : 'Гость'
                             });
                         }
                     }
+                }
+                
+                // Добавляем текущего пользователя, если его нет
+                let currentUserExists = false;
+                for (const user of users) {
+                    if (user.userId === userId) {
+                        currentUserExists = true;
+                        break;
+                    }
+                }
+                
+                if (!currentUserExists) {
+                    users.push({
+                        userId: userId,
+                        balance: balance,
+                        username: 'Вы'
+                    });
                 }
                 
                 // Сортируем по балансу
                 users.sort((a, b) => b.balance - a.balance);
                 
                 if (users.length > 0) {
-                    this.displayLeaderboard(users);
-                    this.displayUserRank(users);
+                    displayLeaderboard(users);
+                    displayUserRank(users);
                 } else {
-                    this.showEmptyLeaderboard();
+                    showEmptyLeaderboard();
                 }
+            }, 1000);
+        }
+        
+        // Отображение рейтинга
+        function displayLeaderboard(leaderboard) {
+            const leaderboardElement = document.getElementById('leaderboard-content');
+            
+            let html = '';
+            const topPlayers = leaderboard.slice(0, 20);
+            
+            if (topPlayers.length === 0) {
+                showEmptyLeaderboard();
+                return;
             }
-
-            displayLeaderboard(leaderboard) {
-                const leaderboardElement = document.getElementById('leaderboard');
+            
+            topPlayers.forEach((player, index) => {
+                const displayName = player.username || `Игрок ${(player.userId || '').substr(0, 6)}`;
+                const balance = player.balance || 0;
                 
-                let html = '';
-                const topPlayers = leaderboard.slice(0, 20);
-                
-                if (topPlayers.length === 0) {
-                    this.showEmptyLeaderboard();
-                    return;
-                }
-                
-                topPlayers.forEach((player, index) {
-                    const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
-                    const balance = player.balance || 0;
-                    
-                    html += `
-                        <div class="leaderboard-item">
-                            <span class="rank">${index + 1}</span>
-                            <span class="username">${this.escapeHtml(displayName)}</span>
-                            <span class="user-balance">${balance}</span>
-                        </div>
-                    `;
-                });
-                
-                leaderboardElement.innerHTML = html;
-            }
-
-            showEmptyLeaderboard() {
-                const leaderboardElement = document.getElementById('leaderboard');
-                leaderboardElement.innerHTML = `
-                    <div class="empty-state">
-                        🏆 Рейтинг пуст<br>
-                        <small>Станьте первым в рейтинге!</small>
+                html += `
+                    <div class="leaderboard-item">
+                        <span class="rank">${index + 1}</span>
+                        <span class="username">${escapeHtml(displayName)}</span>
+                        <span class="user-balance">${balance}</span>
                     </div>
                 `;
+            });
+            
+            leaderboardElement.innerHTML = html;
+        }
+        
+        // Показать пустой рейтинг
+        function showEmptyLeaderboard() {
+            const leaderboardElement = document.getElementById('leaderboard-content');
+            leaderboardElement.innerHTML = `
+                <div class="empty-state">
+                    🏆 Рейтинг пуст<br>
+                    <small>Станьте первым в рейтинге!</small>
+                </div>
+            `;
+        }
+        
+        // Отображение ранга пользователя
+        function displayUserRank(leaderboard) {
+            const userRankElement = document.getElementById('user-rank');
+            const userPositionElement = document.getElementById('user-position');
+            
+            if (!leaderboard || leaderboard.length === 0) {
+                userRankElement.style.display = 'none';
+                return;
             }
 
-            displayUserRank(leaderboard) {
-                const userRankElement = document.getElementById('user-rank');
-                const userPositionElement = document.getElementById('user-position');
-                
-                if (!leaderboard || leaderboard.length === 0) {
-                    userRankElement.style.display = 'none';
-                    return;
-                }
-
-                const userIndex = leaderboard.findIndex(player => 
-                    player.userId && player.userId.toString() === this.userId.toString()
-                );
-                
-                if (userIndex !== -1) {
-                    userPositionElement.textContent = `${userIndex + 1} место`;
-                    userRankElement.style.display = 'block';
-                } else {
-                    userRankElement.style.display = 'none';
-                }
-            }
-
-            showStatus(message, type = 'info') {
-                const statusElement = document.getElementById('status');
-                if (statusElement) {
-                    statusElement.textContent = message;
-                    statusElement.className = `status ${type}`;
-                    
-                    if (type !== 'loading') {
-                        setTimeout(() => {
-                            if (statusElement.textContent === message) {
-                                statusElement.textContent = '';
-                                statusElement.className = 'status';
-                            }
-                        }, 3000);
-                    }
-                }
-            }
-
-            escapeHtml(text) {
-                if (!text) return '';
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
+            const userIndex = leaderboard.findIndex(player => 
+                player.userId && player.userId.toString() === userId.toString()
+            );
+            
+            if (userIndex !== -1) {
+                userPositionElement.textContent = `${userIndex + 1} место`;
+                userRankElement.style.display = 'block';
+            } else {
+                userRankElement.style.display = 'none';
             }
         }
-
+        
+        // Экранирование HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
-            window.coinApp = new CoinClicker();
+            // Загружаем сохраненный баланс
+            loadFromLocal();
             
-            // Добавляем двойной клик для отладки
-            document.addEventListener('dblclick', toggleDebug);
+            // Показываем текущий баланс
+            updateBalanceDisplay();
+            
+            // Настраиваем обработчик клика на монету
+            setupCoinClick();
+            
+            // Показываем статус
+            showStatus('Кликайте на монету!', 'success');
             
             // Автосохранение каждые 30 секунд
             setInterval(() => {
-                if (window.coinApp) {
-                    window.coinApp.saveToCloud();
-                }
+                saveToLocal();
             }, 30000);
         });
     </script>
