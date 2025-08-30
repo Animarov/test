@@ -483,7 +483,7 @@
             'https://i.pravatar.cc/150?img=1',
             'https://i.pravatar.cc/150?img=2',
             'https://i.pravatar.cc/150?img=3',
-            'https://i.pravatar.cc/150?img=4',
+            'httpsi.pravatar.cc/150?img=4',
             'https://i.pravatar.cc/150?img=5',
             'https://i.pravatar.cc/150?img=6',
             'https://i.pravatar.cc/150?img=7',
@@ -665,52 +665,22 @@
             setTimeout(() => {
                 // Получаем всех пользователей из localStorage
                 const users = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('coin_balance_')) {
-                        const userId = key.replace('coin_balance_', '');
-                        const balance = parseInt(localStorage.getItem(key));
-                        if (!isNaN(balance)) {
-                            // Пытаемся загрузить данные пользователя
-                            let username = 'Игрок';
-                            let avatar = 'https://i.pravatar.cc/150?img=6';
-                            
-                            try {
-                                const userData = localStorage.getItem(`coin_user_${userId}`);
-                                if (userData) {
-                                    const parsedData = JSON.parse(userData);
-                                    username = parsedData.name || username;
-                                    avatar = parsedData.avatar || avatar;
-                                }
-                            } catch (e) {
-                                console.error('Ошибка загрузки данных пользователя:', e);
-                            }
-                            
-                            users.push({
-                                userId: userId,
-                                balance: balance,
-                                username: username,
-                                avatar: avatar
-                            });
-                        }
-                    }
-                }
                 
-                // Добавляем текущего пользователя, если его нет
-                let currentUserExists = false;
-                for (const user of users) {
-                    if (user.userId === userId) {
-                        currentUserExists = true;
-                        break;
-                    }
-                }
+                // Добавляем текущего пользователя
+                users.push({
+                    userId: userId,
+                    balance: balance,
+                    username: userName,
+                    avatar: userAvatar
+                });
                 
-                if (!currentUserExists) {
+                // Добавляем тестовых пользователей для демонстрации
+                for (let i = 1; i <= 10; i++) {
                     users.push({
-                        userId: userId,
-                        balance: balance,
-                        username: userName,
-                        avatar: userAvatar
+                        userId: 'test_user_' + i,
+                        balance: Math.floor(Math.random() * 1000),
+                        username: names[Math.floor(Math.random() * names.length)] + ' ' + surnames[Math.floor(Math.random() * surnames.length)],
+                        avatar: avatars[Math.floor(Math.random() * avatars.length)]
                     });
                 }
                 
