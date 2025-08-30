@@ -21,28 +21,8 @@
             text-align: center;
         }
         
-        .coin {
-            width: 150px;
-            height: 150px;
-            background: radial-gradient(circle at 30% 30%, #ffd700, #daa520);
-            border-radius: 50%;
-            margin: 30px auto;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            font-weight: bold;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            transition: transform 0.1s ease;
-            border: 4px solid #ffed85;
-            color: #8b7500;
-            text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
-            user-select: none;
-        }
-        
-        .coin:active {
-            transform: scale(0.95);
+        .header {
+            margin-bottom: 20px;
         }
         
         .balance {
@@ -55,11 +35,71 @@
             backdrop-filter: blur(10px);
         }
         
+        .main-menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px 15px;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .menu-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        .menu-btn:active {
+            transform: translateY(0);
+        }
+        
+        .menu-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        /* Стили для экрана рейтинга */
+        .screen {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        .back-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
         .leaderboard {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
             padding: 20px;
-            margin-top: 30px;
+            margin-top: 15px;
             backdrop-filter: blur(10px);
         }
         
@@ -132,34 +172,6 @@
             border: 1px solid rgba(255, 215, 0, 0.3);
         }
         
-        .error {
-            color: #ff6b6b;
-            background: rgba(255,255,255,0.1);
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
-        
-        .btn {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            padding: 10px 15px;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            margin: 5px;
-            font-size: 14px;
-        }
-        
-        .btn:hover {
-            background: rgba(255,255,255,0.3);
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
         .status {
             margin-top: 15px;
             font-size: 12px;
@@ -167,55 +179,142 @@
             text-align: center;
         }
         
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin: 15px 0;
-            flex-wrap: wrap;
-        }
-        
         .success { color: #51cf66; }
         .error { color: #ff6b6b; }
         .warning { color: #fcc419; }
         .info { color: #339af0; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .debug-info {
+            display: none;
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>💰 Coin Clicker</h1>
-        
-        <div class="balance" id="balance">0 монет</div>
-        
-        <div class="coin" id="coin">
-            КЛИК!
-        </div>
-        
-        <div class="controls">
-            <button class="btn" id="save-btn" onclick="saveToCloud()">💾 Сохранить</button>
-            <button class="btn" id="load-btn" onclick="loadFromCloud()">☁️ Загрузить</button>
-            <button class="btn" id="refresh-btn" onclick="refreshLeaderboard()">🔄 Рейтинг</button>
-            <button class="btn" id="reset-btn" onclick="resetBalance()">🔄 Сбросить</button>
-        </div>
-        
-        <div id="user-rank" class="user-rank" style="display: none;">
-            <strong>Ваше место:</strong> <span id="user-position">-</span>
-        </div>
-        
-        <div class="leaderboard">
-            <h2>🏆 Топ игроков</h2>
-            
-            <div class="leaderboard-header">
-                <span class="rank">Место</span>
-                <span class="username">Никнейм</span>
-                <span class="user-balance">Баланс</span>
+        <!-- Главное меню -->
+        <div id="main-menu-screen" class="screen active">
+            <div class="header">
+                <h1>💰 Coin Clicker</h1>
+                <div class="balance" id="balance">0 монет</div>
             </div>
             
-            <div id="leaderboard" class="loading">Загрузка рейтинга...</div>
+            <div class="main-menu">
+                <button class="menu-btn" onclick="showScreen('top-screen')">
+                    <div class="menu-icon">🏆</div>
+                    Топ
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('shop-screen')">
+                    <div class="menu-icon">🛒</div>
+                    Магазин
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('games-screen')">
+                    <div class="menu-icon">🎮</div>
+                    Игры
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('transfer-screen')">
+                    <div class="menu-icon">↗️</div>
+                    Перевести
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('catalog-screen')">
+                    <div class="menu-icon">📦</div>
+                    Каталог
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('referrals-screen')">
+                    <div class="menu-icon">👥</div>
+                    Рефералы
+                </button>
+            </div>
+            
+            <div class="status" id="status"></div>
         </div>
-        
-        <div id="status" class="status"></div>
-        <div id="debug" style="display: none; font-size: 10px; color: #ccc; margin-top: 10px;"></div>
+
+        <!-- Экран Топ (Рейтинг) -->
+        <div id="top-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>🏆 Топ игроков</h2>
+            
+            <div class="user-rank" id="user-rank" style="display: none;">
+                <strong>Ваше место:</strong> <span id="user-position">-</span>
+            </div>
+            
+            <div class="leaderboard">
+                <div class="leaderboard-header">
+                    <span class="rank">Место</span>
+                    <span class="username">Никнейм</span>
+                    <span class="user-balance">Баланс</span>
+                </div>
+                
+                <div id="leaderboard" class="loading">Загрузка рейтинга...</div>
+            </div>
+            
+            <button class="back-btn" onclick="refreshLeaderboard()">🔄 Обновить</button>
+        </div>
+
+        <!-- Заглушки для остальных экранов -->
+        <div id="shop-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>🛒 Магазин</h2>
+            <div class="empty-state">
+                Магазин скоро откроется!<br>
+                <small>Здесь можно будет покупать улучшения</small>
+            </div>
+        </div>
+
+        <div id="games-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>🎮 Игры</h2>
+            <div class="empty-state">
+                Игры скоро появятся!<br>
+                <small>Здесь будут мини-игры для заработка</small>
+            </div>
+        </div>
+
+        <div id="transfer-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>↗️ Перевести</h2>
+            <div class="empty-state">
+                Переводы скоро будут доступны!<br>
+                <small>Переводите монеты друзьям</small>
+            </div>
+        </div>
+
+        <div id="catalog-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>📦 Каталог</h2>
+            <div class="empty-state">
+                Каталог в разработке!<br>
+                <small>Покупайте предметы и улучшения</small>
+            </div>
+        </div>
+
+        <div id="referrals-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
+            <h2>👥 Рефералы</h2>
+            <div class="empty-state">
+                Реферальная система скоро!<br>
+                <small>Приглашайте друзей и получайте бонусы</small>
+            </div>
+        </div>
+
+        <div id="debug" class="debug-info"></div>
     </div>
 
     <script>
@@ -224,7 +323,6 @@
                 this.userId = null;
                 this.balance = 0;
                 this.telegram = null;
-                // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL Google Apps Script!
                 this.scriptURL = 'https://script.google.com/macros/s/AKfycby0jP0bpzlVyVoIqFGGoWI1dqrVVit7c18JQf2XE6mLJcxRfK_XvQvYbiq1Xts1c60ANw/exec';
                 this.lastSaveTime = 0;
                 this.isSaving = false;
@@ -234,11 +332,7 @@
 
             async init() {
                 try {
-                    console.log('Инициализация приложения...');
                     this.debugLog('Начало инициализации');
-                    
-                    // Сначала инициализируем базовые функции
-                    this.setupClickHandler();
                     
                     // Инициализация Telegram Web App
                     if (window.Telegram && window.Telegram.WebApp) {
@@ -259,15 +353,14 @@
                     // Показываем текущий баланс
                     this.updateBalanceDisplay();
                     
-                    // Затем проверяем доступность скрипта (асинхронно)
+                    // Проверяем доступность скрипта
                     this.checkScriptAvailability();
                     
-                    this.showStatus('Готово! Кликайте по монете 🎯', 'success');
+                    this.showStatus('Добро пожаловать!', 'success');
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
                     this.debugLog('Ошибка инициализации: ' + error.message);
-                    this.showStatus('Ошибка загрузки приложения', 'error');
                 }
             }
 
@@ -286,15 +379,10 @@
                     this.debugLog('Script available: ' + this.scriptAvailable);
                     
                     if (this.scriptAvailable) {
-                        // Загружаем из облака и рейтинг в фоне
+                        // Загружаем из облака в фоне
                         setTimeout(() => this.loadFromCloud().catch(() => {}), 1000);
-                        setTimeout(() => this.loadLeaderboard().catch(() => {}), 2000);
-                    } else {
-                        this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
-                        this.showEmptyLeaderboard();
                     }
                 } catch (error) {
-                    console.log('Ошибка проверки скрипта:', error);
                     this.debugLog('Ошибка проверки скрипта: ' + error.message);
                     this.scriptAvailable = false;
                 }
@@ -312,32 +400,11 @@
                     
                     return response.ok;
                 } catch (error) {
-                    console.log('Google Apps Script недоступен:', error);
                     return false;
                 }
             }
 
-            setupClickHandler() {
-                const coin = document.getElementById('coin');
-                
-                const handleClick = () => {
-                    this.balance++;
-                    this.updateBalanceDisplay();
-                    this.saveToLocal();
-                    
-                    this.showStatus('+1 монета! 💰', 'success');
-                };
-                
-                // Добавляем обработчики событий
-                coin.addEventListener('click', handleClick);
-                coin.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    handleClick();
-                }, { passive: false });
-            }
-
             updateBalanceDisplay() {
-                // Защита от огромных чисел
                 if (this.balance > 1000000) {
                     this.debugLog('Обнаружен слишком большой баланс: ' + this.balance + ', сбрасываем до 0');
                     this.balance = 0;
@@ -365,12 +432,10 @@
                     try {
                         return JSON.parse(text);
                     } catch (e) {
-                        console.error('JSON parse error:', text);
                         return { success: false, error: 'Invalid JSON response' };
                     }
                     
                 } catch (error) {
-                    console.error('Request error:', error);
                     throw error;
                 }
             }
@@ -383,7 +448,6 @@
                 
                 if (this.isSaving) return false;
                 this.isSaving = true;
-                this.toggleButtons(false);
                 
                 try {
                     this.showStatus('Сохранение...', 'loading');
@@ -409,29 +473,17 @@
 
                     if (response && response.success) {
                         this.lastSaveTime = Date.now();
-                        this.showStatus('Сохранено в облако! ✅', 'success');
-                        this.debugLog('Успешно сохранено в облако');
+                        this.showStatus('Сохранено! ✅', 'success');
                         return true;
                     } else {
                         throw new Error(response?.error || 'Ошибка сохранения');
                     }
                 } catch (error) {
-                    console.error('Ошибка сохранения в облако:', error);
-                    this.debugLog('Ошибка сохранения: ' + error.message);
                     this.showStatus('Ошибка сохранения', 'error');
                     return false;
                 } finally {
                     this.isSaving = false;
-                    this.toggleButtons(true);
                 }
-            }
-
-            toggleButtons(enabled) {
-                const buttons = ['save-btn', 'load-btn', 'refresh-btn', 'reset-btn'];
-                buttons.forEach(id => {
-                    const btn = document.getElementById(id);
-                    if (btn) btn.disabled = !enabled;
-                });
             }
 
             async loadFromCloud() {
@@ -439,10 +491,7 @@
                     return false;
                 }
                 
-                this.toggleButtons(false);
-                
                 try {
-                    this.showStatus('Загрузка из облака...', 'loading');
                     this.debugLog('Загрузка из облака...');
                     
                     const url = `${this.scriptURL}?action=get&userId=${encodeURIComponent(this.userId)}&t=${Date.now()}`;
@@ -451,31 +500,16 @@
                     if (data && data.success && data.balance !== undefined && data.balance !== null) {
                         const cloudBalance = parseInt(data.balance);
                         
-                        if (!isNaN(cloudBalance) && cloudBalance >= 0) {
-                            this.debugLog('Получен баланс из облака: ' + cloudBalance);
-                            
-                            // Защита от некорректных значений
-                            if (cloudBalance > 1000000) {
-                                this.debugLog('Слишком большой баланс из облака, игнорируем');
-                                this.showStatus('Ошибка данных из облака', 'error');
-                                return false;
-                            }
-                            
+                        if (!isNaN(cloudBalance) && cloudBalance >= 0 && cloudBalance <= 1000000) {
                             this.balance = cloudBalance;
                             this.updateBalanceDisplay();
                             this.saveToLocal();
-                            this.showStatus('Данные загружены ✅', 'success');
                             return true;
                         }
                     }
-                    this.debugLog('Нет данных в облаке или неверный формат');
                     return false;
                 } catch (error) {
-                    console.log('Не удалось загрузить из облака:', error);
-                    this.debugLog('Ошибка загрузки из облака: ' + error.message);
                     return false;
-                } finally {
-                    this.toggleButtons(true);
                 }
             }
 
@@ -486,18 +520,9 @@
                         const balance = parseInt(saved);
                         if (!isNaN(balance) && balance >= 0 && balance <= 1000000) {
                             this.balance = balance;
-                            this.debugLog('Загружено из localStorage: ' + balance);
-                        } else {
-                            this.debugLog('Некорректное значение в localStorage: ' + saved);
-                            this.balance = 0;
                         }
-                    } else {
-                        this.debugLog('Нет данных в localStorage');
-                        this.balance = 0;
                     }
                 } catch (error) {
-                    console.error('Ошибка загрузки из localStorage:', error);
-                    this.debugLog('Ошибка localStorage: ' + error.message);
                     this.balance = 0;
                 }
             }
@@ -505,19 +530,9 @@
             saveToLocal() {
                 try {
                     localStorage.setItem(`coin_balance_${this.userId}`, this.balance.toString());
-                    this.debugLog('Сохранено в localStorage: ' + this.balance);
                 } catch (error) {
                     console.error('Ошибка сохранения в localStorage:', error);
-                    this.debugLog('Ошибка сохранения localStorage: ' + error.message);
                 }
-            }
-
-            resetBalance() {
-                this.balance = 0;
-                this.updateBalanceDisplay();
-                this.saveToLocal();
-                this.showStatus('Баланс сброшен 🔄', 'info');
-                this.debugLog('Баланс сброшен вручную');
             }
 
             async loadLeaderboard() {
@@ -526,9 +541,10 @@
                     return;
                 }
                 
-                this.toggleButtons(false);
-                
                 try {
+                    const leaderboardElement = document.getElementById('leaderboard');
+                    leaderboardElement.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
+                    
                     const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
@@ -543,11 +559,7 @@
                         this.showEmptyLeaderboard();
                     }
                 } catch (error) {
-                    console.log('Ошибка загрузки рейтинга:', error);
-                    this.debugLog('Ошибка рейтинга: ' + error.message);
                     this.showEmptyLeaderboard();
-                } finally {
-                    this.toggleButtons(true);
                 }
             }
 
@@ -555,7 +567,7 @@
                 const leaderboardElement = document.getElementById('leaderboard');
                 
                 let html = '';
-                const topPlayers = leaderboard.slice(0, 10);
+                const topPlayers = leaderboard.slice(0, 20);
                 
                 if (topPlayers.length === 0) {
                     this.showEmptyLeaderboard();
@@ -634,16 +646,22 @@
             }
         }
 
-        // Глобальные функции для кнопок
-        function saveToCloud() {
-            if (window.coinApp) {
-                window.coinApp.saveToCloud().catch(() => {});
-            }
-        }
-
-        function loadFromCloud() {
-            if (window.coinApp) {
-                window.coinApp.loadFromCloud().catch(() => {});
+        // Глобальные функции для навигации
+        function showScreen(screenId) {
+            // Скрыть все экраны
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Показать выбранный экран
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                
+                // Если открываем топ - загружаем рейтинг
+                if (screenId === 'top-screen') {
+                    refreshLeaderboard();
+                }
             }
         }
 
@@ -653,9 +671,9 @@
             }
         }
 
-        function resetBalance() {
+        function saveToCloud() {
             if (window.coinApp) {
-                window.coinApp.resetBalance();
+                window.coinApp.saveToCloud().catch(() => {});
             }
         }
 
@@ -672,6 +690,13 @@
             
             // Добавляем двойной клик для отладки
             document.addEventListener('dblclick', toggleDebug);
+            
+            // Автосохранение каждые 30 секунд
+            setInterval(() => {
+                if (window.coinApp) {
+                    window.coinApp.saveToCloud().catch(() => {});
+                }
+            }, 30000);
         });
     </script>
 </body>
