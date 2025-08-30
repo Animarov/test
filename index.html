@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -483,7 +484,7 @@
             'https://i.pravatar.cc/150?img=1',
             'https://i.pravatar.cc/150?img=2',
             'https://i.pravatar.cc/150?img=3',
-            'httpsi.pravatar.cc/150?img=4',
+            'https://i.pravatar.cc/150?img=4',
             'https://i.pravatar.cc/150?img=5',
             'https://i.pravatar.cc/150?img=6',
             'https://i.pravatar.cc/150?img=7',
@@ -591,13 +592,15 @@
             
             // Добавляем обработчики
             coin.addEventListener('click', handleClick);
-            coin.addEventListener('touchstart', (e) => {
+            
+            // Исправленный обработчик для touch-устройств
+            coin.addEventListener('touchstart', function(e) {
                 e.preventDefault();
                 const touch = e.touches[0];
-                const simulatedEvent = new MouseEvent('click', {
+                const simulatedEvent = {
                     clientX: touch.clientX,
                     clientY: touch.clientY
-                });
+                };
                 handleClick(simulatedEvent);
             }, { passive: false });
         }
@@ -675,6 +678,7 @@
                 });
                 
                 // Добавляем тестовых пользователей для демонстрации
+                // Вместо попытки получить данные из localStorage, создаем тестовых пользователей
                 for (let i = 1; i <= 10; i++) {
                     users.push({
                         userId: 'test_user_' + i,
