@@ -38,6 +38,7 @@
             border: 4px solid #ffed85;
             color: #8b7500;
             text-shadow: 1px 1px 2px rgba(255,255,255,0.5);
+            user-select: none;
         }
         
         .coin:active {
@@ -201,7 +202,7 @@
         </div>
         
         <div class="leaderboard">
-            <h2>🏆 Топ 100 игроков</h2>
+            <h2>🏆 Топ игроков</h2>
             
             <div class="leaderboard-header">
                 <span class="rank">Место</span>
@@ -233,9 +234,12 @@
                 try {
                     console.log('Инициализация приложения...');
                     
-                    // Проверяем доступность Google Apps Script
-                    this.scriptAvailable = await this.testScriptConnection();
-                    console.log('Script available:', this.scriptAvailable);
+                    // Сначала инициализируем базовые функции
+                    this.setupClickHandler();
+                    this.loadFromLocal();
+                    
+                    // Показываем текущий баланс
+                    document.getElementById('balance').textContent = `${this.balance} монет`;
                     
                     // Инициализация Telegram Web App
                     if (window.Telegram && window.Telegram.WebApp) {
@@ -248,42 +252,33 @@
                         this.userId = 'guest_' + Math.random().toString(36).substr(2, 9);
                     }
 
-                    // Сразу показываем баланс 0
-                    document.getElementById('balance').textContent = '0 монет';
-                    
-                    // Загружаем из локального хранилища
-                    this.loadFromLocal();
-                    
-                    // Пробуем загрузить из облака (если доступно)
-                    if (this.scriptAvailable) {
-                        try {
-                            await this.loadFromCloud();
-                        } catch (error) {
-                            console.log('Ошибка загрузки из облака:', error);
-                        }
-                    } else {
-                        this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
-                    }
-                    
-                    // Загружаем рейтинг (если доступно)
-                    if (this.scriptAvailable) {
-                        try {
-                            await this.loadLeaderboard();
-                        } catch (error) {
-                            console.log('Ошибка загрузки рейтинга:', error);
-                            this.showEmptyLeaderboard();
-                        }
-                    } else {
-                        this.showEmptyLeaderboard();
-                    }
-                    
-                    // Добавляем обработчик клика
-                    this.setupClickHandler();
+                    // Затем проверяем доступность скрипта (асинхронно)
+                    this.checkScriptAvailability();
                     
                     this.showStatus('Готово! Кликайте по монете 🎯', 'success');
                     
                 } catch (error) {
                     console.error('Ошибка инициализации:', error);
+                    this.showStatus('Ошибка загрузки приложения', 'error');
+                }
+            }
+
+            async checkScriptAvailability() {
+                try {
+                    this.scriptAvailable = await this.testScriptConnection();
+                    console.log('Script available:', this.scriptAvailable);
+                    
+                    if (this.scriptAvailable) {
+                        // Загружаем из облака и рейтинг в фоне
+                        this.loadFromCloud().catch(() => {});
+                        this.loadLeaderboard().catch(() => {});
+                    } else {
+                        this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
+                        this.showEmptyLeaderboard();
+                    }
+                } catch (error) {
+                    console.log('Ошибка проверки скрипта:', error);
+                    this.scriptAvailable = false;
                 }
             }
 
@@ -297,8 +292,7 @@
                         }
                     });
                     
-                    const text = await response.text();
-                    return text === 'OK' || response.ok;
+                    return response.ok;
                 } catch (error) {
                     console.log('Google Apps Script недоступен:', error);
                     return false;
@@ -309,7 +303,7 @@
                 const coin = document.getElementById('coin');
                 let lastClickTime = 0;
                 
-                coin.addEventListener('click', () => {
+                const handleClick = () => {
                     const now = Date.now();
                     if (now - lastClickTime < 100) return;
                     lastClickTime = now;
@@ -319,24 +313,22 @@
                     this.saveToLocal();
                     
                     this.showStatus('+1 монета! 💰', 'success');
-                });
+                };
+                
+                // Добавляем несколько обработчиков для надежности
+                coin.addEventListener('click', handleClick);
+                coin.addEventListener('touchstart', handleClick, { passive: true });
             }
 
             async makeRequest(url, options = {}) {
                 try {
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 5000);
-                    
                     const response = await fetch(url, {
                         ...options,
-                        signal: controller.signal,
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             ...options.headers
                         }
                     });
-                    
-                    clearTimeout(timeoutId);
                     
                     if (!response.ok) {
                         throw new Error(`HTTP error: ${response.status}`);
@@ -352,9 +344,7 @@
                     }
                     
                 } catch (error) {
-                    if (error.name === 'AbortError') {
-                        throw new Error('Request timeout');
-                    }
+                    console.error('Request error:', error);
                     throw error;
                 }
             }
@@ -399,7 +389,7 @@
                     }
                 } catch (error) {
                     console.error('Ошибка сохранения в облако:', error);
-                    this.showStatus('Ошибка сохранения: ' + error.message, 'error');
+                    this.showStatus('Ошибка сохранения', 'error');
                     return false;
                 } finally {
                     this.isSaving = false;
@@ -417,7 +407,6 @@
 
             async loadFromCloud() {
                 if (!this.scriptAvailable) {
-                    this.showStatus('Облачное сохранение недоступно ⚠️', 'warning');
                     return false;
                 }
                 
@@ -433,7 +422,6 @@
                         const cloudBalance = parseInt(data.balance);
                         
                         if (!isNaN(cloudBalance) && cloudBalance >= 0) {
-                            // ВАЖНОЕ ИСПРАВЛЕНИЕ: Всегда используем баланс из облака
                             this.balance = cloudBalance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                             this.saveToLocal();
@@ -441,11 +429,9 @@
                             return true;
                         }
                     }
-                    this.showStatus('Нет данных в облаке', 'info');
                     return false;
                 } catch (error) {
-                    console.log('Не удалось загрузить из облака:', error.message);
-                    this.showStatus('Ошибка загрузки: ' + error.message, 'error');
+                    console.log('Не удалось загрузить из облака:', error);
                     return false;
                 } finally {
                     this.toggleButtons(true);
@@ -458,7 +444,6 @@
                     if (saved) {
                         const balance = parseInt(saved);
                         if (!isNaN(balance) && balance >= 0) {
-                            // Убираем ограничение в 1,000,000 монет
                             this.balance = balance;
                             document.getElementById('balance').textContent = `${this.balance} монет`;
                         }
@@ -479,15 +464,12 @@
             async loadLeaderboard() {
                 if (!this.scriptAvailable) {
                     this.showEmptyLeaderboard();
-                    this.showStatus('Рейтинг недоступен в оффлайн-режиме 📴', 'warning');
                     return;
                 }
                 
                 this.toggleButtons(false);
                 
                 try {
-                    this.showStatus('Загрузка рейтинга...', 'loading');
-                    
                     const url = `${this.scriptURL}?action=leaderboard&t=${Date.now()}`;
                     const data = await this.makeRequest(url);
                     
@@ -495,19 +477,15 @@
                         if (data.leaderboard && data.leaderboard.length > 0) {
                             this.displayLeaderboard(data.leaderboard);
                             this.displayUserRank(data.leaderboard);
-                            this.showStatus('Рейтинг обновлен ✅', 'success');
                         } else {
                             this.showEmptyLeaderboard();
-                            this.showStatus('Рейтинг пуст 🏆', 'info');
                         }
                     } else {
                         this.showEmptyLeaderboard();
-                        this.showStatus('Ошибка загрузки рейтинга ⚠️', 'error');
                     }
                 } catch (error) {
-                    console.log('Ошибка загрузки рейтинга:', error.message);
+                    console.log('Ошибка загрузки рейтинга:', error);
                     this.showEmptyLeaderboard();
-                    this.showStatus('Рейтинг временно недоступен ⚠️', 'warning');
                 } finally {
                     this.toggleButtons(true);
                 }
@@ -517,7 +495,14 @@
                 const leaderboardElement = document.getElementById('leaderboard');
                 
                 let html = '';
-                leaderboard.slice(0, 100).forEach((player, index) {
+                const topPlayers = leaderboard.slice(0, 10); // Показываем только топ-10
+                
+                if (topPlayers.length === 0) {
+                    this.showEmptyLeaderboard();
+                    return;
+                }
+                
+                topPlayers.forEach((player, index) => {
                     const displayName = player.username || player.firstName || `Игрок ${(player.userId || '').substr(0, 6)}`;
                     const balance = player.balance || 0;
                     
@@ -552,7 +537,9 @@
                     return;
                 }
 
-                const userIndex = leaderboard.findIndex(player => player.userId === this.userId);
+                const userIndex = leaderboard.findIndex(player => 
+                    player.userId && player.userId.toString() === this.userId.toString()
+                );
                 
                 if (userIndex !== -1) {
                     userPositionElement.textContent = `${userIndex + 1} место`;
@@ -587,20 +574,40 @@
             }
         }
 
+        // Глобальные функции для кнопок
         function saveToCloud() {
-            if (window.coinApp) window.coinApp.saveToCloud();
+            if (window.coinApp) {
+                window.coinApp.saveToCloud().catch(() => {});
+            }
         }
 
         function loadFromCloud() {
-            if (window.coinApp) window.coinApp.loadFromCloud();
+            if (window.coinApp) {
+                window.coinApp.loadFromCloud().catch(() => {});
+            }
         }
 
         function refreshLeaderboard() {
-            if (window.coinApp) window.coinApp.loadLeaderboard();
+            if (window.coinApp) {
+                window.coinApp.loadLeaderboard().catch(() => {});
+            }
         }
 
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
             window.coinApp = new CoinClicker();
+            
+            // Добавляем обработчик клика на монету для мобильных устройств
+            const coin = document.getElementById('coin');
+            coin.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                if (window.coinApp) {
+                    window.coinApp.balance++;
+                    document.getElementById('balance').textContent = `${window.coinApp.balance} монет`;
+                    window.coinApp.saveToLocal();
+                    window.coinApp.showStatus('+1 монета! 💰', 'success');
+                }
+            }, { passive: false });
         });
     </script>
 </body>
