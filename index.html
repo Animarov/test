@@ -352,6 +352,40 @@
         .cloud-online { background-color: #22c55e; }
         .cloud-offline { background-color: #ef4444; }
         .cloud-loading { background-color: #f59e0b; }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
+
+        .user-profile-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+            object-fit: cover;
+            border: 2px solid rgba(251, 146, 60, 0.5);
+        }
+
+        .user-profile-info {
+            text-align: left;
+        }
+
+        .user-profile-name {
+            font-weight: bold;
+            color: #7c2d12;
+            margin-bottom: 3px;
+        }
+
+        .user-profile-id {
+            font-size: 12px;
+            color: #a8a29e;
+        }
     </style>
 </head>
 <body>
@@ -359,6 +393,14 @@
         <!-- Главное меню -->
         <div id="main-menu-screen" class="screen active">
             <div class="header">
+                <div class="user-profile" id="user-profile">
+                    <img class="user-profile-avatar" id="user-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                    <div class="user-profile-info">
+                        <div class="user-profile-name" id="user-name">Загрузка...</div>
+                        <div class="user-profile-id">ID: <span id="user-id">-</span></div>
+                    </div>
+                </div>
+                
                 <div class="balance">
                     <div class="balance-label">Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span></div>
                     <div class="balance-amount" id="balance">0 монет</div>
@@ -481,9 +523,10 @@
         // Глобальные переменные
         let balance = 0;
         let userId = getOrCreateUserId();
-        let userName = generateRandomName();
-        let userAvatar = generateRandomAvatar();
-        // Замените этот URL на ваш реальный URL скрипта Google Apps Script
+        let userName = "Гость";
+        let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        
+        // ЗАМЕНИТЕ ЭТОТ URL НА ВАШ РЕАЛЬНЫЙ URL СКРИПТА
         let scriptURL = 'https://script.google.com/macros/s/AKfycby7qOwZh-JQtplzzGirv4rP56S4x1cLEGQ0rgqQk9IrKVa71Fu3wUYkSj478od_ttwZ0g/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
@@ -498,32 +541,71 @@
             return id;
         }
         
-        // Списки для генерации случайных имен и аватарок
-        const names = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Иван', 'Екатерина', 'Сергей', 'Ольга', 'Андрей', 'Наталья', 'Максим', 'Юлия', 'Артем', 'Ирина', 'Владимир', 'Светлана', 'Павел', 'Татьяна', 'Николай', 'Елена'];
-        const surnames = ['Иванов', 'Петров', 'Сидоров', 'Смирнов', 'Кузнецов', 'Попов', 'Васильев', 'Павлов', 'Семенов', 'Голубев', 'Виноградов', 'Богданов', 'Воробьев', 'Федоров', 'Михайлов', 'Беляев', 'Тарасов', 'Белов', 'Комаров', 'Орлов'];
-        const avatars = [
-            'https://i.pravatar.cc/150?img=1',
-            'https://i.pravatar.cc/150?img=2',
-            'https://i.pravatar.cc/150?img=3',
-            'https://i.pravatar.cc/150?img=4',
-            'https://i.pravatar.cc/150?img=5',
-            'https://i.pravatar.cc/150?img=6',
-            'https://i.pravatar.cc/150?img=7',
-            'https://i.pravatar.cc/150?img=8',
-            'https://i.pravatar.cc/150?img=9',
-            'https://i.pravatar.cc/150?img=10'
-        ];
-        
-        // Генерация случайного имени
-        function generateRandomName() {
-            const name = names[Math.floor(Math.random() * names.length)];
-            const surname = surnames[Math.floor(Math.random() * surnames.length)];
-            return name + ' ' + surname;
+        // Функция для получения данных из Telegram
+        function initTelegramData() {
+            // Проверяем, запущено ли в Telegram WebApp
+            if (window.Telegram && window.Telegram.WebApp) {
+                const webApp = window.Telegram.WebApp;
+                
+                // Получаем данные пользователя
+                const user = webApp.initDataUnsafe.user;
+                
+                if (user) {
+                    // Устанавливаем имя пользователя
+                    if (user.first_name || user.last_name) {
+                        userName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+                    } else if (user.username) {
+                        userName = user.username;
+                    }
+                    
+                    // Устанавливаем аватарку
+                    if (user.photo_url) {
+                        userAvatar = user.photo_url;
+                    }
+                    
+                    // Используем Telegram ID как основной идентификатор
+                    if (user.id) {
+                        userId = 'tg_' + user.id;
+                        localStorage.setItem('coin_user_id', userId);
+                    }
+                    
+                    // Обновляем отображение профиля
+                    updateUserProfile();
+                }
+            }
+            
+            // Загружаем сохраненные данные
+            loadUserData();
         }
         
-        // Генерация случайного аватара
-        function generateRandomAvatar() {
-            return avatars[Math.floor(Math.random() * avatars.length)];
+        // Обновление отображения профиля
+        function updateUserProfile() {
+            document.getElementById('user-name').textContent = userName;
+            document.getElementById('user-id').textContent = userId;
+            document.getElementById('user-avatar').src = userAvatar;
+        }
+        
+        // Сохранение данных пользователя
+        function saveUserData() {
+            localStorage.setItem('coin_user_data', JSON.stringify({
+                name: userName,
+                avatar: userAvatar
+            }));
+        }
+        
+        // Загрузка данных пользователя
+        function loadUserData() {
+            try {
+                const userData = localStorage.getItem('coin_user_data');
+                if (userData) {
+                    const parsedData = JSON.parse(userData);
+                    userName = parsedData.name || userName;
+                    userAvatar = parsedData.avatar || userAvatar;
+                    updateUserProfile();
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки данных пользователя:', error);
+            }
         }
         
         // Навигация по экранам
@@ -606,16 +688,15 @@
         // Сброс игры
         function resetGame() {
             balance = 0;
-            userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            userId = 'tg_' + Math.random().toString(36).substr(2, 9);
             localStorage.setItem('coin_user_id', userId);
-            userName = generateRandomName();
-            userAvatar = generateRandomAvatar();
+            initTelegramData(); // Переинициализируем данные Telegram
             updateBalanceDisplay();
             saveToLocal();
             showStatus('Игра сброшена! 🔄', 'info');
         }
         
-        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ
+        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
         function setupCoinClick() {
             const coin = document.getElementById('coin');
             
@@ -679,10 +760,7 @@
         function saveToLocal() {
             try {
                 localStorage.setItem('coin_balance', balance.toString());
-                localStorage.setItem('coin_user_data', JSON.stringify({
-                    name: userName,
-                    avatar: userAvatar
-                }));
+                saveUserData();
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
             }
@@ -699,12 +777,7 @@
                     }
                 }
                 
-                const userData = localStorage.getItem('coin_user_data');
-                if (userData) {
-                    const parsedData = JSON.parse(userData);
-                    userName = parsedData.name || userName;
-                    userAvatar = parsedData.avatar || userAvatar;
-                }
+                loadUserData();
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
                 balance = 0;
@@ -743,6 +816,7 @@
                 formData.append('userId', userId);
                 formData.append('balance', balance);
                 formData.append('username', userName);
+                formData.append('avatar', userAvatar);
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
@@ -867,13 +941,13 @@
                         avatar: userAvatar
                     });
                     
-                    // Добавляем тестовых пользователей
-                    for (let i = 1; i <= 15; i++) {
+                    // Добавляем тестовых пользователей (только для демонстрации)
+                    for (let i = 1; i <= 5; i++) {
                         users.push({
-                            userId: 'test_user_' + i,
-                            balance: Math.floor(Math.random() * 1000) + 100,
-                            username: names[Math.floor(Math.random() * names.length)] + ' ' + surnames[Math.floor(Math.random() * surnames.length)],
-                            avatar: avatars[Math.floor(Math.random() * avatars.length)]
+                            userId: 'demo_user_' + i,
+                            balance: Math.floor(Math.random() * 500) + 100,
+                            username: 'Демо пользователь ' + i,
+                            avatar: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
                         });
                     }
                     
@@ -904,7 +978,7 @@
             topPlayers.forEach((player, index) => {
                 const displayName = player.username || `Игрок ${(player.userId || '').substr(0, 6)}`;
                 const playerBalance = player.balance || 0;
-                const avatar = player.avatar || 'https://i.pravatar.cc/150?img=6';
+                const avatar = player.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 
                 html += `
                     <div class="leaderboard-item">
@@ -960,10 +1034,14 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
+            // Инициализируем данные Telegram
+            initTelegramData();
+            
             loadFromLocal();
             updateBalanceDisplay();
             setupCoinClick();
             updateCloudIndicator('offline');
+            updateUserProfile();
             
             // Проверяем доступность облака при старте
             setTimeout(() => {
@@ -990,4 +1068,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
