@@ -479,7 +479,7 @@
     <script>
         // Глобальные переменные
         let balance = 0;
-        let userId = 'user_' + Math.random().toString(36).substr(2, 9);
+        let userId = getOrCreateUserId();
         let userName = generateRandomName();
         let userAvatar = generateRandomAvatar();
         let scriptURL = 'https://script.google.com/macros/s/AKfycbxVR0deJOB2cnyxVAMsYGzQkoDhDMC1YSU1BtmpMXPWubzjkakSeSkn0jqMkl-yJJltPg/exec';
@@ -574,6 +574,7 @@
                     <div>Баланс: ${balance} | UserID: ${userId}</div>
                     <div>Имя: ${userName}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
+                    <div>Последний клик: ${new Date().toLocaleTimeString()}</div>
                     <button class="test-button" onclick="addTestCoins(10)">Тест: +10</button>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
@@ -616,14 +617,17 @@
                 
                 let clientX, clientY;
                 
+                // Получаем координаты клика
                 if (event.type === 'touchstart') {
                     if (event.touches && event.touches[0]) {
-                        clientX = event.touches[0].clientX;
-                        clientY = event.touches[0].clientY;
+                        const rect = coin.getBoundingClientRect();
+                        clientX = rect.left + rect.width / 2;
+                        clientY = rect.top + rect.height / 2;
                     }
                 } else {
-                    clientX = event.clientX;
-                    clientY = event.clientY;
+                    const rect = coin.getBoundingClientRect();
+                    clientX = rect.left + rect.width / 2;
+                    clientY = rect.top + rect.height / 2;
                 }
                 
                 if (clientX && clientY) {
@@ -673,10 +677,11 @@
         // Сохранение в localStorage
         function saveToLocal() {
             try {
-                localStorage.setItem(`coin_balance_${userId}`, balance.toString());
-                localStorage.setItem(`coin_user_${userId}`, JSON.stringify({
+                localStorage.setItem('coin_balance', balance.toString());
+                localStorage.setItem('coin_user_data', JSON.stringify({
                     name: userName,
-                    avatar: userAvatar
+                    avatar: userAvatar,
+                    userId: userId // сохраняем ID на всякий случай
                 }));
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
@@ -686,7 +691,7 @@
         // Загрузка из localStorage
         function loadFromLocal() {
             try {
-                const savedBalance = localStorage.getItem(`coin_balance_${userId}`);
+                const savedBalance = localStorage.getItem('coin_balance');
                 if (savedBalance) {
                     const parsedBalance = parseInt(savedBalance);
                     if (!isNaN(parsedBalance) && parsedBalance >= 0) {
@@ -694,11 +699,12 @@
                     }
                 }
                 
-                const userData = localStorage.getItem(`coin_user_${userId}`);
+                const userData = localStorage.getItem('coin_user_data');
                 if (userData) {
                     const parsedData = JSON.parse(userData);
                     userName = parsedData.name || userName;
                     userAvatar = parsedData.avatar || userAvatar;
+                    // Не перезаписываем userId, он уже установлен правильно
                 }
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
