@@ -482,9 +482,20 @@
         let userId = getOrCreateUserId();
         let userName = generateRandomName();
         let userAvatar = generateRandomAvatar();
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbzNo6LQqt31PlhbVDZFb_wXHKNdyzLcDYBtnLFQypjqa-V7Dj_wpk0FWb0s2vkXyuqeTQ/exec';
+        // ЗАМЕНИТЕ ЭТОТ URL НА ВАШ РЕАЛЬНЫЙ URL СКРИПТА
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
+        
+        // Генерация/получение ID пользователя
+        function getOrCreateUserId() {
+            let id = localStorage.getItem('coin_user_id');
+            if (!id) {
+                id = 'user_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('coin_user_id', id);
+            }
+            return id;
+        }
         
         // Списки для генерации случайных имен и аватарок
         const names = ['Алексей', 'Мария', 'Дмитрий', 'Анна', 'Иван', 'Екатерина', 'Сергей', 'Ольга', 'Андрей', 'Наталья', 'Максим', 'Юлия', 'Артем', 'Ирина', 'Владимир', 'Светлана', 'Павел', 'Татьяна', 'Николай', 'Елена'];
@@ -531,7 +542,7 @@
         }
 
         function refreshLeaderboard() {
-            loadLeaderboard();
+            loadLeaderboardFromCloud();
         }
 
         // Анимация клика
@@ -595,6 +606,7 @@
         function resetGame() {
             balance = 0;
             userId = 'user_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('coin_user_id', userId);
             userName = generateRandomName();
             userAvatar = generateRandomAvatar();
             updateBalanceDisplay();
@@ -605,34 +617,17 @@
         // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
         function setupCoinClick() {
             const coin = document.getElementById('coin');
-            let lastClickTime = 0;
             
             function handleClick(event) {
                 event.preventDefault();
                 event.stopPropagation();
                 
-                const now = Date.now();
-                if (now - lastClickTime < 100) return;
-                lastClickTime = now;
-                
-                let clientX, clientY;
-                
                 // Получаем координаты клика
-                if (event.type === 'touchstart') {
-                    if (event.touches && event.touches[0]) {
-                        const rect = coin.getBoundingClientRect();
-                        clientX = rect.left + rect.width / 2;
-                        clientY = rect.top + rect.height / 2;
-                    }
-                } else {
-                    const rect = coin.getBoundingClientRect();
-                    clientX = rect.left + rect.width / 2;
-                    clientY = rect.top + rect.height / 2;
-                }
+                const rect = coin.getBoundingClientRect();
+                const clientX = rect.left + rect.width / 2;
+                const clientY = rect.top + rect.height / 2;
                 
-                if (clientX && clientY) {
-                    createClickAnimation(clientX, clientY);
-                }
+                createClickAnimation(clientX, clientY);
                 
                 balance++;
                 updateBalanceDisplay();
@@ -651,9 +646,11 @@
                 }
             }
             
+            // Удаляем старые обработчики
             coin.onclick = null;
             coin.ontouchstart = null;
             
+            // Добавляем новые обработчики
             coin.addEventListener('click', handleClick);
             coin.addEventListener('touchstart', handleClick, { passive: false });
         }
@@ -680,8 +677,7 @@
                 localStorage.setItem('coin_balance', balance.toString());
                 localStorage.setItem('coin_user_data', JSON.stringify({
                     name: userName,
-                    avatar: userAvatar,
-                    userId: userId // сохраняем ID на всякий случай
+                    avatar: userAvatar
                 }));
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
@@ -704,7 +700,6 @@
                     const parsedData = JSON.parse(userData);
                     userName = parsedData.name || userName;
                     userAvatar = parsedData.avatar || userAvatar;
-                    // Не перезаписываем userId, он уже установлен правильно
                 }
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
@@ -719,7 +714,7 @@
             updateCloudIndicator('loading');
             
             try {
-                const formData = new FormData();
+                const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
                 formData.append('balance', balance);
@@ -727,6 +722,9 @@
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
                     body: formData
                 });
                 
@@ -807,22 +805,25 @@
                 console.error('Ошибка загрузки рейтинга:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                loadLeaderboard(); // Fallback to local leaderboard
                 showStatus('Ошибка загрузки рейтинга', 'error');
+                
+                // Показываем локальные данные как fallback
+                loadLeaderboardLocal();
             }
         }
         
-        // Загрузка рейтинга (локальная)
-        function loadLeaderboard() {
+        // Загрузка локального рейтинга (для отладки)
+        function loadLeaderboardLocal() {
             const leaderboardElement = document.getElementById('leaderboard-content');
             if (!leaderboardElement) return;
             
-            leaderboardElement.innerHTML = '<div class="loading">Загрузка рейтинга...</div>';
+            leaderboardElement.innerHTML = '<div class="loading">Загрузка локального рейтинга...</div>';
             
             setTimeout(() => {
                 try {
                     const users = [];
                     
+                    // Добавляем текущего пользователя
                     users.push({
                         userId: userId,
                         balance: balance,
@@ -830,6 +831,7 @@
                         avatar: userAvatar
                     });
                     
+                    // Добавляем тестовых пользователей
                     for (let i = 1; i <= 15; i++) {
                         users.push({
                             userId: 'test_user_' + i,
@@ -911,7 +913,7 @@
             );
             
             if (userIndex !== -1) {
-                userPositionElement.textContent = `${userIndex + 1} место`;
+                userPositionElement.textContent = `${userIndex + 1} место из ${leaderboard.length}`;
                 userRankElement.style.display = 'block';
             } else {
                 userRankElement.style.display = 'none';
