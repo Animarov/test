@@ -523,44 +523,32 @@
         let userId = null;
         let userName = "Гость";
         let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+        let isTelegramWebApp = false;
         
         // URL Google Apps Script
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
         
-        // Получение ID пользователя из Telegram
-        function getTelegramUserId() {
-            // Проверяем, запущено ли в Telegram WebApp
-            if (window.Telegram && window.Telegram.WebApp) {
-                const webApp = window.Telegram.WebApp;
-                const user = webApp.initDataUnsafe.user;
-                
-                if (user && user.id) {
-                    return 'tg_' + user.id;
-                }
-            }
-            
-            // Если не в Telegram, используем сохраненный ID или создаем новый
-            let id = localStorage.getItem('coin_user_id');
-            if (!id) {
-                id = 'user_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('coin_user_id', id);
-            }
-            return id;
+        // Проверка, запущено ли в Telegram WebApp
+        function isTelegram() {
+            return !!(window.Telegram && window.Telegram.WebApp);
         }
         
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
-            if (window.Telegram && window.Telegram.WebApp) {
+            if (isTelegram()) {
                 const webApp = window.Telegram.WebApp;
                 const user = webApp.initDataUnsafe.user;
                 
                 if (user) {
-                    let name = "Гость";
-                    let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                    isTelegramWebApp = true;
+                    
+                    // Получаем ID пользователя
+                    const telegramId = user.id;
                     
                     // Формируем имя
+                    let name = "Гость";
                     if (user.first_name || user.last_name) {
                         name = [user.first_name, user.last_name].filter(Boolean).join(' ');
                     } else if (user.username) {
@@ -568,19 +556,31 @@
                     }
                     
                     // Получаем аватар
+                    let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                     if (user.photo_url) {
                         avatar = user.photo_url;
                     }
                     
-                    return { name, avatar };
+                    return {
+                        id: telegramId,
+                        name: name,
+                        avatar: avatar
+                    };
                 }
             }
             
-            // Если не в Telegram, используем сохраненные данные
-            return { 
-                name: localStorage.getItem('coin_user_name') || "Гость",
-                avatar: localStorage.getItem('coin_user_avatar') || "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+            // Если не в Telegram
+            isTelegramWebApp = false;
+            return {
+                id: 'guest_' + Math.random().toString(36).substr(2, 9),
+                name: "Гость",
+                avatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
             };
+        }
+        
+        // Генерация уникального ключа для хранения данных
+        function getStorageKey(key) {
+            return `coin_${userId}_${key}`;
         }
         
         // Обновление отображения профиля
@@ -592,30 +592,40 @@
         
         // Сохранение данных пользователя
         function saveUserData() {
-            localStorage.setItem('coin_user_name', userName);
-            localStorage.setItem('coin_user_avatar', userAvatar);
+            if (!isTelegramWebApp) {
+                localStorage.setItem(getStorageKey('user_name'), userName);
+                localStorage.setItem(getStorageKey('user_avatar'), userAvatar);
+            }
         }
         
         // Загрузка данных пользователя
         function loadUserData() {
-            const savedName = localStorage.getItem('coin_user_name');
-            const savedAvatar = localStorage.getItem('coin_user_avatar');
-            
-            if (savedName) userName = savedName;
-            if (savedAvatar) userAvatar = savedAvatar;
+            if (!isTelegramWebApp) {
+                const savedName = localStorage.getItem(getStorageKey('user_name'));
+                const savedAvatar = localStorage.getItem(getStorageKey('user_avatar'));
+                
+                if (savedName) userName = savedName;
+                if (savedAvatar) userAvatar = savedAvatar;
+            }
         }
         
-        // Инициализация данных Telegram
-        function initTelegramData() {
-            userId = getTelegramUserId();
-            
+        // Инициализация данных
+        function initUserData() {
             const userData = getTelegramUserData();
+            userId = userData.id;
             userName = userData.name;
             userAvatar = userData.avatar;
             
-            // Сохраняем данные
-            saveUserData();
+            // Загружаем сохраненные данные (только для гостей)
+            if (!isTelegramWebApp) {
+                loadUserData();
+            }
+            
+            // Обновляем отображение
             updateUserProfile();
+            
+            // Загружаем баланс
+            loadFromLocal();
         }
         
         // Навигация по экранам
@@ -677,6 +687,7 @@
                 debugElement.innerHTML = `
                     <div>Баланс: ${balance} | UserID: ${userId}</div>
                     <div>Имя: ${userName}</div>
+                    <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
                     <div>Последний клик: ${new Date().toLocaleTimeString()}</div>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
@@ -689,7 +700,9 @@
         // Сброс игры
         function resetGame() {
             balance = 0;
-            localStorage.removeItem('coin_balance');
+            if (!isTelegramWebApp) {
+                localStorage.removeItem(getStorageKey('balance'));
+            }
             showStatus('Игра сброшена! 🔄', 'info');
             updateBalanceDisplay();
             saveToLocal();
@@ -758,8 +771,10 @@
         // Сохранение в localStorage
         function saveToLocal() {
             try {
-                localStorage.setItem('coin_balance', balance.toString());
-                saveUserData();
+                if (!isTelegramWebApp) {
+                    localStorage.setItem(getStorageKey('balance'), balance.toString());
+                    saveUserData();
+                }
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
             }
@@ -768,19 +783,22 @@
         // Загрузка из localStorage
         function loadFromLocal() {
             try {
-                const savedBalance = localStorage.getItem('coin_balance');
-                if (savedBalance) {
-                    const parsedBalance = parseInt(savedBalance);
-                    if (!isNaN(parsedBalance) && parsedBalance >= 0) {
-                        balance = parsedBalance;
+                if (!isTelegramWebApp) {
+                    const savedBalance = localStorage.getItem(getStorageKey('balance'));
+                    if (savedBalance) {
+                        const parsedBalance = parseInt(savedBalance);
+                        if (!isNaN(parsedBalance) && parsedBalance >= 0) {
+                            balance = parsedBalance;
+                        }
                     }
+                    
+                    loadUserData();
                 }
-                
-                loadUserData();
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
                 balance = 0;
             }
+            updateBalanceDisplay();
         }
         
         // Проверка доступности Google Apps Script
@@ -813,6 +831,7 @@
                 formData.append('balance', balance);
                 formData.append('username', userName);
                 formData.append('avatar', userAvatar);
+                formData.append('isTelegram', isTelegramWebApp.toString());
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
@@ -1013,10 +1032,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
-            // Инициализируем данные Telegram
-            initTelegramData();
+            // Инициализируем данные пользователя
+            initUserData();
             
-            loadFromLocal();
             updateBalanceDisplay();
             setupCoinClick();
             updateCloudIndicator('offline');
@@ -1044,7 +1062,9 @@
             }, 30000);
             
             console.log('Игра загружена!');
+            console.log('Telegram WebApp:', isTelegramWebApp);
+            console.log('User ID:', userId);
         });
     </script>
 </body>
-    </html>
+                        </html>
