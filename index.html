@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -435,7 +436,7 @@
                         Каталог
                     </button>
                     
-                    <button class="menu-btn" onclick="showScreen('referrals-screen')">
+                    <button class"menu-btn" onclick="showScreen('referrals-screen')">
                         <div class="menu-icon">👥</div>
                         Рефералы
                     </button>
@@ -524,6 +525,7 @@
         let userName = "Гость";
         let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         let isTelegramWebApp = false;
+        let telegramUsername = "";
         
         // URL Google Apps Script
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
@@ -544,16 +546,21 @@
                 if (user) {
                     isTelegramWebApp = true;
                     
-                    // Получаем ID пользователя
+                    // Получаем ID пользователя (просто число, без префикса)
                     const telegramId = user.id;
                     
-                    // Формируем имя
+                    // Формируем имя - используем first_name как было раньше
                     let name = "Гость";
-                    if (user.first_name || user.last_name) {
-                        name = [user.first_name, user.last_name].filter(Boolean).join(' ');
+                    if (user.first_name) {
+                        name = user.first_name;
+                    } else if (user.last_name) {
+                        name = user.last_name;
                     } else if (user.username) {
                         name = user.username;
                     }
+                    
+                    // Сохраняем username для отправки в облако
+                    telegramUsername = user.username || "";
                     
                     // Получаем аватар
                     let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
@@ -562,19 +569,22 @@
                     }
                     
                     return {
-                        id: telegramId,
+                        id: telegramId, // Только число, без префикса
                         name: name,
-                        avatar: avatar
+                        avatar: avatar,
+                        username: user.username || ""
                     };
                 }
             }
             
             // Если не в Telegram
             isTelegramWebApp = false;
+            telegramUsername = "";
             return {
                 id: 'guest_' + Math.random().toString(36).substr(2, 9),
                 name: "Гость",
-                avatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                avatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                username: ""
             };
         }
         
@@ -615,6 +625,7 @@
             userId = userData.id;
             userName = userData.name;
             userAvatar = userData.avatar;
+            telegramUsername = userData.username;
             
             // Загружаем сохраненные данные (только для гостей)
             if (!isTelegramWebApp) {
@@ -678,6 +689,7 @@
                 indicator.title = status === 'online' ? 'Облако подключено' : 
                                 status === 'offline' ? 'Облако отключено' : 'Загрузка...';
             }
+            updateDebugInfo();
         }
         
         // Отладочная информация
@@ -687,6 +699,7 @@
                 debugElement.innerHTML = `
                     <div>Баланс: ${balance} | UserID: ${userId}</div>
                     <div>Имя: ${userName}</div>
+                    <div>Username: ${telegramUsername || 'нет'}</div>
                     <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
                     <div>Последний клик: ${new Date().toLocaleTimeString()}</div>
@@ -830,6 +843,7 @@
                 formData.append('userId', userId);
                 formData.append('balance', balance);
                 formData.append('username', userName);
+                formData.append('telegramUsername', telegramUsername);
                 formData.append('avatar', userAvatar);
                 formData.append('isTelegram', isTelegramWebApp.toString());
                 
@@ -1064,7 +1078,8 @@
             console.log('Игра загружена!');
             console.log('Telegram WebApp:', isTelegramWebApp);
             console.log('User ID:', userId);
+            console.log('Username:', telegramUsername);
         });
     </script>
 </body>
-                        </html>
+</html>
