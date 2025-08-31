@@ -396,7 +396,7 @@
                 <div class="user-profile" id="user-profile">
                     <img class="user-profile-avatar" id="user-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
                     <div class="user-profile-info">
-                        <div class="user-profile-name" id="user-name">Загрузка...</div>
+                        <div class="user-profile-name" id="user-name">Загрузка Telegram...</div>
                         <div class="user-profile-id">ID: <span id="user-id">-</span></div>
                     </div>
                 </div>
@@ -436,7 +436,7 @@
                         Каталог
                     </button>
                     
-                    <button class"menu-btn" onclick="showScreen('referrals-screen')">
+                    <button class="menu-btn" onclick="showScreen('referrals-screen')">
                         <div class="menu-icon">👥</div>
                         Рефералы
                     </button>
@@ -522,75 +522,93 @@
         // Глобальные переменные
         let balance = 0;
         let userId = null;
-        let userName = "Гость";
+        let userName = "Загрузка...";
         let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         let isTelegramWebApp = false;
         let telegramUsername = "";
+        let telegramFirstName = "";
         
         // URL Google Apps Script
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
         
-        // Проверка, запущено ли в Telegram WebApp
-        function isTelegram() {
-            return !!(window.Telegram && window.Telegram.WebApp);
+        // Функция для парсинга initData из Telegram
+        function parseInitData(initData) {
+            const result = {};
+            const params = new URLSearchParams(initData);
+            
+            for (const [key, value] of params) {
+                if (key === 'user') {
+                    try {
+                        result.user = JSON.parse(decodeURIComponent(value));
+                    } catch (e) {
+                        console.error('Error parsing user data:', e);
+                    }
+                }
+            }
+            return result;
         }
         
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
-            if (isTelegram()) {
+            if (window.Telegram && window.Telegram.WebApp) {
                 const webApp = window.Telegram.WebApp;
-                const user = webApp.initDataUnsafe.user;
                 
-                if (user) {
+                // Пробуем разные способы получения данных
+                let userData = null;
+                
+                // Способ 1: initDataUnsafe
+                if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
+                    userData = webApp.initDataUnsafe.user;
+                    console.log('Data from initDataUnsafe:', userData);
+                }
+                
+                // Способ 2: Парсинг initData
+                if (!userData && webApp.initData) {
+                    const parsedData = parseInitData(webApp.initData);
+                    if (parsedData.user) {
+                        userData = parsedData.user;
+                        console.log('Data from parsed initData:', userData);
+                    }
+                }
+                
+                if (userData) {
                     isTelegramWebApp = true;
                     
-                    // Получаем ID пользователя (просто число, без префикса)
-                    const telegramId = user.id;
+                    // Получаем ID пользователя
+                    const telegramId = userData.id;
                     
                     // Формируем имя - используем first_name как было раньше
                     let name = "Гость";
-                    if (user.first_name) {
-                        name = user.first_name;
-                    } else if (user.last_name) {
-                        name = user.last_name;
-                    } else if (user.username) {
-                        name = user.username;
+                    if (userData.first_name) {
+                        name = userData.first_name;
+                        telegramFirstName = userData.first_name;
                     }
                     
                     // Сохраняем username для отправки в облако
-                    telegramUsername = user.username || "";
+                    telegramUsername = userData.username || "";
                     
                     // Получаем аватар
                     let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                    if (user.photo_url) {
-                        avatar = user.photo_url;
+                    if (userData.photo_url) {
+                        avatar = userData.photo_url;
                     }
                     
                     return {
-                        id: telegramId, // Только число, без префикса
+                        id: telegramId, // Только число
                         name: name,
                         avatar: avatar,
-                        username: user.username || ""
+                        username: telegramUsername
                     };
                 }
             }
             
-            // Если не в Telegram
+            // Если не в Telegram или данные не получены
             isTelegramWebApp = false;
             telegramUsername = "";
-            return {
-                id: 'guest_' + Math.random().toString(36).substr(2, 9),
-                name: "Гость",
-                avatar: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                username: ""
-            };
-        }
-        
-        // Генерация уникального ключа для хранения данных
-        function getStorageKey(key) {
-            return `coin_${userId}_${key}`;
+            telegramFirstName = "";
+            return null;
         }
         
         // Обновление отображения профиля
@@ -600,36 +618,31 @@
             document.getElementById('user-avatar').src = userAvatar;
         }
         
-        // Сохранение данных пользователя
-        function saveUserData() {
-            if (!isTelegramWebApp) {
-                localStorage.setItem(getStorageKey('user_name'), userName);
-                localStorage.setItem(getStorageKey('user_avatar'), userAvatar);
-            }
-        }
-        
-        // Загрузка данных пользователя
-        function loadUserData() {
-            if (!isTelegramWebApp) {
-                const savedName = localStorage.getItem(getStorageKey('user_name'));
-                const savedAvatar = localStorage.getItem(getStorageKey('user_avatar'));
-                
-                if (savedName) userName = savedName;
-                if (savedAvatar) userAvatar = savedAvatar;
-            }
-        }
-        
         // Инициализация данных
         function initUserData() {
             const userData = getTelegramUserData();
-            userId = userData.id;
-            userName = userData.name;
-            userAvatar = userData.avatar;
-            telegramUsername = userData.username;
             
-            // Загружаем сохраненные данные (только для гостей)
-            if (!isTelegramWebApp) {
-                loadUserData();
+            if (userData) {
+                // Данные из Telegram
+                userId = userData.id;
+                userName = userData.name;
+                userAvatar = userData.avatar;
+                telegramUsername = userData.username;
+                
+                console.log('Telegram user data loaded:', {
+                    id: userId,
+                    name: userName,
+                    username: telegramUsername
+                });
+            } else {
+                // Гостевой режим
+                isTelegramWebApp = false;
+                userId = 'guest_' + Math.random().toString(36).substr(2, 9);
+                userName = "Гость";
+                userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                telegramUsername = "";
+                
+                console.log('Guest mode activated');
             }
             
             // Обновляем отображение
@@ -702,7 +715,6 @@
                     <div>Username: ${telegramUsername || 'нет'}</div>
                     <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
-                    <div>Последний клик: ${new Date().toLocaleTimeString()}</div>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
                     <button class="test-button" onclick="resetGame()">Сбросить игру</button>
@@ -713,12 +725,9 @@
         // Сброс игры
         function resetGame() {
             balance = 0;
-            if (!isTelegramWebApp) {
-                localStorage.removeItem(getStorageKey('balance'));
-            }
+            saveToLocal();
             showStatus('Игра сброшена! 🔄', 'info');
             updateBalanceDisplay();
-            saveToLocal();
         }
         
         // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
@@ -753,11 +762,7 @@
                 }
             }
             
-            // Удаляем старые обработчики
-            coin.onclick = null;
-            coin.ontouchstart = null;
-            
-            // Добавляем новые обработчики
+            // Добавляем обработчики
             coin.addEventListener('click', handleClick);
             coin.addEventListener('touchstart', function(e) {
                 e.preventDefault();
@@ -784,10 +789,7 @@
         // Сохранение в localStorage
         function saveToLocal() {
             try {
-                if (!isTelegramWebApp) {
-                    localStorage.setItem(getStorageKey('balance'), balance.toString());
-                    saveUserData();
-                }
+                localStorage.setItem(`coin_balance_${userId}`, balance.toString());
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
             }
@@ -796,16 +798,12 @@
         // Загрузка из localStorage
         function loadFromLocal() {
             try {
-                if (!isTelegramWebApp) {
-                    const savedBalance = localStorage.getItem(getStorageKey('balance'));
-                    if (savedBalance) {
-                        const parsedBalance = parseInt(savedBalance);
-                        if (!isNaN(parsedBalance) && parsedBalance >= 0) {
-                            balance = parsedBalance;
-                        }
+                const savedBalance = localStorage.getItem(`coin_balance_${userId}`);
+                if (savedBalance) {
+                    const parsedBalance = parseInt(savedBalance);
+                    if (!isNaN(parsedBalance) && parsedBalance >= 0) {
+                        balance = parsedBalance;
                     }
-                    
-                    loadUserData();
                 }
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
@@ -817,13 +815,10 @@
         // Проверка доступности Google Apps Script
         async function checkScriptAvailability() {
             try {
-                const response = await fetch(scriptURL + '?action=test&t=' + Date.now(), {
-                    method: 'GET',
-                    mode: 'no-cors'
-                });
-                return true;
+                const response = await fetch(scriptURL + '?action=test&t=' + Date.now());
+                return response.ok;
             } catch (error) {
-                console.log('Google Apps Script недоступен, используем локальное хранилище');
+                console.log('Google Apps Script недоступен');
                 return false;
             }
         }
@@ -844,6 +839,7 @@
                 formData.append('balance', balance);
                 formData.append('username', userName);
                 formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
                 formData.append('avatar', userAvatar);
                 formData.append('isTelegram', isTelegramWebApp.toString());
                 
@@ -942,36 +938,7 @@
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
                 showStatus('Используется локальный рейтинг 📱', 'info');
-                
-                loadLeaderboardLocal();
             }
-        }
-        
-        // Загрузка локального рейтинга
-        function loadLeaderboardLocal() {
-            const leaderboardElement = document.getElementById('leaderboard-content');
-            if (!leaderboardElement) return;
-            
-            leaderboardElement.innerHTML = '<div class="loading">Загрузка локального рейтинга...</div>';
-            
-            setTimeout(() => {
-                try {
-                    const users = [{
-                        userId: userId,
-                        balance: balance,
-                        username: userName,
-                        avatar: userAvatar
-                    }];
-                    
-                    users.sort((a, b) => b.balance - a.balance);
-                    displayLeaderboard(users);
-                    displayUserRank(users);
-                    
-                } catch (error) {
-                    console.error('Ошибка загрузки рейтинга:', error);
-                    showEmptyLeaderboard();
-                }
-            }, 800);
         }
         
         // Отображение рейтинга
@@ -1076,10 +1043,7 @@
             }, 30000);
             
             console.log('Игра загружена!');
-            console.log('Telegram WebApp:', isTelegramWebApp);
-            console.log('User ID:', userId);
-            console.log('Username:', telegramUsername);
         });
     </script>
 </body>
-</html>
+    </html>
