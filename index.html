@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -359,7 +360,7 @@
         <div id="main-menu-screen" class="screen active">
             <div class="header">
                 <div class="balance">
-                    <div class="balance-label">Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-loading" title="Статус облака"></span></div>
+                    <div class="balance-label">Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span></div>
                     <div class="balance-amount" id="balance">0 монет</div>
                 </div>
             </div>
@@ -482,8 +483,8 @@
         let userId = getOrCreateUserId();
         let userName = generateRandomName();
         let userAvatar = generateRandomAvatar();
-        // ЗАМЕНИТЕ ЭТОТ URL НА ВАШ РЕАЛЬНЫЙ URL СКРИПТА
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
+        // Замените этот URL на ваш реальный URL скрипта Google Apps Script
+        let scriptURL = 'https://script.google.com/macros/s/AKfycby7qOwZh-JQtplzzGirv4rP56S4x1cLEGQ0rgqQk9IrKVa71Fu3wUYkSj478od_ttwZ0g/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
         
@@ -614,7 +615,7 @@
             showStatus('Игра сброшена! 🔄', 'info');
         }
         
-        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
+        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ - ИСПРАВЛЕННАЯ ВЕРСИЯ
         function setupCoinClick() {
             const coin = document.getElementById('coin');
             
@@ -652,7 +653,10 @@
             
             // Добавляем новые обработчики
             coin.addEventListener('click', handleClick);
-            coin.addEventListener('touchstart', handleClick, { passive: false });
+            coin.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                handleClick(e);
+            }, { passive: false });
         }
         
         // Показать статус
@@ -709,11 +713,31 @@
         
         // === GOOGLE APPS SCRIPT ИНТЕГРАЦИЯ ===
         
+        // Проверка доступности Google Apps Script
+        async function checkScriptAvailability() {
+            try {
+                const response = await fetch(scriptURL + '?action=test&t=' + Date.now(), {
+                    method: 'GET',
+                    mode: 'no-cors'
+                });
+                return true;
+            } catch (error) {
+                console.log('Google Apps Script недоступен, используем локальное хранилище');
+                return false;
+            }
+        }
+        
         // Сохранение в облако
         async function saveToCloud() {
             updateCloudIndicator('loading');
             
             try {
+                // Проверяем доступность скрипта
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Google Apps Script недоступен');
+                }
+                
                 const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
@@ -744,7 +768,7 @@
                 console.error('Ошибка сохранения в облако:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка облачного сохранения', 'error');
+                showStatus('Используется локальное хранилище 📱', 'info');
             }
         }
         
@@ -753,6 +777,12 @@
             updateCloudIndicator('loading');
             
             try {
+                // Проверяем доступность скрипта
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Google Apps Script недоступен');
+                }
+                
                 const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
@@ -774,7 +804,7 @@
                 console.error('Ошибка загрузки из облака:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка загрузки из облака', 'error');
+                showStatus('Используются локальные данные 📱', 'info');
             }
         }
         
@@ -787,6 +817,12 @@
             updateCloudIndicator('loading');
             
             try {
+                // Проверяем доступность скрипта
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Google Apps Script недоступен');
+                }
+                
                 const url = `${scriptURL}?action=leaderboard&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
@@ -805,7 +841,7 @@
                 console.error('Ошибка загрузки рейтинга:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка загрузки рейтинга', 'error');
+                showStatus('Используется локальный рейтинг 📱', 'info');
                 
                 // Показываем локальные данные как fallback
                 loadLeaderboardLocal();
@@ -927,13 +963,18 @@
             loadFromLocal();
             updateBalanceDisplay();
             setupCoinClick();
-            updateCloudIndicator('loading');
+            updateCloudIndicator('offline');
             
-            // Пытаемся загрузить из облака при старте
+            // Проверяем доступность облака при старте
             setTimeout(() => {
-                loadFromCloud().catch(() => {
-                    // Если облако недоступно, используем локальные данные
-                    showStatus('Используются локальные данные 📱', 'info');
+                checkScriptAvailability().then(isAvailable => {
+                    if (isAvailable) {
+                        loadFromCloud().catch(() => {
+                            showStatus('Используются локальные данные 📱', 'info');
+                        });
+                    } else {
+                        showStatus('Используются локальные данные 📱', 'info');
+                    }
                 });
             }, 1000);
             
@@ -949,4 +990,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
