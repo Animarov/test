@@ -552,13 +552,21 @@
         
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
+            console.log('Checking for Telegram WebApp...');
+            
+            // Проверяем, доступен ли объект Telegram
             if (window.Telegram && window.Telegram.WebApp) {
+                console.log('Telegram WebApp detected');
                 const webApp = window.Telegram.WebApp;
+                
+                // Расширенная проверка доступных данных
+                console.log('WebApp initData:', webApp.initData);
+                console.log('WebApp initDataUnsafe:', webApp.initDataUnsafe);
                 
                 // Пробуем разные способы получения данных
                 let userData = null;
                 
-                // Способ 1: initDataUnsafe
+                // Способ 1: initDataUnsafe (самый надежный)
                 if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
                     userData = webApp.initDataUnsafe.user;
                     console.log('Data from initDataUnsafe:', userData);
@@ -566,10 +574,25 @@
                 
                 // Способ 2: Парсинг initData
                 if (!userData && webApp.initData) {
+                    console.log('Parsing initData directly');
                     const parsedData = parseInitData(webApp.initData);
                     if (parsedData.user) {
                         userData = parsedData.user;
                         console.log('Data from parsed initData:', userData);
+                    }
+                }
+                
+                // Способ 3: Проверяем, есть ли данные в URL (для тестирования)
+                if (!userData) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const testUser = urlParams.get('testUser');
+                    if (testUser) {
+                        try {
+                            userData = JSON.parse(decodeURIComponent(testUser));
+                            console.log('Test user data from URL:', userData);
+                        } catch (e) {
+                            console.error('Error parsing test user data:', e);
+                        }
                     }
                 }
                 
@@ -604,7 +627,11 @@
                         username: telegramUsername,
                         firstName: telegramFirstName
                     };
+                } else {
+                    console.log('No user data found in Telegram WebApp');
                 }
+            } else {
+                console.log('Telegram WebApp not detected');
             }
             
             // Если не в Telegram или данные не получены
@@ -638,31 +665,44 @@
                     name: userName,
                     username: telegramUsername
                 });
+                
+                // Загружаем баланс
+                loadFromLocal();
             } else {
-                // Гостевой режим - но теперь мы не создаем рандомный ID
-                // Вместо этого показываем сообщение о необходимости открытия через Telegram
+                // Показываем сообщение об ошибке загрузки данных Telegram
                 isTelegramWebApp = false;
                 userId = null;
-                userName = "Откройте через Telegram";
+                userName = "Ошибка загрузки данных";
                 userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                 telegramUsername = "";
                 
-                console.log('Not in Telegram Mini App');
+                console.log('Failed to load Telegram user data');
                 
-                // Показываем сообщение о необходимости открытия через Telegram
-                showStatus('Откройте приложение через Telegram для сохранения прогресса', 'warning');
+                // Показываем сообщение об ошибке
+                showStatus('Не удалось загрузить данные из Telegram', 'error');
+                
+                // Показываем кнопку для тестового режима
+                const debugElement = document.getElementById('debug');
+                if (debugElement) {
+                    debugElement.innerHTML += `<div>
+                        <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
+                    </div>`;
+                }
             }
             
             // Обновляем отображение
             updateUserProfile();
+        }
+        
+        // Включение тестового режима
+        function enableTestMode() {
+            userId = 'test_' + Math.floor(Math.random() * 10000);
+            userName = "Тестовый пользователь";
+            userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
             
-            // Загружаем баланс только если есть ID пользователя
-            if (userId) {
-                loadFromLocal();
-            } else {
-                balance = 0;
-                updateBalanceDisplay();
-            }
+            updateUserProfile();
+            loadFromLocal();
+            showStatus('Тестовый режим активирован', 'info');
         }
         
         // Навигация по экранам
@@ -680,11 +720,11 @@
                 }
             }
         }
-
+    
         function refreshLeaderboard() {
             loadLeaderboardFromCloud();
         }
-
+    
         // Анимация клика
         function createClickAnimation(x, y) {
             const animation = document.createElement('div');
@@ -732,13 +772,20 @@
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
                     <button class="test-button" onclick="resetGame()">Сбросить игру</button>
                 `;
+                
+                // Добавляем кнопку тестового режима, если нет userId
+                if (!userId) {
+                    debugElement.innerHTML += `<div>
+                        <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
+                    </div>`;
+                }
             }
         }
         
         // Сброс игры
         function resetGame() {
             if (!userId) {
-                showStatus('Откройте приложение через Telegram для сброса', 'warning');
+                showStatus('Включите тестовый режим для сброса', 'warning');
                 return;
             }
             
@@ -758,7 +805,7 @@
                 
                 // Проверяем, есть ли ID пользователя
                 if (!userId) {
-                    showStatus('Откройте приложение через Telegram для игры', 'warning');
+                    showStatus('Включите тестовый режим для игры', 'warning');
                     return;
                 }
                 
@@ -854,7 +901,7 @@
         // Сохранение в облако
         async function saveToCloud() {
             if (!userId) {
-                showStatus('Откройте приложение через Telegram для сохранения в облако', 'warning');
+                showStatus('Включите тестовый режим для сохранения в облако', 'warning');
                 return;
             }
             
@@ -906,7 +953,7 @@
         // Загрузка из облака
         async function loadFromCloud() {
             if (!userId) {
-                showStatus('Откройте приложение через Telegram для загрузки из облака', 'warning');
+                showStatus('Включите тестовый режим для загрузки из облака', 'warning');
                 return;
             }
             
@@ -1034,7 +1081,7 @@
                 if (userRankElement) userRankElement.style.display = 'none';
                 return;
             }
-
+    
             const userIndex = leaderboard.findIndex(player => 
                 player.userId && player.userId.toString() === userId.toString()
             );
