@@ -418,6 +418,99 @@
             cursor: pointer;
             font-size: 12px;
         }
+
+        /* Стили для экрана переводов */
+        .transfer-form {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #7c2d12;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .transfer-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+
+        .transfer-btn:hover {
+            background: #ea580c;
+        }
+
+        .transfer-btn:disabled {
+            background: #a8a29e;
+            cursor: not-allowed;
+        }
+
+        .transfer-history {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .transfer-history h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #7c2d12;
+        }
+
+        .transfer-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(124, 45, 18, 0.2);
+        }
+
+        .transfer-item:last-child {
+            border-bottom: none;
+        }
+
+        .transfer-out {
+            color: #dc2626;
+        }
+
+        .transfer-in {
+            color: #166534;
+        }
+
+        .transfer-info {
+            font-size: 12px;
+            color: #a8a29e;
+        }
     </style>
 </head>
 <body>
@@ -540,10 +633,31 @@
             <div class="empty-state">Игры скоро появятся!</div>
         </div>
 
+        <!-- Экран переводов -->
         <div id="transfer-screen" class="screen">
             <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
-            <h2>↗️ Перевести</h2>
-            <div class="empty-state">Переводы скоро будут!</div>
+            <h2>↗️ Перевести монеты</h2>
+            
+            <div class="transfer-form">
+                <div class="form-group">
+                    <label for="recipient-id">ID получателя:</label>
+                    <input type="text" id="recipient-id" placeholder="Введите ID пользователя">
+                </div>
+                
+                <div class="form-group">
+                    <label for="transfer-amount">Сумма перевода:</label>
+                    <input type="text" id="transfer-amount" placeholder="0.000000000" value="0.000000001">
+                </div>
+                
+                <button class="transfer-btn" onclick="transferCoins()">Перевести</button>
+            </div>
+            
+            <div class="transfer-history">
+                <h3>История переводов</h3>
+                <div id="transfer-history-content">
+                    <div class="empty-state">История переводов пуста</div>
+                </div>
+            </div>
         </div>
 
         <div id="catalog-screen" class="screen">
@@ -568,6 +682,7 @@
         let isTelegramWebApp = false;
         let telegramUsername = "";
         let telegramFirstName = "";
+        let transferHistory = [];
         
         // URL Google Apps Script
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
@@ -882,6 +997,8 @@
                 
                 if (screenId === 'top-screen') {
                     refreshLeaderboard();
+                } else if (screenId === 'transfer-screen') {
+                    updateTransferHistory();
                 }
             }
         }
@@ -948,9 +1065,11 @@
             }
             
             balance = 0;
+            transferHistory = [];
             saveToLocal();
             showStatus('Игра сброшена! 🔄', 'info');
             updateBalanceDisplay();
+            updateTransferHistory();
         }
         
         // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
@@ -1022,6 +1141,7 @@
                     name: userName,
                     avatar: userAvatar
                 }));
+                localStorage.setItem(`coin_transfers_${userId}`, JSON.stringify(transferHistory));
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
             }
@@ -1046,12 +1166,19 @@
                     if (userData.name) userName = userData.name;
                     if (userData.avatar) userAvatar = userData.avatar;
                 }
+                
+                const savedTransfers = localStorage.getItem(`coin_transfers_${userId}`);
+                if (savedTransfers) {
+                    transferHistory = JSON.parse(savedTransfers);
+                }
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
                 balance = 0;
+                transferHistory = [];
             }
             updateBalanceDisplay();
             updateUserProfile();
+            updateTransferHistory();
         }
         
         // Проверка доступности Google Apps Script
@@ -1309,6 +1436,102 @@
             } catch (e) {
                 showStatus('Ошибка импорта данных', 'error');
             }
+        }
+        
+        // Система переводов
+        function transferCoins() {
+            const recipientId = document.getElementById('recipient-id').value.trim();
+            const amountInput = document.getElementById('transfer-amount').value.trim();
+            
+            if (!recipientId) {
+                showStatus('Введите ID получателя', 'error');
+                return;
+            }
+            
+            if (recipientId === userId) {
+                showStatus('Нельзя переводить самому себе', 'error');
+                return;
+            }
+            
+            const amount = parseFloat(amountInput);
+            if (isNaN(amount) || amount <= 0) {
+                showStatus('Введите корректную сумму', 'error');
+                return;
+            }
+            
+            if (amount > balance) {
+                showStatus('Недостаточно средств', 'error');
+                return;
+            }
+            
+            // Проверяем, существует ли получатель (в реальном приложении здесь был бы запрос к серверу)
+            // В данном случае просто имитируем успешный перевод
+            
+            // Список тестовых пользователей для демонстрации
+            const testUsers = ['test_123', 'test_456', 'test_789', 'test_101'];
+            const isTestUser = testUsers.includes(recipientId);
+            
+            if (!isTestUser && !recipientId.startsWith('test_')) {
+                showStatus('Пользователь с таким ID не найден', 'error');
+                return;
+            }
+            
+            // Выполняем перевод
+            balance -= amount;
+            updateBalanceDisplay();
+            saveToLocal();
+            
+            // Добавляем запись в историю переводов
+            const transfer = {
+                id: Date.now(),
+                type: 'out',
+                recipientId: recipientId,
+                amount: amount,
+                date: new Date().toLocaleString('ru-RU')
+            };
+            
+            transferHistory.unshift(transfer);
+            if (transferHistory.length > 20) {
+                transferHistory = transferHistory.slice(0, 20);
+            }
+            
+            saveToLocal();
+            updateTransferHistory();
+            
+            showStatus(`Перевод ${formatBalance(amount)} пользователю ${recipientId} выполнен!`, 'success');
+            
+            // Очищаем поле получателя, оставляем сумму для возможного нового перевода
+            document.getElementById('recipient-id').value = '';
+        }
+        
+        // Обновление истории переводов
+        function updateTransferHistory() {
+            const historyElement = document.getElementById('transfer-history-content');
+            if (!historyElement) return;
+            
+            if (transferHistory.length === 0) {
+                historyElement.innerHTML = '<div class="empty-state">История переводов пуста</div>';
+                return;
+            }
+            
+            let html = '';
+            transferHistory.forEach(transfer => {
+                const amountClass = transfer.type === 'out' ? 'transfer-out' : 'transfer-in';
+                const direction = transfer.type === 'out' ? '→' : '←';
+                const target = transfer.type === 'out' ? transfer.recipientId : transfer.senderId;
+                
+                html += `
+                    <div class="transfer-item">
+                        <span class="${amountClass}">${direction} ${formatBalance(transfer.amount)}</span>
+                        <div class="transfer-info">
+                            <div>ID: ${target}</div>
+                            <div>${transfer.date}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            historyElement.innerHTML = html;
         }
         
         // Инициализация при загрузке
