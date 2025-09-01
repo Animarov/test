@@ -569,7 +569,6 @@
             </div>
             
             <button class="back-btn" onclick="refreshLeaderboard()">🔄 Обновить</button>
-            <button class="back-btn" onclick="loadLeaderboardFromCloud()">📊 Загрузить из облака</button>
         </div>
 
         <!-- Остальные экраны -->
@@ -627,37 +626,31 @@
 
     <script>
         // Глобальные переменные
-        let balance = 0; // Храним баланс как число для точных вычислений
+        let balance = 0;
         let userId = null;
         let userName = "Загрузка...";
         let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
         let isTelegramWebApp = false;
         let telegramUsername = "";
         let telegramFirstName = "";
-        let transferHistory = [];
         
         // URL Google Apps Script
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
-        let lastCloudSave = 0;
 
         // Форматирование числа с 9 знаками после запятой
         function formatBalance(amount) {
-            // Преобразуем число в строку с фиксированным количеством знаков после запятой
             let formatted = amount.toFixed(9);
-            
-            // Убедимся, что у нас всегда 9 знаков после запятой
             const parts = formatted.split('.');
             if (parts.length === 1) {
                 formatted += '.000000000';
             } else if (parts[1].length < 9) {
                 formatted = parts[0] + '.' + parts[1].padEnd(9, '0');
             }
-            
             return formatted;
         }
 
-        // Улучшенная проверка Telegram WebApp
+        // Проверка Telegram WebApp
         function enhancedTelegramCheck() {
             const checks = [
                 () => window.Telegram?.WebApp,
@@ -678,7 +671,7 @@
             });
         }
 
-        // Функция для парсинга initData из Telegram
+        // Парсинг initData из Telegram
         function parseInitData(initData) {
             const result = {};
             const params = new URLSearchParams(initData);
@@ -690,12 +683,6 @@
                         result.user = JSON.parse(decodedValue);
                     } catch (e) {
                         console.error('Error parsing user data:', e);
-                        try {
-                            const cleanValue = value.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-                            result.user = JSON.parse(cleanValue);
-                        } catch (e2) {
-                            console.error('Alternative parsing also failed:', e2);
-                        }
                     }
                 } else {
                     result[key] = value;
@@ -704,39 +691,21 @@
             return result;
         }
         
-        // Расширенная функция получения данных пользователя из Telegram
+        // Получение данных пользователя из Telegram
         function getTelegramUserData() {
-            console.log('Checking for Telegram WebApp...');
-            
             if (enhancedTelegramCheck()) {
-                console.log('Telegram WebApp detected');
-                
                 let userData = null;
                 
-                // Способ 1: initDataUnsafe
                 if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
                     userData = window.Telegram.WebApp.initDataUnsafe.user;
-                    console.log('Data from initDataUnsafe:', userData);
-                }
-                
-                // Способ 2: Парсинг initData
-                if (!userData && window.Telegram?.WebApp?.initData) {
-                    console.log('Parsing initData directly');
+                } else if (window.Telegram?.WebApp?.initData) {
                     const parsedData = parseInitData(window.Telegram.WebApp.initData);
                     if (parsedData.user) {
                         userData = parsedData.user;
-                        console.log('Data from parsed initData:', userData);
                     }
-                }
-                
-                // Способ 3: Альтернативные объекты
-                if (!userData && window.TelegramWebApp?.initDataUnsafe?.user) {
+                } else if (window.TelegramWebApp?.initDataUnsafe?.user) {
                     userData = window.TelegramWebApp.initDataUnsafe.user;
-                    console.log('Data from alternative object:', userData);
-                }
-                
-                // Способ 4: Данные из URL
-                if (!userData) {
+                } else {
                     const urlParams = new URLSearchParams(window.location.search);
                     const tgWebAppData = urlParams.get('tgWebAppData');
                     if (tgWebAppData) {
@@ -744,7 +713,6 @@
                             const parsedData = parseInitData(tgWebAppData);
                             if (parsedData.user) {
                                 userData = parsedData.user;
-                                console.log('Data from URL parameters:', userData);
                             }
                         } catch (e) {
                             console.error('Error parsing URL data:', e);
@@ -752,30 +720,10 @@
                     }
                 }
                 
-                // Способ 5: Кэш
-                if (!userData) {
-                    try {
-                        const cachedUser = localStorage.getItem('telegram_user_data');
-                        if (cachedUser) {
-                            userData = JSON.parse(cachedUser);
-                            console.log('Data from cache:', userData);
-                        }
-                    } catch (e) {
-                        console.error('Error reading cached data:', e);
-                    }
-                }
-                
                 if (userData) {
                     isTelegramWebApp = true;
                     
-                    try {
-                        localStorage.setItem('telegram_user_data', JSON.stringify(userData));
-                    } catch (e) {
-                        console.error('Error caching user data:', e);
-                    }
-                    
                     const telegramId = userData.id;
-                    
                     let name = "Гость";
                     if (userData.username) {
                         name = "@" + userData.username;
@@ -808,7 +756,7 @@
             return null;
         }
         
-        // Альтернативный способ получения данных через событие
+        // Ожидание инициализации Telegram
         function waitForTelegramInit() {
             return new Promise((resolve) => {
                 if (enhancedTelegramCheck()) {
@@ -851,12 +799,9 @@
         
         // Инициализация данных
         async function initUserData() {
-            console.log('Initializing user data...');
-            
             let userData = getTelegramUserData();
             
             if (!userData) {
-                console.log('Waiting for Telegram initialization...');
                 userData = await waitForTelegramInit();
             }
             
@@ -867,32 +812,22 @@
                 telegramUsername = userData.username;
                 telegramFirstName = userData.firstName;
                 
-                console.log('Telegram user data loaded:', {
-                    id: userId,
-                    name: userName,
-                    username: telegramUsername
-                });
-                
-                loadFromLocal();
+                updateUserProfile();
+                loadUserData();
             } else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tgWebAppData = urlParams.get('tgWebAppData');
                 
                 if (tgWebAppData) {
-                    console.log('Found tgWebAppData in URL, trying to parse...');
                     try {
                         const parsedData = parseInitData(tgWebAppData);
                         if (parsedData.user) {
                             userData = parsedData.user;
-                            
                             userId = userData.id;
                             userName = userData.username ? "@" + userData.username : userData.first_name;
                             userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                            telegramUsername = userData.username || "";
-                            telegramFirstName = userData.first_name || "";
-                            
-                            console.log('User data from URL parameters:', userData);
-                            loadFromLocal();
+                            updateUserProfile();
+                            loadUserData();
                         }
                     } catch (e) {
                         console.error('Error parsing tgWebAppData:', e);
@@ -903,7 +838,6 @@
                     isTelegramWebApp = false;
                     userId = null;
                     userName = "Ошибка загрузки данных";
-                    
                     showStatus('Не удалось загрузить данные из Telegram.', 'error');
                 }
             }
@@ -922,9 +856,9 @@
                 targetScreen.classList.add('active');
                 
                 if (screenId === 'top-screen') {
-                    refreshLeaderboard();
+                    loadLeaderboardFromCloud();
                 } else if (screenId === 'transfer-screen') {
-                    updateTransferHistory();
+                    loadTransferHistory();
                 }
             }
         }
@@ -993,10 +927,8 @@
                 
                 createClickAnimation(clientX, clientY);
                 
-                // Добавляем 0.000000001 за каждый клик
-                balance += 0.000000001;
-                updateBalanceDisplay();
-                saveToLocal();
+                // Обновляем баланс на сервере
+                updateBalanceOnServer(0.000000001);
                 
                 coin.style.transform = 'scale(0.95)';
                 setTimeout(() => {
@@ -1004,10 +936,6 @@
                 }, 100);
                 
                 showStatus('+0.000000001 монета! 💰', 'success');
-                
-                if (balance % 10 === 0) {
-                    saveToCloud();
-                }
             }
             
             coin.addEventListener('click', handleClick);
@@ -1033,56 +961,6 @@
             }
         }
         
-        // Сохранение в localStorage
-        function saveToLocal() {
-            if (!userId) return;
-            
-            try {
-                localStorage.setItem(`coin_balance_${userId}`, balance.toString());
-                localStorage.setItem(`coin_user_${userId}`, JSON.stringify({
-                    name: userName,
-                    avatar: userAvatar
-                }));
-                localStorage.setItem(`coin_transfers_${userId}`, JSON.stringify(transferHistory));
-            } catch (error) {
-                console.error('Ошибка сохранения:', error);
-            }
-        }
-        
-        // Загрузка из localStorage
-        function loadFromLocal() {
-            if (!userId) return;
-            
-            try {
-                const savedBalance = localStorage.getItem(`coin_balance_${userId}`);
-                if (savedBalance) {
-                    const parsedBalance = parseFloat(savedBalance);
-                    if (!isNaN(parsedBalance) && parsedBalance >= 0) {
-                        balance = parsedBalance;
-                    }
-                }
-                
-                const savedUser = localStorage.getItem(`coin_user_${userId}`);
-                if (savedUser) {
-                    const userData = JSON.parse(savedUser);
-                    if (userData.name) userName = userData.name;
-                    if (userData.avatar) userAvatar = userData.avatar;
-                }
-                
-                const savedTransfers = localStorage.getItem(`coin_transfers_${userId}`);
-                if (savedTransfers) {
-                    transferHistory = JSON.parse(savedTransfers);
-                }
-            } catch (error) {
-                console.error('Ошибка загрузки:', error);
-                balance = 0;
-                transferHistory = [];
-            }
-            updateBalanceDisplay();
-            updateUserProfile();
-            updateTransferHistory();
-        }
-        
         // Проверка доступности Google Apps Script
         async function checkScriptAvailability() {
             try {
@@ -1094,12 +972,9 @@
             }
         }
         
-        // Сохранение в облако
-        async function saveToCloud() {
-            if (!userId) {
-                showStatus('Ошибка сохранения в облако', 'warning');
-                return;
-            }
+        // Загрузка данных пользователя с сервера
+        async function loadUserData() {
+            if (!userId) return;
             
             updateCloudIndicator('loading');
             
@@ -1109,10 +984,42 @@
                     throw new Error('Google Apps Script недоступен');
                 }
                 
+                const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.balance !== undefined) {
+                        balance = result.balance;
+                        updateBalanceDisplay();
+                    }
+                    
+                    scriptAvailable = true;
+                    updateCloudIndicator('online');
+                    showStatus('Данные загружены из облака! ☁️', 'success');
+                } else {
+                    // Если пользователь не найден, создаем нового
+                    if (result.error === 'User not found') {
+                        await createNewUser();
+                    } else {
+                        throw new Error(result.error || 'Ошибка загрузки данных');
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных:', error);
+                scriptAvailable = false;
+                updateCloudIndicator('offline');
+                showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
+            }
+        }
+        
+        // Создание нового пользователя
+        async function createNewUser() {
+            try {
                 const formData = new URLSearchParams();
-                formData.append('action', 'update');
+                formData.append('action', 'create');
                 formData.append('userId', userId);
-                formData.append('balance', balance);
                 formData.append('username', userName);
                 formData.append('telegramUsername', telegramUsername);
                 formData.append('firstName', telegramFirstName);
@@ -1130,59 +1037,59 @@
                 const result = await response.json();
                 
                 if (result.success) {
+                    balance = 0;
+                    updateBalanceDisplay();
                     scriptAvailable = true;
-                    lastCloudSave = Date.now();
                     updateCloudIndicator('online');
-                    showStatus('Данные сохранены в облако! ☁️', 'success');
+                    showStatus('Новый пользователь создан!', 'success');
                 } else {
-                    throw new Error(result.error || 'Unknown error');
+                    throw new Error(result.error || 'Ошибка создания пользователя');
                 }
                 
             } catch (error) {
-                console.error('Ошибка сохранения в облако:', error);
+                console.error('Ошибка создания пользователя:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Используется локальное хранилище 📱', 'info');
+                showStatus('Ошибка создания пользователя.', 'error');
             }
         }
         
-        // Загрузка из облака
-        async function loadFromCloud() {
-            if (!userId) {
-                showStatus('Ошибка загрузки из облака', 'warning');
-                return;
-            }
-            
-            updateCloudIndicator('loading');
+        // Обновление баланса на сервере
+        async function updateBalanceOnServer(amountToAdd) {
+            if (!userId) return;
             
             try {
-                const isAvailable = await checkScriptAvailability();
-                if (!isAvailable) {
-                    throw new Error('Google Apps Script недоступен');
-                }
+                const formData = new URLSearchParams();
+                formData.append('action', 'update');
+                formData.append('userId', userId);
+                formData.append('amountToAdd', amountToAdd);
                 
-                const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const response = await fetch(url);
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
                 const result = await response.json();
                 
-                if (result.success && result.balance !== undefined) {
-                    if (result.balance > balance) {
+                if (result.success) {
+                    if (result.balance !== undefined) {
                         balance = result.balance;
                         updateBalanceDisplay();
-                        saveToLocal();
-                        showStatus('Данные загружены из облака! ☁️', 'success');
                     }
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                 } else {
-                    throw new Error(result.error || 'No data received');
+                    throw new Error(result.error || 'Ошибка обновления баланса');
                 }
                 
             } catch (error) {
-                console.error('Ошибка загрузки из облака:', error);
+                console.error('Ошибка обновления баланса:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Используются локальные данные 📱', 'info');
+                showStatus('Ошибка синхронизации с сервером.', 'error');
             }
         }
         
@@ -1209,7 +1116,6 @@
                     displayUserRank(result.leaderboard);
                     scriptAvailable = true;
                     updateCloudIndicator('online');
-                    showStatus('Рейтинг загружен из облака!', 'success');
                 } else {
                     throw new Error(result.error || 'Invalid leaderboard data');
                 }
@@ -1218,7 +1124,7 @@
                 console.error('Ошибка загрузки рейтинга:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Используется локальный рейтинг 📱', 'info');
+                showStatus('Ошибка загрузки рейтинга.', 'error');
             }
         }
         
@@ -1231,7 +1137,12 @@
             const topPlayers = leaderboard.slice(0, 20);
             
             if (topPlayers.length === 0) {
-                showEmptyLeaderboard();
+                leaderboardElement.innerHTML = `
+                    <div class="empty-state">
+                        🏆 Рейтинг пуст<br>
+                        <small>Станьте первым в рейтинге!</small>
+                    </div>
+                `;
                 return;
             }
             
@@ -1253,19 +1164,6 @@
             });
             
             leaderboardElement.innerHTML = html;
-        }
-        
-        // Пустой рейтинг
-        function showEmptyLeaderboard() {
-            const leaderboardElement = document.getElementById('leaderboard-content');
-            if (leaderboardElement) {
-                leaderboardElement.innerHTML = `
-                    <div class="empty-state">
-                        🏆 Рейтинг пуст<br>
-                        <small>Станьте первым в рейтинге!</small>
-                    </div>
-                `;
-            }
         }
         
         // Ранг пользователя
@@ -1311,32 +1209,12 @@
                 return;
             }
             
-            // Проверяем баланс через облако
             updateCloudIndicator('loading');
             
             try {
-                // Сначала проверяем баланс на сервере
                 const isAvailable = await checkScriptAvailability();
                 if (!isAvailable) {
-                    throw new Error('Google Apps Script недоступен');
-                }
-                
-                // Проверяем, существует ли получатель
-                const checkUserUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(recipientId)}&t=${Date.now()}`;
-                const userResponse = await fetch(checkUserUrl);
-                const userResult = await userResponse.json();
-                
-                if (!userResult.success || userResult.balance === undefined) {
-                    showStatus('Пользователь с таким ID не найден', 'error');
-                    updateCloudIndicator(scriptAvailable ? 'online' : 'offline');
-                    return;
-                }
-                
-                // Проверяем баланс отправителя
-                if (amount > balance) {
-                    showStatus('Недостаточно средств', 'error');
-                    updateCloudIndicator(scriptAvailable ? 'online' : 'offline');
-                    return;
+                    throw new Error('Сервер временно недоступен');
                 }
                 
                 // Выполняем перевод через сервер
@@ -1358,65 +1236,88 @@
                 
                 if (result.success) {
                     // Обновляем баланс
-                    balance -= amount;
-                    updateBalanceDisplay();
-                    saveToLocal();
-                    
-                    // Добавляем запись в историю переводов
-                    const transfer = {
-                        id: Date.now(),
-                        type: 'out',
-                        recipientId: recipientId,
-                        amount: amount,
-                        date: new Date().toLocaleString('ru-RU')
-                    };
-                    
-                    transferHistory.unshift(transfer);
-                    if (transferHistory.length > 20) {
-                        transferHistory = transferHistory.slice(0, 20);
+                    if (result.newBalance !== undefined) {
+                        balance = result.newBalance;
+                        updateBalanceDisplay();
                     }
-                    
-                    saveToLocal();
-                    updateTransferHistory();
                     
                     showStatus(`Перевод ${formatBalance(amount)} пользователю ${recipientId} выполнен!`, 'success');
                     updateCloudIndicator('online');
                     
-                    // Очищаем поле получателя, оставляем сумму для возможного нового перевода
+                    // Очищаем поле получателя
                     document.getElementById('recipient-id').value = '';
+                    
+                    // Обновляем историю переводов
+                    loadTransferHistory();
+                    
                 } else {
-                    throw new Error(result.error || 'Ошибка перевода');
+                    throw new Error(result.error || 'Ошибка перевода на сервере');
                 }
                 
             } catch (error) {
                 console.error('Ошибка перевода:', error);
-                showStatus('Ошибка перевода. Попробуйте позже.', 'error');
+                showStatus('Ошибка перевода: ' + error.message, 'error');
                 updateCloudIndicator('offline');
             }
         }
         
-        // Обновление истории переводов
-        function updateTransferHistory() {
+        // Загрузка истории переводов
+        async function loadTransferHistory() {
             const historyElement = document.getElementById('transfer-history-content');
             if (!historyElement) return;
             
-            if (transferHistory.length === 0) {
+            if (!userId) {
+                historyElement.innerHTML = '<div class="empty-state">Войдите в систему</div>';
+                return;
+            }
+            
+            historyElement.innerHTML = '<div class="loading">Загрузка истории...</div>';
+            
+            try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер недоступен');
+                }
+                
+                const url = `${scriptURL}?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success && result.transfers) {
+                    displayTransferHistory(result.transfers);
+                } else {
+                    throw new Error(result.error || 'Ошибка загрузки истории');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+                historyElement.innerHTML = '<div class="empty-state">Ошибка загрузки истории</div>';
+            }
+        }
+        
+        // Отображение истории переводов
+        function displayTransferHistory(transfers) {
+            const historyElement = document.getElementById('transfer-history-content');
+            if (!historyElement) return;
+            
+            if (!transfers || transfers.length === 0) {
                 historyElement.innerHTML = '<div class="empty-state">История переводов пуста</div>';
                 return;
             }
             
             let html = '';
-            transferHistory.forEach(transfer => {
+            transfers.forEach(transfer => {
                 const amountClass = transfer.type === 'out' ? 'transfer-out' : 'transfer-in';
                 const direction = transfer.type === 'out' ? '→' : '←';
-                const target = transfer.type === 'out' ? transfer.recipientId : transfer.senderId;
+                const target = transfer.type === 'out' ? transfer.toUserId : transfer.fromUserId;
+                const date = new Date(transfer.timestamp).toLocaleString('ru-RU');
                 
                 html += `
                     <div class="transfer-item">
                         <span class="${amountClass}">${direction} ${formatBalance(transfer.amount)}</span>
                         <div class="transfer-info">
                             <div>ID: ${target}</div>
-                            <div>${transfer.date}</div>
+                            <div>${date}</div>
                         </div>
                     </div>
                 `;
@@ -1434,27 +1335,6 @@
             setupCoinClick();
             updateCloudIndicator('offline');
             updateUserProfile();
-            
-            if (userId) {
-                setTimeout(() => {
-                    checkScriptAvailability().then(isAvailable => {
-                        if (isAvailable) {
-                            loadFromCloud().catch(() => {
-                                showStatus('Используются локальные данные 📱', 'info');
-                            });
-                        } else {
-                            showStatus('Используются локальные данные 📱', 'info');
-                        }
-                    });
-                }, 1000);
-            }
-            
-            setInterval(() => {
-                saveToLocal();
-                if (scriptAvailable && Date.now() - lastCloudSave > 60000 && userId) {
-                    saveToCloud();
-                }
-            }, 30000);
             
             console.log('Игра загружена!');
         });
