@@ -821,12 +821,6 @@
             // Проверяем, находимся ли мы в Telegram WebApp
             isTelegramWebApp = isTelegramWebAppEnvironment();
             
-            // Устанавливаем таймаут для завершения инициализации
-            const initTimeout = setTimeout(() => {
-                console.log('Таймаут инициализации, переход в локальный режим');
-                finishInitialization();
-            }, 2000); // 2 секунды на проверку Telegram
-            
             if (isTelegramWebApp) {
                 console.log('Обнаружена среда Telegram WebApp');
                 document.getElementById('tg-connection-status').innerHTML = '⏳ Загрузка данных Telegram...';
@@ -872,7 +866,6 @@
                             username: telegramUsername
                         });
                         
-                        clearTimeout(initTimeout);
                         finishInitialization();
                         showStatus('Данные Telegram загружены!', 'success');
                         return;
@@ -884,7 +877,6 @@
             
             // Если не в Telegram или не удалось получить данные
             console.log('Не в среде Telegram WebApp или не удалось получить данные');
-            clearTimeout(initTimeout);
             finishInitialization();
         }
         
