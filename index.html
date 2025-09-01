@@ -6,6 +6,7 @@
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Ваши стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -589,7 +590,7 @@
             
             <div class="coin-section">
                 <div class="coin-img" id="coin">
-                    <div class="coin-content">CLICK</div>
+                    <div class="coin-content">CLICK!</div>
                 </div>
             </div>
             
@@ -714,16 +715,18 @@
         // История переводов
         let transferHistory = [];
 
-        // Проверка Telegram WebApp - БЫСТРАЯ ВЕРСИЯ
+        // Проверка Telegram WebApp - УЛУЧШЕННАЯ ВЕРСИЯ
         function checkTelegramEnvironment() {
             try {
-                // Быстрая проверка основных признаков
-                if (window.Telegram?.WebApp) return true;
-                if (window.TelegramWebApp) return true;
+                // Проверяем наличие объекта Telegram WebApp
+                if (window.Telegram?.WebApp?.initData) return true;
+                if (window.TelegramWebApp?.initData) return true;
                 
+                // Проверяем наличие данных в URL параметрах
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) return true;
                 
+                // Проверяем user agent
                 if (navigator.userAgent.includes('Telegram')) return true;
                 
                 return false;
@@ -732,19 +735,43 @@
             }
         }
 
-        // Быстрое получение данных пользователя из Telegram
+        // Получение данных пользователя из Telegram
         function getTelegramUserData() {
             try {
+                let userData = null;
+                
+                // Пробуем разные варианты доступа к данным
                 if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                    return window.Telegram.WebApp.initDataUnsafe.user;
+                    userData = window.Telegram.WebApp.initDataUnsafe.user;
+                } else if (window.TelegramWebApp?.initDataUnsafe?.user) {
+                    userData = window.TelegramWebApp.initDataUnsafe.user;
                 }
-                if (window.TelegramWebApp?.initDataUnsafe?.user) {
-                    return window.TelegramWebApp.initDataUnsafe.user;
-                }
+                
+                return userData;
             } catch (error) {
-                console.log('Ошибка получения данных Telegram');
+                console.log('Ошибка получения данных Telegram:', error);
+                return null;
             }
-            return null;
+        }
+
+        // Инициализация Telegram WebApp
+        function initTelegramWebApp() {
+            try {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                    console.log("Telegram WebApp инициализирован");
+                    return true;
+                } else if (window.TelegramWebApp) {
+                    window.TelegramWebApp.ready();
+                    window.TelegramWebApp.expand();
+                    console.log("Telegram WebApp инициализирован (старая версия)");
+                    return true;
+                }
+            } catch (e) {
+                console.log('WebApp инициализация не удалась:', e);
+            }
+            return false;
         }
 
         // Обновление отображения профиля
@@ -805,13 +832,13 @@
         function initUserData() {
             // Сразу показываем, что проверяем
             const tgStatus = document.getElementById('tg-connection-status');
-            if (tgStatus) tgStatus.innerHTML = '🔍 Быстрая проверка...';
+            if (tgStatus) tgStatus.innerHTML = '🔍 Проверка Telegram...';
             
-            // Быстрая проверка Telegram
+            // Проверяем Telegram
             isTelegramWebApp = checkTelegramEnvironment();
             
             if (isTelegramWebApp) {
-                // Пытаемся быстро получить данные Telegram
+                // Пытаемся получить данные Telegram
                 const userData = getTelegramUserData();
                 
                 if (userData && userData.id) {
@@ -833,29 +860,25 @@
                     telegramUsername = userData.username || "";
                     telegramFirstName = userData.first_name || "";
                     
+                    // Инициализируем WebApp
+                    initTelegramWebApp();
+                    
                     // Загружаем данные и обновляем интерфейс
                     loadFromLocal();
                     updateUserProfile();
                     
-                    // Пытаемся инициализировать WebApp
-                    try {
-                        if (window.Telegram?.WebApp) {
-                            window.Telegram.WebApp.ready();
-                            window.Telegram.WebApp.expand();
-                        } else if (window.TelegramWebApp) {
-                            window.TelegramWebApp.ready();
-                            window.TelegramWebApp.expand();
-                        }
-                    } catch (e) {
-                        console.log('WebApp инициализация не удалась');
-                    }
-                    
                     showStatus('Telegram подключен!', 'success');
                     return;
+                } else {
+                    // Telegram обнаружен, но данные пользователя не получены
+                    console.log("Telegram обнаружен, но данные пользователя недоступны");
+                    tgStatus.innerHTML = '⚠️ Данные Telegram не получены';
+                    tgStatus.style.background = 'rgba(254, 249, 195, 0.7)';
+                    tgStatus.style.color = '#ca8a04';
                 }
             }
             
-            // Если Telegram не обнаружен или данные не получены - сразу переходим к локальному режиму
+            // Если Telegram не обнаружен или данные не получены - переходим к локальному режиму
             initLocalUser();
         }
         
@@ -1405,7 +1428,7 @@
 
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Быстрая загрузка игры...');
+            console.log('Загрузка игры...');
             
             // Немедленная инициализация
             initUserData();
