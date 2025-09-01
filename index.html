@@ -724,24 +724,17 @@
         function isTelegramWebAppEnvironment() {
             try {
                 // Проверяем наличие объекта Telegram WebApp
-                const hasTelegramWebApp = window.Telegram && window.Telegram.WebApp;
-                const hasTelegramWebAppAlt = window.TelegramWebApp;
+                if (window.Telegram && window.Telegram.WebApp) return true;
+                if (window.TelegramWebApp) return true;
                 
                 // Проверяем параметры URL, которые могут указывать на Telegram
                 const urlParams = new URLSearchParams(window.location.search);
-                const hasTgWebAppData = urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion');
+                if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) return true;
                 
                 // Проверяем user agent
-                const isTelegramUserAgent = navigator.userAgent.includes('Telegram');
+                if (navigator.userAgent.includes('Telegram')) return true;
                 
-                console.log('Проверка окружения Telegram:', {
-                    hasTelegramWebApp,
-                    hasTelegramWebAppAlt,
-                    hasTgWebAppData,
-                    isTelegramUserAgent
-                });
-                
-                return hasTelegramWebApp || hasTelegramWebAppAlt || hasTgWebAppData || isTelegramUserAgent;
+                return false;
             } catch (error) {
                 console.error('Ошибка проверки окружения Telegram:', error);
                 return false;
@@ -750,21 +743,15 @@
 
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
-            console.log('Получение данных Telegram...');
-            
             try {
                 // Способ 1: через initDataUnsafe (основной способ)
                 if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                    const user = window.Telegram.WebApp.initDataUnsafe.user;
-                    console.log('Данные получены через initDataUnsafe:', user);
-                    return user;
+                    return window.Telegram.WebApp.initDataUnsafe.user;
                 }
                 
                 // Способ 2: через альтернативный объект
                 if (window.TelegramWebApp?.initDataUnsafe?.user) {
-                    const user = window.TelegramWebApp.initDataUnsafe.user;
-                    console.log('Данные получены через альтернативный объект:', user);
-                    return user;
+                    return window.TelegramWebApp.initDataUnsafe.user;
                 }
                 
                 // Способ 3: через параметры URL
@@ -775,9 +762,7 @@
                         const params = new URLSearchParams(tgWebAppData);
                         const userParam = params.get('user');
                         if (userParam) {
-                            const user = JSON.parse(decodeURIComponent(userParam));
-                            console.log('Данные получены из URL параметров:', user);
-                            return user;
+                            return JSON.parse(decodeURIComponent(userParam));
                         }
                     } catch (e) {
                         console.error('Ошибка парсинга данных из URL:', e);
@@ -787,7 +772,6 @@
                 console.error('Ошибка получения данных Telegram:', error);
             }
             
-            console.log('Данные Telegram не найдены');
             return null;
         }
 
@@ -884,8 +868,37 @@
                 }
             }
             
-            // Если не в Telegram или не удалось получить данные
+            // Если не в Telegram или не удалось получить данные - сразу переходим к локальному режиму
             console.log('Не в среде Telegram WebApp или не удалось получить данные');
+            useLocalMode();
+        }
+        
+        // Использование локального режима
+        function useLocalMode() {
+            // Проверяем, есть ли сохраненные данные
+            const savedUserId = localStorage.getItem('local_user_id');
+            if (savedUserId) {
+                userId = savedUserId;
+                userName = localStorage.getItem('local_user_name') || "Локальный пользователь";
+                userAvatar = localStorage.getItem('local_user_avatar') || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                
+                console.log('Загружены локальные данные пользователя:', userId);
+                showStatus('Локальные данные загружены', 'info');
+            } else {
+                // Создаем нового локального пользователя
+                userId = 'local_' + Math.floor(Math.random() * 1000000);
+                userName = "Локальный пользователь";
+                userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                
+                // Сохраняем данные локального пользователя
+                localStorage.setItem('local_user_id', userId);
+                localStorage.setItem('local_user_name', userName);
+                localStorage.setItem('local_user_avatar', userAvatar);
+                
+                console.log('Создан новый локальный пользователь:', userId);
+                showStatus('Создан новый аккаунт', 'info');
+            }
+            
             finishInitialization();
         }
         
@@ -893,33 +906,6 @@
         function finishInitialization() {
             if (initializationComplete) return;
             initializationComplete = true;
-            
-            // Если данные не были получены из Telegram, используем локальные
-            if (!userId) {
-                // Проверяем, есть ли сохраненные данные
-                const savedUserId = localStorage.getItem('local_user_id');
-                if (savedUserId) {
-                    userId = savedUserId;
-                    userName = localStorage.getItem('local_user_name') || "Локальный пользователь";
-                    userAvatar = localStorage.getItem('local_user_avatar') || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                    
-                    console.log('Загружены локальные данные пользователя:', userId);
-                    showStatus('Локальные данные загружены', 'info');
-                } else {
-                    // Создаем нового локального пользователя
-                    userId = 'local_' + Math.floor(Math.random() * 1000000);
-                    userName = "Локальный пользователь";
-                    userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                    
-                    // Сохраняем данные локального пользователя
-                    localStorage.setItem('local_user_id', userId);
-                    localStorage.setItem('local_user_name', userName);
-                    localStorage.setItem('local_user_avatar', userAvatar);
-                    
-                    console.log('Создан новый локальный пользователь:', userId);
-                    showStatus('Создан новый аккаунт', 'info');
-                }
-            }
             
             // Загружаем сохраненные данные
             loadFromLocal();
@@ -1526,4 +1512,4 @@
         });
     </script>
 </body>
-                    </html>
+                        </html>
