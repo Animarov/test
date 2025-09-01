@@ -1147,7 +1147,11 @@
             }
             
             topPlayers.forEach((player, index) => {
-                const displayName = player.username || `Игрок ${(player.userId || '').substr(0, 6)}`;
+                // ИСПРАВЛЕНИЕ: Используем правильное поле для имени пользователя
+                const displayName = player.username || player.telegramUsername || 
+                                  (player.firstName ? player.firstName + (player.lastName ? ' ' + player.lastName : '') : 
+                                  `Игрок ${(player.userId || '').substr(0, 6)}`);
+                
                 const playerBalance = formatBalance(player.balance || 0);
                 const avatar = player.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 
@@ -1330,9 +1334,11 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
+            // ИСПРАВЛЕНИЕ: Инициализируем обработчик клика до загрузки данных пользователя
+            setupCoinClick();
+            
             initUserData();
             updateBalanceDisplay();
-            setupCoinClick();
             updateCloudIndicator('offline');
             updateUserProfile();
             
@@ -1340,4 +1346,4 @@
         });
     </script>
 </body>
-    </html>
+                </html>
