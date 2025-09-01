@@ -63,6 +63,8 @@
             font-size: 32px;
             color: #c2410c;
             font-weight: 800;
+            font-family: monospace;
+            letter-spacing: 1px;
         }
         
         .main-menu {
@@ -239,8 +241,9 @@
         .user-balance {
             font-weight: bold;
             color: #c2410c;
-            width: 80px;
+            width: 100px;
             text-align: right;
+            font-family: monospace;
         }
         
         .user-avatar {
@@ -432,7 +435,7 @@
                 
                 <div class="balance">
                     <div class="balance-label">Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span></div>
-                    <div class="balance-amount" id="balance">0 монет</div>
+                    <div class="balance-amount" id="balance">0.000000000</div>
                 </div>
             </div>
             
@@ -558,7 +561,7 @@
 
     <script>
         // Глобальные переменные
-        let balance = 0;
+        let balance = 0; // Храним баланс как число для точных вычислений
         let userId = null;
         let userName = "Загрузка...";
         let userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
@@ -570,6 +573,22 @@
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
+
+        // Форматирование числа с 9 знаками после запятой
+        function formatBalance(amount) {
+            // Преобразуем число в строку с фиксированным количеством знаков после запятой
+            let formatted = amount.toFixed(9);
+            
+            // Убедимся, что у нас всегда 9 знаков после запятой
+            const parts = formatted.split('.');
+            if (parts.length === 1) {
+                formatted += '.000000000';
+            } else if (parts[1].length < 9) {
+                formatted = parts[0] + '.' + parts[1].padEnd(9, '0');
+            }
+            
+            return formatted;
+        }
 
         // Улучшенная проверка Telegram WebApp
         function enhancedTelegramCheck() {
@@ -888,7 +907,7 @@
         function updateBalanceDisplay() {
             const balanceElement = document.getElementById('balance');
             if (balanceElement) {
-                balanceElement.textContent = `${balance} монет`;
+                balanceElement.textContent = formatBalance(balance);
             }
             updateDebugInfo();
         }
@@ -908,7 +927,7 @@
             const debugElement = document.getElementById('debug');
             if (debugElement) {
                 debugElement.innerHTML = `
-                    <div>Баланс: ${balance} | UserID: ${userId || 'не установлен'}</div>
+                    <div>Баланс: ${formatBalance(balance)} | UserID: ${userId || 'не установлен'}</div>
                     <div>Имя: ${userName}</div>
                     <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
@@ -953,7 +972,8 @@
                 
                 createClickAnimation(clientX, clientY);
                 
-                balance++;
+                // Добавляем 0.000000001 за каждый клик
+                balance += 0.000000001;
                 updateBalanceDisplay();
                 saveToLocal();
                 
@@ -962,7 +982,7 @@
                     coin.style.transform = 'scale(1)';
                 }, 100);
                 
-                showStatus('+1 монета! 💰', 'success');
+                showStatus('+0.000000001 монета! 💰', 'success');
                 
                 if (balance % 10 === 0) {
                     saveToCloud();
@@ -1014,7 +1034,7 @@
             try {
                 const savedBalance = localStorage.getItem(`coin_balance_${userId}`);
                 if (savedBalance) {
-                    const parsedBalance = parseInt(savedBalance);
+                    const parsedBalance = parseFloat(savedBalance);
                     if (!isNaN(parsedBalance) && parsedBalance >= 0) {
                         balance = parsedBalance;
                     }
@@ -1188,7 +1208,7 @@
             
             topPlayers.forEach((player, index) => {
                 const displayName = player.username || `Игрок ${(player.userId || '').substr(0, 6)}`;
-                const playerBalance = player.balance || 0;
+                const playerBalance = formatBalance(player.balance || 0);
                 const avatar = player.avatar || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
                 
                 html += `
