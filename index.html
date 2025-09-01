@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coin Clicker</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -386,6 +386,35 @@
             font-size: 12px;
             color: #a8a29e;
         }
+
+        .import-export {
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            border: 1px solid rgba(251, 146, 60, 0.3);
+        }
+
+        .import-export input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        .import-export button {
+            width: 100%;
+            padding: 8px;
+            margin: 2px 0;
+            background: #f59e0b;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -455,6 +484,15 @@
                 <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                 <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
                 <button class="test-button" onclick="resetGame()">Сбросить игру</button>
+                <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
+                <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
+            </div>
+
+            <div class="import-export" id="import-export" style="display: none;">
+                <input type="text" id="import-data" placeholder="Введите код резервной копии">
+                <button onclick="importSaveData()">Импортировать данные</button>
+                <button onclick="exportSaveData()">Экспортировать данные</button>
+                <button onclick="hideExportImport()">Скрыть</button>
             </div>
         </div>
 
@@ -533,26 +571,33 @@
         let scriptAvailable = false;
         let lastCloudSave = 0;
 
+        // Улучшенная проверка Telegram WebApp
+        function enhancedTelegramCheck() {
+            const checks = [
+                () => window.Telegram?.WebApp,
+                () => window.TelegramWebApp,
+                () => window?.ReactNativeWebView,
+                () => navigator.userAgent.includes('Telegram'),
+                () => window.location.search.includes('tgWebApp'),
+                () => window.location.hash.includes('tgWebApp')
+            ];
+            
+            return checks.some(check => {
+                try {
+                    const result = check();
+                    return result && result !== null && result !== undefined;
+                } catch (e) {
+                    return false;
+                }
+            });
+        }
 
         function checkTelegramWebApp() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const webApp = window.Telegram.WebApp;
-                console.log('Telegram WebApp detected:', {
-                    version: webApp.version,
-                    platform: webApp.platform,
-                    initData: webApp.initData,
-                    initDataUnsafe: webApp.initDataUnsafe
-                });
+            if (enhancedTelegramCheck()) {
+                console.log('Telegram environment detected');
                 return true;
             }
             
-            // Альтернативная проверка для некоторых версий Telegram
-            if (window.TelegramWebApp) {
-                console.log('TelegramWebApp detected (alternative object)');
-                return true;
-            }
-            
-            // Проверка параметров в URL
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) {
                 console.log('Telegram WebApp parameters found in URL');
@@ -561,6 +606,7 @@
             
             return false;
         }
+
         // Функция для парсинга initData из Telegram
         function parseInitData(initData) {
             const result = {};
@@ -569,14 +615,12 @@
             for (const [key, value] of params) {
                 if (key === 'user') {
                     try {
-                        // Декодируем и парсим данные пользователя
                         const decodedValue = decodeURIComponent(value);
                         result.user = JSON.parse(decodedValue);
                     } catch (e) {
                         console.error('Error parsing user data:', e);
-                        // Пробуем альтернативный способ парсинга
                         try {
-                            const cleanValue = value.replace(/\\"/g, '"');
+                            const cleanValue = value.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
                             result.user = JSON.parse(cleanValue);
                         } catch (e2) {
                             console.error('Alternative parsing also failed:', e2);
@@ -593,37 +637,51 @@
         function getTelegramUserData() {
             console.log('Checking for Telegram WebApp...');
             
-            // Проверяем, доступен ли объект Telegram
-            if (window.Telegram && window.Telegram.WebApp) {
+            if (enhancedTelegramCheck()) {
                 console.log('Telegram WebApp detected');
-                const webApp = window.Telegram.WebApp;
                 
-                // Расширенная проверка доступных данных
-                console.log('WebApp initData:', webApp.initData);
-                console.log('WebApp initDataUnsafe:', webApp.initDataUnsafe);
-                console.log('WebApp version:', webApp.version);
-                console.log('WebApp platform:', webApp.platform);
-                
-                // Пробуем разные способы получения данных
                 let userData = null;
                 
-                // Способ 1: initDataUnsafe (самый надежный)
-                if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
-                    userData = webApp.initDataUnsafe.user;
+                // Способ 1: initDataUnsafe
+                if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                    userData = window.Telegram.WebApp.initDataUnsafe.user;
                     console.log('Data from initDataUnsafe:', userData);
                 }
                 
                 // Способ 2: Парсинг initData
-                if (!userData && webApp.initData) {
+                if (!userData && window.Telegram?.WebApp?.initData) {
                     console.log('Parsing initData directly');
-                    const parsedData = parseInitData(webApp.initData);
+                    const parsedData = parseInitData(window.Telegram.WebApp.initData);
                     if (parsedData.user) {
                         userData = parsedData.user;
                         console.log('Data from parsed initData:', userData);
                     }
                 }
                 
-                // Способ 3: Проверяем данные в localStorage (для кэширования)
+                // Способ 3: Альтернативные объекты
+                if (!userData && window.TelegramWebApp?.initDataUnsafe?.user) {
+                    userData = window.TelegramWebApp.initDataUnsafe.user;
+                    console.log('Data from alternative object:', userData);
+                }
+                
+                // Способ 4: Данные из URL
+                if (!userData) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const tgWebAppData = urlParams.get('tgWebAppData');
+                    if (tgWebAppData) {
+                        try {
+                            const parsedData = parseInitData(tgWebAppData);
+                            if (parsedData.user) {
+                                userData = parsedData.user;
+                                console.log('Data from URL parameters:', userData);
+                            }
+                        } catch (e) {
+                            console.error('Error parsing URL data:', e);
+                        }
+                    }
+                }
+                
+                // Способ 5: Кэш
                 if (!userData) {
                     try {
                         const cachedUser = localStorage.getItem('telegram_user_data');
@@ -639,66 +697,50 @@
                 if (userData) {
                     isTelegramWebApp = true;
                     
-                    // Кэшируем данные пользователя
                     try {
                         localStorage.setItem('telegram_user_data', JSON.stringify(userData));
                     } catch (e) {
                         console.error('Error caching user data:', e);
                     }
                     
-                    // Получаем ID пользователя
                     const telegramId = userData.id;
                     
-                    // Формируем имя - используем username если есть, иначе first_name
                     let name = "Гость";
                     if (userData.username) {
                         name = "@" + userData.username;
                     } else if (userData.first_name) {
                         name = userData.first_name;
-                    } else if (userData.last_name) {
-                        name = userData.last_name;
+                        if (userData.last_name) {
+                            name += " " + userData.last_name;
+                        }
                     }
                     
-                    // Сохраняем username для отправки в облако
                     telegramUsername = userData.username || "";
                     telegramFirstName = userData.first_name || "";
                     
-                    // Получаем аватар
                     let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                     if (userData.photo_url) {
                         avatar = userData.photo_url;
                     }
                     
                     return {
-                        id: telegramId, // Только число
+                        id: telegramId,
                         name: name,
                         avatar: avatar,
                         username: telegramUsername,
                         firstName: telegramFirstName
                     };
-                } else {
-                    console.log('No user data found in Telegram WebApp');
                 }
-            } else {
-                console.log('Telegram WebApp not detected');
-                console.log('Available global objects:', {
-                    Telegram: window.Telegram,
-                    TelegramWebApp: window.TelegramWebApp
-                });
             }
             
-            // Если не в Telegram или данные не получены
             isTelegramWebApp = false;
-            telegramUsername = "";
-            telegramFirstName = "";
             return null;
         }
         
         // Альтернативный способ получения данных через событие
         function waitForTelegramInit() {
             return new Promise((resolve) => {
-                // Проверяем, есть ли уже Telegram WebApp
-                if (window.Telegram && window.Telegram.WebApp) {
+                if (enhancedTelegramCheck()) {
                     const userData = getTelegramUserData();
                     if (userData) {
                         resolve(userData);
@@ -706,14 +748,13 @@
                     }
                 }
                 
-                // Ждем инициализации Telegram
                 let attempts = 0;
-                const maxAttempts = 50; // 5 секунд максимум
+                const maxAttempts = 50;
                 
                 const checkInterval = setInterval(() => {
                     attempts++;
                     
-                    if (window.Telegram && window.Telegram.WebApp) {
+                    if (enhancedTelegramCheck()) {
                         const userData = getTelegramUserData();
                         if (userData) {
                             clearInterval(checkInterval);
@@ -741,17 +782,14 @@
         async function initUserData() {
             console.log('Initializing user data...');
             
-            // Пытаемся получить данные Telegram
             let userData = getTelegramUserData();
             
-            // Если не получилось, ждем инициализации
             if (!userData) {
                 console.log('Waiting for Telegram initialization...');
                 userData = await waitForTelegramInit();
             }
             
             if (userData) {
-                // Данные из Telegram
                 userId = userData.id;
                 userName = userData.name;
                 userAvatar = userData.avatar;
@@ -764,10 +802,8 @@
                     username: telegramUsername
                 });
                 
-                // Загружаем баланс
                 loadFromLocal();
             } else {
-                // Проверяем, есть ли параметры запуска в URL (для WebApp)
                 const urlParams = new URLSearchParams(window.location.search);
                 const tgWebAppData = urlParams.get('tgWebAppData');
                 
@@ -785,8 +821,6 @@
                             telegramFirstName = userData.first_name || "";
                             
                             console.log('User data from URL parameters:', userData);
-                            
-                            // Загружаем баланс
                             loadFromLocal();
                         }
                     } catch (e) {
@@ -794,30 +828,15 @@
                     }
                 }
                 
-                // Если все еще нет данных, показываем сообщение об ошибке
                 if (!userData) {
                     isTelegramWebApp = false;
                     userId = null;
                     userName = "Ошибка загрузки данных";
-                    userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                    telegramUsername = "";
                     
-                    console.log('Failed to load Telegram user data');
-                    
-                    // Показываем сообщение об ошибке
-                    showStatus('Не удалось загрузить данные из Telegram. Попробуйте перезагрузить мини-приложение.', 'error');
-                    
-                    // Показываем кнопку для тестового режима
-                    const debugElement = document.getElementById('debug');
-                    if (debugElement) {
-                        debugElement.innerHTML += `<div>
-                            <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
-                        </div>`;
-                    }
+                    showStatus('Не удалось загрузить данные из Telegram. Используйте тестовый режим.', 'error');
                 }
             }
             
-            // Обновляем отображение
             updateUserProfile();
         }
         
@@ -882,7 +901,6 @@
                 indicator.title = status === 'online' ? 'Облако подключено' : 
                                 status === 'offline' ? 'Облако отключено' : 'Загрузка...';
             }
-            updateDebugInfo();
         }
         
         // Отладочная информация
@@ -892,20 +910,14 @@
                 debugElement.innerHTML = `
                     <div>Баланс: ${balance} | UserID: ${userId || 'не установлен'}</div>
                     <div>Имя: ${userName}</div>
-                    <div>Username: ${telegramUsername || 'нет'}</div>
                     <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
                     <button class="test-button" onclick="resetGame()">Сбросить игру</button>
+                    <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
+                    <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
                 `;
-                
-                // Добавляем кнопку тестового режима, если нет userId
-                if (!userId) {
-                    debugElement.innerHTML += `<div>
-                        <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
-                    </div>`;
-                }
             }
         }
         
@@ -930,13 +942,11 @@
                 event.preventDefault();
                 event.stopPropagation();
                 
-                // Проверяем, есть ли ID пользователя
                 if (!userId) {
                     showStatus('Включите тестовый режим для игры', 'warning');
                     return;
                 }
                 
-                // Получаем координаты клика
                 const rect = coin.getBoundingClientRect();
                 const clientX = rect.left + rect.width / 2;
                 const clientY = rect.top + rect.height / 2;
@@ -954,13 +964,11 @@
                 
                 showStatus('+1 монета! 💰', 'success');
                 
-                // Автосохранение в облако каждые 10 кликов
                 if (balance % 10 === 0) {
                     saveToCloud();
                 }
             }
             
-            // Добавляем обработчики
             coin.addEventListener('click', handleClick);
             coin.addEventListener('touchstart', function(e) {
                 e.preventDefault();
@@ -990,6 +998,10 @@
             
             try {
                 localStorage.setItem(`coin_balance_${userId}`, balance.toString());
+                localStorage.setItem(`coin_user_${userId}`, JSON.stringify({
+                    name: userName,
+                    avatar: userAvatar
+                }));
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
             }
@@ -1007,11 +1019,19 @@
                         balance = parsedBalance;
                     }
                 }
+                
+                const savedUser = localStorage.getItem(`coin_user_${userId}`);
+                if (savedUser) {
+                    const userData = JSON.parse(savedUser);
+                    if (userData.name) userName = userData.name;
+                    if (userData.avatar) userAvatar = userData.avatar;
+                }
             } catch (error) {
                 console.error('Ошибка загрузки:', error);
                 balance = 0;
             }
             updateBalanceDisplay();
+            updateUserProfile();
         }
         
         // Проверка доступности Google Apps Script
@@ -1220,20 +1240,67 @@
                 userRankElement.style.display = 'none';
             }
         }
+
+        // Импорт/Экспорт данных
+        function showExportImport() {
+            document.getElementById('import-export').style.display = 'block';
+        }
+
+        function hideExportImport() {
+            document.getElementById('import-export').style.display = 'none';
+        }
+
+        function exportSaveData() {
+            const data = {
+                userId: userId,
+                balance: balance,
+                userName: userName,
+                userAvatar: userAvatar,
+                timestamp: Date.now()
+            };
+            const json = JSON.stringify(data);
+            document.getElementById('import-data').value = json;
+            showStatus('Данные подготовлены для экспорта', 'success');
+        }
+
+        function importSaveData() {
+            const jsonString = document.getElementById('import-data').value;
+            if (!jsonString) {
+                showStatus('Введите код резервной копии', 'error');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(jsonString);
+                if (data && data.balance !== undefined) {
+                    userId = data.userId || userId;
+                    balance = data.balance;
+                    userName = data.userName || userName;
+                    userAvatar = data.userAvatar || userAvatar;
+                    
+                    saveToLocal();
+                    updateUserProfile();
+                    updateBalanceDisplay();
+                    showStatus('Данные импортированы!', 'success');
+                    hideExportImport();
+                } else {
+                    throw new Error('Invalid data format');
+                }
+            } catch (e) {
+                showStatus('Ошибка импорта данных', 'error');
+            }
+        }
         
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
-            // Инициализируем данные пользователя
             initUserData();
-            
             updateBalanceDisplay();
             setupCoinClick();
             updateCloudIndicator('offline');
             updateUserProfile();
             
-            // Проверяем доступность облака только если есть ID пользователя
             if (userId) {
                 setTimeout(() => {
                     checkScriptAvailability().then(isAvailable => {
@@ -1248,7 +1315,6 @@
                 }, 1000);
             }
             
-            // Автосохранение
             setInterval(() => {
                 saveToLocal();
                 if (scriptAvailable && Date.now() - lastCloudSave > 60000 && userId) {
