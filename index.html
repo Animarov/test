@@ -532,7 +532,35 @@
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
-        
+
+
+        function checkTelegramWebApp() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const webApp = window.Telegram.WebApp;
+                console.log('Telegram WebApp detected:', {
+                    version: webApp.version,
+                    platform: webApp.platform,
+                    initData: webApp.initData,
+                    initDataUnsafe: webApp.initDataUnsafe
+                });
+                return true;
+            }
+            
+            // Альтернативная проверка для некоторых версий Telegram
+            if (window.TelegramWebApp) {
+                console.log('TelegramWebApp detected (alternative object)');
+                return true;
+            }
+            
+            // Проверка параметров в URL
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) {
+                console.log('Telegram WebApp parameters found in URL');
+                return true;
+            }
+            
+            return false;
+        }
         // Функция для парсинга initData из Telegram
         function parseInitData(initData) {
             const result = {};
@@ -541,10 +569,21 @@
             for (const [key, value] of params) {
                 if (key === 'user') {
                     try {
-                        result.user = JSON.parse(decodeURIComponent(value));
+                        // Декодируем и парсим данные пользователя
+                        const decodedValue = decodeURIComponent(value);
+                        result.user = JSON.parse(decodedValue);
                     } catch (e) {
                         console.error('Error parsing user data:', e);
+                        // Пробуем альтернативный способ парсинга
+                        try {
+                            const cleanValue = value.replace(/\\"/g, '"');
+                            result.user = JSON.parse(cleanValue);
+                        } catch (e2) {
+                            console.error('Alternative parsing also failed:', e2);
+                        }
                     }
+                } else {
+                    result[key] = value;
                 }
             }
             return result;
