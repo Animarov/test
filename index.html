@@ -6,6 +6,7 @@
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -494,17 +495,31 @@
             font-size: 12px;
             margin-left: 10px;
         }
+
+        .mode-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            background: rgba(251, 146, 60, 0.3);
+            color: #7c2d12;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Главное меню -->
         <div id="main-menu-screen" class="screen active">
+            <div class="mode-indicator" id="mode-indicator">Режим: проверка...</div>
+            
             <div class="header">
                 <div class="user-profile" id="user-profile">
                     <img class="user-profile-avatar" id="user-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
                     <div class="user-profile-info">
-                        <div class="user-profile-name" id="user-name">Загрузка Telegram...</div>
+                        <div class="user-profile-name" id="user-name">Загрузка...</div>
                         <div class="user-profile-id">ID: <span id="user-id">-</span>
                             <button class="copy-btn" onclick="copyUserId()">📋</button>
                         </div>
@@ -681,65 +696,42 @@
 
         // Упрощенная проверка Telegram WebApp
         function isTelegramWebAppEnvironment() {
-            // Проверяем различные способы определения Telegram WebApp
-            return (
-                (window.Telegram && window.Telegram.WebApp) ||
-                (window.TelegramWebApp) ||
-                (window.location.search.includes('tgWebApp')) ||
-                (window.location.hash.includes('tgWebApp')) ||
-                (navigator.userAgent.includes('Telegram'))
-            );
+            // Более точная проверка на Telegram WebApp
+            return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || 
+                   (window.TelegramWebApp && window.TelegramWebApp.initData);
         }
 
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
             console.log('Получение данных Telegram...');
             
-            // Способ 1: через initDataUnsafe (основной способ)
+            // Основной способ через initDataUnsafe
             if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
                 console.log('Данные получены через initDataUnsafe:', user);
                 return user;
             }
             
-            // Способ 2: через инициализацию WebApp
-            if (window.Telegram?.WebApp) {
-                try {
-                    window.Telegram.WebApp.ready();
-                    window.Telegram.WebApp.expand();
-                    
-                    if (window.Telegram.WebApp.initDataUnsafe?.user) {
-                        const user = window.Telegram.WebApp.initDataUnsafe.user;
-                        console.log('Данные получены после инициализации WebApp:', user);
-                        return user;
-                    }
-                } catch (e) {
-                    console.error('Ошибка инициализации WebApp:', e);
-                }
-            }
-            
-            // Способ 3: через параметры URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const tgWebAppData = urlParams.get('tgWebAppData');
-            if (tgWebAppData) {
-                try {
-                    const params = new URLSearchParams(tgWebAppData);
-                    const userParam = params.get('user');
-                    if (userParam) {
-                        const user = JSON.parse(decodeURIComponent(userParam));
-                        console.log('Данные получены из URL параметров:', user);
-                        return user;
-                    }
-                } catch (e) {
-                    console.error('Ошибка парсинга данных из URL:', e);
-                }
-            }
-            
-            // Способ 4: через альтернативный объект
+            // Альтернативный способ через TelegramWebApp
             if (window.TelegramWebApp?.initDataUnsafe?.user) {
                 const user = window.TelegramWebApp.initDataUnsafe.user;
                 console.log('Данные получены через альтернативный объект:', user);
                 return user;
+            }
+            
+            // Попытка получить данные из initData
+            try {
+                if (window.Telegram?.WebApp?.initData) {
+                    const initData = new URLSearchParams(window.Telegram.WebApp.initData);
+                    const userStr = initData.get('user');
+                    if (userStr) {
+                        const user = JSON.parse(decodeURIComponent(userStr));
+                        console.log('Данные получены из initData:', user);
+                        return user;
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка парсинга initData:', e);
             }
             
             console.log('Данные Telegram не найдены');
@@ -751,6 +743,14 @@
             document.getElementById('user-name').textContent = userName;
             document.getElementById('user-id').textContent = userId || '-';
             document.getElementById('user-avatar').src = userAvatar;
+            
+            // Обновляем индикатор режима
+            const modeIndicator = document.getElementById('mode-indicator');
+            if (modeIndicator) {
+                modeIndicator.textContent = isTelegramWebApp ? 'Режим: Telegram' : 'Режим: браузер';
+                modeIndicator.style.background = isTelegramWebApp ? 
+                    'rgba(76, 175, 80, 0.3)' : 'rgba(251, 146, 60, 0.3)';
+            }
         }
         
         // Инициализация данных
@@ -758,9 +758,23 @@
             console.log('Инициализация данных пользователя...');
             
             // Проверяем, находимся ли мы в Telegram WebApp
-            if (isTelegramWebAppEnvironment()) {
+            isTelegramWebApp = isTelegramWebAppEnvironment();
+            
+            if (isTelegramWebApp) {
                 console.log('Обнаружена среда Telegram WebApp');
-                isTelegramWebApp = true;
+                
+                // Инициализируем WebApp
+                try {
+                    if (window.Telegram?.WebApp) {
+                        window.Telegram.WebApp.ready();
+                        window.Telegram.WebApp.expand();
+                    } else if (window.TelegramWebApp) {
+                        window.TelegramWebApp.ready();
+                        window.TelegramWebApp.expand();
+                    }
+                } catch (e) {
+                    console.error('Ошибка инициализации WebApp:', e);
+                }
                 
                 // Получаем данные пользователя
                 const userData = getTelegramUserData();
@@ -793,8 +807,7 @@
                         username: telegramUsername
                     });
                     
-                    // Загружаем сохраненные данные
-                    loadFromLocal();
+                    showStatus('Данные Telegram загружены!', 'success');
                 } else {
                     // Не удалось получить данные, но мы в Telegram
                     userName = "Пользователь Telegram";
@@ -802,12 +815,11 @@
                     userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                     
                     console.log('Используем временный ID для Telegram пользователя:', userId);
-                    loadFromLocal();
+                    showStatus('Используется временный аккаунт', 'warning');
                 }
             } else {
                 // Не в Telegram WebApp - используем локальное хранилище
                 console.log('Не в среде Telegram WebApp');
-                isTelegramWebApp = false;
                 
                 // Проверяем, есть ли сохраненные данные
                 const savedUserId = localStorage.getItem('local_user_id');
@@ -817,6 +829,7 @@
                     userAvatar = localStorage.getItem('local_user_avatar') || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                     
                     console.log('Загружены локальные данные пользователя:', userId);
+                    showStatus('Локальные данные загружены', 'info');
                 } else {
                     // Создаем нового локального пользователя
                     userId = 'local_' + Math.floor(Math.random() * 1000000);
@@ -829,13 +842,13 @@
                     localStorage.setItem('local_user_avatar', userAvatar);
                     
                     console.log('Создан новый локальный пользователь:', userId);
+                    showStatus('Создан новый аккаунт', 'info');
                 }
-                
-                loadFromLocal();
             }
             
+            // Загружаем сохраненные данные
+            loadFromLocal();
             updateUserProfile();
-            showStatus('Данные загружены!', 'success');
         }
         
         // Навигация по экранам
@@ -1419,4 +1432,4 @@
         });
     </script>
 </body>
-    </html>
+                    </html>
