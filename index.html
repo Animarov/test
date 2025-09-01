@@ -550,7 +550,7 @@
             return result;
         }
         
-        // Получение данных пользователя из Telegram
+        // Расширенная функция получения данных пользователя из Telegram
         function getTelegramUserData() {
             console.log('Checking for Telegram WebApp...');
             
@@ -562,6 +562,8 @@
                 // Расширенная проверка доступных данных
                 console.log('WebApp initData:', webApp.initData);
                 console.log('WebApp initDataUnsafe:', webApp.initDataUnsafe);
+                console.log('WebApp version:', webApp.version);
+                console.log('WebApp platform:', webApp.platform);
                 
                 // Пробуем разные способы получения данных
                 let userData = null;
@@ -582,22 +584,28 @@
                     }
                 }
                 
-                // Способ 3: Проверяем, есть ли данные в URL (для тестирования)
+                // Способ 3: Проверяем данные в localStorage (для кэширования)
                 if (!userData) {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const testUser = urlParams.get('testUser');
-                    if (testUser) {
-                        try {
-                            userData = JSON.parse(decodeURIComponent(testUser));
-                            console.log('Test user data from URL:', userData);
-                        } catch (e) {
-                            console.error('Error parsing test user data:', e);
+                    try {
+                        const cachedUser = localStorage.getItem('telegram_user_data');
+                        if (cachedUser) {
+                            userData = JSON.parse(cachedUser);
+                            console.log('Data from cache:', userData);
                         }
+                    } catch (e) {
+                        console.error('Error reading cached data:', e);
                     }
                 }
                 
                 if (userData) {
                     isTelegramWebApp = true;
+                    
+                    // Кэшируем данные пользователя
+                    try {
+                        localStorage.setItem('telegram_user_data', JSON.stringify(userData));
+                    } catch (e) {
+                        console.error('Error caching user data:', e);
+                    }
                     
                     // Получаем ID пользователя
                     const telegramId = userData.id;
@@ -608,6 +616,8 @@
                         name = "@" + userData.username;
                     } else if (userData.first_name) {
                         name = userData.first_name;
+                    } else if (userData.last_name) {
+                        name = userData.last_name;
                     }
                     
                     // Сохраняем username для отправки в облако
@@ -632,6 +642,10 @@
                 }
             } else {
                 console.log('Telegram WebApp not detected');
+                console.log('Available global objects:', {
+                    Telegram: window.Telegram,
+                    TelegramWebApp: window.TelegramWebApp
+                });
             }
             
             // Если не в Telegram или данные не получены
@@ -639,6 +653,42 @@
             telegramUsername = "";
             telegramFirstName = "";
             return null;
+        }
+        
+        // Альтернативный способ получения данных через событие
+        function waitForTelegramInit() {
+            return new Promise((resolve) => {
+                // Проверяем, есть ли уже Telegram WebApp
+                if (window.Telegram && window.Telegram.WebApp) {
+                    const userData = getTelegramUserData();
+                    if (userData) {
+                        resolve(userData);
+                        return;
+                    }
+                }
+                
+                // Ждем инициализации Telegram
+                let attempts = 0;
+                const maxAttempts = 50; // 5 секунд максимум
+                
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        const userData = getTelegramUserData();
+                        if (userData) {
+                            clearInterval(checkInterval);
+                            resolve(userData);
+                            return;
+                        }
+                    }
+                    
+                    if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        resolve(null);
+                    }
+                }, 100);
+            });
         }
         
         // Обновление отображения профиля
@@ -649,8 +699,17 @@
         }
         
         // Инициализация данных
-        function initUserData() {
-            const userData = getTelegramUserData();
+        async function initUserData() {
+            console.log('Initializing user data...');
+            
+            // Пытаемся получить данные Telegram
+            let userData = getTelegramUserData();
+            
+            // Если не получилось, ждем инициализации
+            if (!userData) {
+                console.log('Waiting for Telegram initialization...');
+                userData = await waitForTelegramInit();
+            }
             
             if (userData) {
                 // Данные из Telegram
@@ -669,24 +728,53 @@
                 // Загружаем баланс
                 loadFromLocal();
             } else {
-                // Показываем сообщение об ошибке загрузки данных Telegram
-                isTelegramWebApp = false;
-                userId = null;
-                userName = "Ошибка загрузки данных";
-                userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                telegramUsername = "";
+                // Проверяем, есть ли параметры запуска в URL (для WebApp)
+                const urlParams = new URLSearchParams(window.location.search);
+                const tgWebAppData = urlParams.get('tgWebAppData');
                 
-                console.log('Failed to load Telegram user data');
+                if (tgWebAppData) {
+                    console.log('Found tgWebAppData in URL, trying to parse...');
+                    try {
+                        const parsedData = parseInitData(tgWebAppData);
+                        if (parsedData.user) {
+                            userData = parsedData.user;
+                            
+                            userId = userData.id;
+                            userName = userData.username ? "@" + userData.username : userData.first_name;
+                            userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                            telegramUsername = userData.username || "";
+                            telegramFirstName = userData.first_name || "";
+                            
+                            console.log('User data from URL parameters:', userData);
+                            
+                            // Загружаем баланс
+                            loadFromLocal();
+                        }
+                    } catch (e) {
+                        console.error('Error parsing tgWebAppData:', e);
+                    }
+                }
                 
-                // Показываем сообщение об ошибке
-                showStatus('Не удалось загрузить данные из Telegram', 'error');
-                
-                // Показываем кнопку для тестового режима
-                const debugElement = document.getElementById('debug');
-                if (debugElement) {
-                    debugElement.innerHTML += `<div>
-                        <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
-                    </div>`;
+                // Если все еще нет данных, показываем сообщение об ошибке
+                if (!userData) {
+                    isTelegramWebApp = false;
+                    userId = null;
+                    userName = "Ошибка загрузки данных";
+                    userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                    telegramUsername = "";
+                    
+                    console.log('Failed to load Telegram user data');
+                    
+                    // Показываем сообщение об ошибке
+                    showStatus('Не удалось загрузить данные из Telegram. Попробуйте перезагрузить мини-приложение.', 'error');
+                    
+                    // Показываем кнопку для тестового режима
+                    const debugElement = document.getElementById('debug');
+                    if (debugElement) {
+                        debugElement.innerHTML += `<div>
+                            <button class="test-button" onclick="enableTestMode()">Включить тестовый режим</button>
+                        </div>`;
+                    }
                 }
             }
             
