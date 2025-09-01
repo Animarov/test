@@ -579,15 +579,17 @@
                     // Получаем ID пользователя
                     const telegramId = userData.id;
                     
-                    // Формируем имя - используем first_name как было раньше
+                    // Формируем имя - используем username если есть, иначе first_name
                     let name = "Гость";
-                    if (userData.first_name) {
+                    if (userData.username) {
+                        name = "@" + userData.username;
+                    } else if (userData.first_name) {
                         name = userData.first_name;
-                        telegramFirstName = userData.first_name;
                     }
                     
                     // Сохраняем username для отправки в облако
                     telegramUsername = userData.username || "";
+                    telegramFirstName = userData.first_name || "";
                     
                     // Получаем аватар
                     let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
@@ -599,7 +601,8 @@
                         id: telegramId, // Только число
                         name: name,
                         avatar: avatar,
-                        username: telegramUsername
+                        username: telegramUsername,
+                        firstName: telegramFirstName
                     };
                 }
             }
@@ -628,6 +631,7 @@
                 userName = userData.name;
                 userAvatar = userData.avatar;
                 telegramUsername = userData.username;
+                telegramFirstName = userData.firstName;
                 
                 console.log('Telegram user data loaded:', {
                     id: userId,
@@ -635,21 +639,30 @@
                     username: telegramUsername
                 });
             } else {
-                // Гостевой режим
+                // Гостевой режим - но теперь мы не создаем рандомный ID
+                // Вместо этого показываем сообщение о необходимости открытия через Telegram
                 isTelegramWebApp = false;
-                userId = 'guest_' + Math.random().toString(36).substr(2, 9);
-                userName = "Гость";
+                userId = null;
+                userName = "Откройте через Telegram";
                 userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                 telegramUsername = "";
                 
-                console.log('Guest mode activated');
+                console.log('Not in Telegram Mini App');
+                
+                // Показываем сообщение о необходимости открытия через Telegram
+                showStatus('Откройте приложение через Telegram для сохранения прогресса', 'warning');
             }
             
             // Обновляем отображение
             updateUserProfile();
             
-            // Загружаем баланс
-            loadFromLocal();
+            // Загружаем баланс только если есть ID пользователя
+            if (userId) {
+                loadFromLocal();
+            } else {
+                balance = 0;
+                updateBalanceDisplay();
+            }
         }
         
         // Навигация по экранам
@@ -710,7 +723,7 @@
             const debugElement = document.getElementById('debug');
             if (debugElement) {
                 debugElement.innerHTML = `
-                    <div>Баланс: ${balance} | UserID: ${userId}</div>
+                    <div>Баланс: ${balance} | UserID: ${userId || 'не установлен'}</div>
                     <div>Имя: ${userName}</div>
                     <div>Username: ${telegramUsername || 'нет'}</div>
                     <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
@@ -724,6 +737,11 @@
         
         // Сброс игры
         function resetGame() {
+            if (!userId) {
+                showStatus('Откройте приложение через Telegram для сброса', 'warning');
+                return;
+            }
+            
             balance = 0;
             saveToLocal();
             showStatus('Игра сброшена! 🔄', 'info');
@@ -737,6 +755,12 @@
             function handleClick(event) {
                 event.preventDefault();
                 event.stopPropagation();
+                
+                // Проверяем, есть ли ID пользователя
+                if (!userId) {
+                    showStatus('Откройте приложение через Telegram для игры', 'warning');
+                    return;
+                }
                 
                 // Получаем координаты клика
                 const rect = coin.getBoundingClientRect();
@@ -788,6 +812,8 @@
         
         // Сохранение в localStorage
         function saveToLocal() {
+            if (!userId) return;
+            
             try {
                 localStorage.setItem(`coin_balance_${userId}`, balance.toString());
             } catch (error) {
@@ -797,6 +823,8 @@
         
         // Загрузка из localStorage
         function loadFromLocal() {
+            if (!userId) return;
+            
             try {
                 const savedBalance = localStorage.getItem(`coin_balance_${userId}`);
                 if (savedBalance) {
@@ -825,6 +853,11 @@
         
         // Сохранение в облако
         async function saveToCloud() {
+            if (!userId) {
+                showStatus('Откройте приложение через Telegram для сохранения в облако', 'warning');
+                return;
+            }
+            
             updateCloudIndicator('loading');
             
             try {
@@ -872,6 +905,11 @@
         
         // Загрузка из облака
         async function loadFromCloud() {
+            if (!userId) {
+                showStatus('Откройте приложение через Telegram для загрузки из облака', 'warning');
+                return;
+            }
+            
             updateCloudIndicator('loading');
             
             try {
@@ -1021,23 +1059,25 @@
             updateCloudIndicator('offline');
             updateUserProfile();
             
-            // Проверяем доступность облака
-            setTimeout(() => {
-                checkScriptAvailability().then(isAvailable => {
-                    if (isAvailable) {
-                        loadFromCloud().catch(() => {
+            // Проверяем доступность облака только если есть ID пользователя
+            if (userId) {
+                setTimeout(() => {
+                    checkScriptAvailability().then(isAvailable => {
+                        if (isAvailable) {
+                            loadFromCloud().catch(() => {
+                                showStatus('Используются локальные данные 📱', 'info');
+                            });
+                        } else {
                             showStatus('Используются локальные данные 📱', 'info');
-                        });
-                    } else {
-                        showStatus('Используются локальные данные 📱', 'info');
-                    }
-                });
-            }, 1000);
+                        }
+                    });
+                }, 1000);
+            }
             
             // Автосохранение
             setInterval(() => {
                 saveToLocal();
-                if (scriptAvailable && Date.now() - lastCloudSave > 60000) {
+                if (scriptAvailable && Date.now() - lastCloudSave > 60000 && userId) {
                     saveToCloud();
                 }
             }, 30000);
