@@ -387,35 +387,6 @@
             color: #a8a29e;
         }
 
-        .import-export {
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 8px;
-            border: 1px solid rgba(251, 146, 60, 0.3);
-        }
-
-        .import-export input {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 12px;
-        }
-
-        .import-export button {
-            width: 100%;
-            padding: 8px;
-            margin: 2px 0;
-            background: #f59e0b;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
         /* Стили для системы переводов */
         .transfer-form {
             background: rgba(255, 255, 255, 0.7);
@@ -593,16 +564,6 @@
                 <div>Отладка: кликните по монете</div>
                 <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                 <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
-                <button class="test-button" onclick="resetGame()">Сбросить игру</button>
-                <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
-                <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
-            </div>
-
-            <div class="import-export" id="import-export" style="display: none;">
-                <input type="text" id="import-data" placeholder="Введите код резервной копии">
-                <button onclick="importSaveData()">Импортировать данные</button>
-                <button onclick="exportSaveData()">Экспортировать данные</button>
-                <button onclick="hideExportImport()">Скрыть</button>
             </div>
         </div>
 
@@ -987,17 +948,6 @@
             updateUserProfile();
         }
         
-        // Включение тестового режима
-        function enableTestMode() {
-            userId = 'test_' + Math.floor(Math.random() * 10000);
-            userName = "Тестовый пользователь";
-            userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-            
-            updateUserProfile();
-            loadFromLocal();
-            showStatus('Тестовый режим активирован', 'info');
-        }
-        
         // Навигация по экранам
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(screen => {
@@ -1063,25 +1013,8 @@
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
-                    <button class="test-button" onclick="resetGame()">Сбросить игру</button>
-                    <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
-                    <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
                 `;
             }
-        }
-        
-        // Сброс игры
-        function resetGame() {
-            if (!userId) {
-                showStatus('Включите тестовый режим для сброса', 'warning');
-                return;
-            }
-            
-            balance = 0;
-            transferHistory = [];
-            saveToLocal();
-            showStatus('Игра сброшена! 🔄', 'info');
-            updateBalanceDisplay();
         }
         
         // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
@@ -1093,7 +1026,7 @@
                 event.stopPropagation();
                 
                 if (!userId) {
-                    showStatus('Включите тестовый режим для игры', 'warning');
+                    showStatus('Данные Telegram не загружены', 'warning');
                     return;
                 }
                 
@@ -1205,7 +1138,7 @@
         // Сохранение в облако
         async function saveToCloud() {
             if (!userId) {
-                showStatus('Включите тестовый режим для сохранения в облако', 'warning');
+                showStatus('Данные Telegram не загружены', 'warning');
                 return;
             }
             
@@ -1257,7 +1190,7 @@
         // Загрузка из облака
         async function loadFromCloud() {
             if (!userId) {
-                showStatus('Включите тестовый режим для загрузки из облака', 'warning');
+                showStatus('Данные Telegram не загружены', 'warning');
                 return;
             }
             
@@ -1398,60 +1331,10 @@
             }
         }
 
-        // Импорт/Экспорт данных
-        function showExportImport() {
-            document.getElementById('import-export').style.display = 'block';
-        }
-
-        function hideExportImport() {
-            document.getElementById('import-export').style.display = 'none';
-        }
-
-        function exportSaveData() {
-            const data = {
-                userId: userId,
-                balance: balance,
-                userName: userName,
-                userAvatar: userAvatar,
-                timestamp: Date.now()
-            };
-            const json = JSON.stringify(data);
-            document.getElementById('import-data').value = json;
-            showStatus('Данные подготовлены для экспорта', 'success');
-        }
-
-        function importSaveData() {
-            const jsonString = document.getElementById('import-data').value;
-            if (!jsonString) {
-                showStatus('Введите код резервной копии', 'error');
-                return;
-            }
-
-            try {
-                const data = JSON.parse(jsonString);
-                if (data && data.balance !== undefined) {
-                    userId = data.userId || userId;
-                    balance = data.balance;
-                    userName = data.userName || userName;
-                    userAvatar = data.userAvatar || userAvatar;
-                    
-                    saveToLocal();
-                    updateUserProfile();
-                    updateBalanceDisplay();
-                    showStatus('Данные импортированы!', 'success');
-                    hideExportImport();
-                } else {
-                    throw new Error('Invalid data format');
-                }
-            } catch (e) {
-                showStatus('Ошибка импорта данных', 'error');
-            }
-        }
-
         // СИСТЕМА ПЕРЕВОДОВ
         function copyUserId() {
             if (!userId) {
-                showStatus('Сначала включите тестовый режим', 'warning');
+                showStatus('Данные Telegram не загружены', 'warning');
                 return;
             }
             
@@ -1647,4 +1530,4 @@
         });
     </script>
 </body>
-                    </html>
+    </html>
