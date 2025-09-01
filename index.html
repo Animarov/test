@@ -332,18 +332,6 @@
             overflow-y: auto;
         }
         
-        .test-button {
-            margin-top: 5px;
-            padding: 5px 10px;
-            background: #f59e0b;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
-            margin-right: 5px;
-        }
-        
         .cloud-status {
             display: inline-block;
             width: 10px;
@@ -388,35 +376,6 @@
         .user-profile-id {
             font-size: 12px;
             color: #a8a29e;
-        }
-
-        .import-export {
-            margin-top: 10px;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 8px;
-            border: 1px solid rgba(251, 146, 60, 0.3);
-        }
-
-        .import-export input {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 12px;
-        }
-
-        .import-export button {
-            width: 100%;
-            padding: 8px;
-            margin: 2px 0;
-            background: #f59e0b;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            font-size: 12px;
         }
 
         /* Стили для экрана переводов */
@@ -577,18 +536,11 @@
             <div class="status" id="status"></div>
             <div class="debug-info" id="debug">
                 <div>Отладка: кликните по монете</div>
-                <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
-                <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
-                <button class="test-button" onclick="resetGame()">Сбросить игру</button>
-                <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
-                <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
-            </div>
-
-            <div class="import-export" id="import-export" style="display: none;">
-                <input type="text" id="import-data" placeholder="Введите код резервной копии">
-                <button onclick="importSaveData()">Импортировать данные</button>
-                <button onclick="exportSaveData()">Экспортировать данные</button>
-                <button onclick="hideExportImport()">Скрыть</button>
+                <div>Баланс: <span id="debug-balance">0.000000000</span></div>
+                <div>UserID: <span id="debug-userid">не установлен</span></div>
+                <div>Имя: <span id="debug-username">-</span></div>
+                <div>Telegram: <span id="debug-telegram">✗</span></div>
+                <div>Облако: <span id="debug-cloud">✗</span></div>
             </div>
         </div>
 
@@ -724,21 +676,6 @@
                     return false;
                 }
             });
-        }
-
-        function checkTelegramWebApp() {
-            if (enhancedTelegramCheck()) {
-                console.log('Telegram environment detected');
-                return true;
-            }
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) {
-                console.log('Telegram WebApp parameters found in URL');
-                return true;
-            }
-            
-            return false;
         }
 
         // Функция для парсинга initData из Telegram
@@ -967,22 +904,11 @@
                     userId = null;
                     userName = "Ошибка загрузки данных";
                     
-                    showStatus('Не удалось загрузить данные из Telegram. Используйте тестовый режим.', 'error');
+                    showStatus('Не удалось загрузить данные из Telegram.', 'error');
                 }
             }
             
             updateUserProfile();
-        }
-        
-        // Включение тестового режима
-        function enableTestMode() {
-            userId = 'test_' + Math.floor(Math.random() * 10000);
-            userName = "Тестовый пользователь";
-            userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-            
-            updateUserProfile();
-            loadFromLocal();
-            showStatus('Тестовый режим активирован', 'info');
         }
         
         // Навигация по экранам
@@ -1041,35 +967,11 @@
         
         // Отладочная информация
         function updateDebugInfo() {
-            const debugElement = document.getElementById('debug');
-            if (debugElement) {
-                debugElement.innerHTML = `
-                    <div>Баланс: ${formatBalance(balance)} | UserID: ${userId || 'не установлен'}</div>
-                    <div>Имя: ${userName}</div>
-                    <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
-                    <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
-                    <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
-                    <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
-                    <button class="test-button" onclick="resetGame()">Сбросить игру</button>
-                    <button class="test-button" onclick="enableTestMode()">Тестовый режим</button>
-                    <button class="test-button" onclick="showExportImport()">Импорт/Экспорт</button>
-                `;
-            }
-        }
-        
-        // Сброс игры
-        function resetGame() {
-            if (!userId) {
-                showStatus('Включите тестовый режим для сброса', 'warning');
-                return;
-            }
-            
-            balance = 0;
-            transferHistory = [];
-            saveToLocal();
-            showStatus('Игра сброшена! 🔄', 'info');
-            updateBalanceDisplay();
-            updateTransferHistory();
+            document.getElementById('debug-balance').textContent = formatBalance(balance);
+            document.getElementById('debug-userid').textContent = userId || 'не установлен';
+            document.getElementById('debug-username').textContent = userName;
+            document.getElementById('debug-telegram').textContent = isTelegramWebApp ? '✓' : '✗';
+            document.getElementById('debug-cloud').textContent = scriptAvailable ? '✓' : '✗';
         }
         
         // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
@@ -1081,7 +983,7 @@
                 event.stopPropagation();
                 
                 if (!userId) {
-                    showStatus('Включите тестовый режим для игры', 'warning');
+                    showStatus('Загрузка данных пользователя...', 'warning');
                     return;
                 }
                 
@@ -1195,7 +1097,7 @@
         // Сохранение в облако
         async function saveToCloud() {
             if (!userId) {
-                showStatus('Включите тестовый режим для сохранения в облако', 'warning');
+                showStatus('Ошибка сохранения в облако', 'warning');
                 return;
             }
             
@@ -1247,7 +1149,7 @@
         // Загрузка из облака
         async function loadFromCloud() {
             if (!userId) {
-                showStatus('Включите тестовый режим для загрузки из облака', 'warning');
+                showStatus('Ошибка загрузки из облака', 'warning');
                 return;
             }
             
@@ -1387,59 +1289,9 @@
                 userRankElement.style.display = 'none';
             }
         }
-
-        // Импорт/Экспорт данных
-        function showExportImport() {
-            document.getElementById('import-export').style.display = 'block';
-        }
-
-        function hideExportImport() {
-            document.getElementById('import-export').style.display = 'none';
-        }
-
-        function exportSaveData() {
-            const data = {
-                userId: userId,
-                balance: balance,
-                userName: userName,
-                userAvatar: userAvatar,
-                timestamp: Date.now()
-            };
-            const json = JSON.stringify(data);
-            document.getElementById('import-data').value = json;
-            showStatus('Данные подготовлены для экспорта', 'success');
-        }
-
-        function importSaveData() {
-            const jsonString = document.getElementById('import-data').value;
-            if (!jsonString) {
-                showStatus('Введите код резервной копии', 'error');
-                return;
-            }
-
-            try {
-                const data = JSON.parse(jsonString);
-                if (data && data.balance !== undefined) {
-                    userId = data.userId || userId;
-                    balance = data.balance;
-                    userName = data.userName || userName;
-                    userAvatar = data.userAvatar || userAvatar;
-                    
-                    saveToLocal();
-                    updateUserProfile();
-                    updateBalanceDisplay();
-                    showStatus('Данные импортированы!', 'success');
-                    hideExportImport();
-                } else {
-                    throw new Error('Invalid data format');
-                }
-            } catch (e) {
-                showStatus('Ошибка импорта данных', 'error');
-            }
-        }
         
         // Система переводов
-        function transferCoins() {
+        async function transferCoins() {
             const recipientId = document.getElementById('recipient-id').value.trim();
             const amountInput = document.getElementById('transfer-amount').value.trim();
             
@@ -1459,49 +1311,88 @@
                 return;
             }
             
-            if (amount > balance) {
-                showStatus('Недостаточно средств', 'error');
-                return;
+            // Проверяем баланс через облако
+            updateCloudIndicator('loading');
+            
+            try {
+                // Сначала проверяем баланс на сервере
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Google Apps Script недоступен');
+                }
+                
+                // Проверяем, существует ли получатель
+                const checkUserUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(recipientId)}&t=${Date.now()}`;
+                const userResponse = await fetch(checkUserUrl);
+                const userResult = await userResponse.json();
+                
+                if (!userResult.success || userResult.balance === undefined) {
+                    showStatus('Пользователь с таким ID не найден', 'error');
+                    updateCloudIndicator(scriptAvailable ? 'online' : 'offline');
+                    return;
+                }
+                
+                // Проверяем баланс отправителя
+                if (amount > balance) {
+                    showStatus('Недостаточно средств', 'error');
+                    updateCloudIndicator(scriptAvailable ? 'online' : 'offline');
+                    return;
+                }
+                
+                // Выполняем перевод через сервер
+                const formData = new URLSearchParams();
+                formData.append('action', 'transfer');
+                formData.append('fromUserId', userId);
+                formData.append('toUserId', recipientId);
+                formData.append('amount', amount);
+                
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Обновляем баланс
+                    balance -= amount;
+                    updateBalanceDisplay();
+                    saveToLocal();
+                    
+                    // Добавляем запись в историю переводов
+                    const transfer = {
+                        id: Date.now(),
+                        type: 'out',
+                        recipientId: recipientId,
+                        amount: amount,
+                        date: new Date().toLocaleString('ru-RU')
+                    };
+                    
+                    transferHistory.unshift(transfer);
+                    if (transferHistory.length > 20) {
+                        transferHistory = transferHistory.slice(0, 20);
+                    }
+                    
+                    saveToLocal();
+                    updateTransferHistory();
+                    
+                    showStatus(`Перевод ${formatBalance(amount)} пользователю ${recipientId} выполнен!`, 'success');
+                    updateCloudIndicator('online');
+                    
+                    // Очищаем поле получателя, оставляем сумму для возможного нового перевода
+                    document.getElementById('recipient-id').value = '';
+                } else {
+                    throw new Error(result.error || 'Ошибка перевода');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка перевода:', error);
+                showStatus('Ошибка перевода. Попробуйте позже.', 'error');
+                updateCloudIndicator('offline');
             }
-            
-            // Проверяем, существует ли получатель (в реальном приложении здесь был бы запрос к серверу)
-            // В данном случае просто имитируем успешный перевод
-            
-            // Список тестовых пользователей для демонстрации
-            const testUsers = ['test_123', 'test_456', 'test_789', 'test_101'];
-            const isTestUser = testUsers.includes(recipientId);
-            
-            if (!isTestUser && !recipientId.startsWith('test_')) {
-                showStatus('Пользователь с таким ID не найден', 'error');
-                return;
-            }
-            
-            // Выполняем перевод
-            balance -= amount;
-            updateBalanceDisplay();
-            saveToLocal();
-            
-            // Добавляем запись в историю переводов
-            const transfer = {
-                id: Date.now(),
-                type: 'out',
-                recipientId: recipientId,
-                amount: amount,
-                date: new Date().toLocaleString('ru-RU')
-            };
-            
-            transferHistory.unshift(transfer);
-            if (transferHistory.length > 20) {
-                transferHistory = transferHistory.slice(0, 20);
-            }
-            
-            saveToLocal();
-            updateTransferHistory();
-            
-            showStatus(`Перевод ${formatBalance(amount)} пользователю ${recipientId} выполнен!`, 'success');
-            
-            // Очищаем поле получателя, оставляем сумму для возможного нового перевода
-            document.getElementById('recipient-id').value = '';
         }
         
         // Обновление истории переводов
