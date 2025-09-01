@@ -6,7 +6,6 @@
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -507,6 +506,16 @@
             background: rgba(251, 146, 60, 0.3);
             color: #7c2d12;
         }
+
+        .tg-connection-status {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            text-align: center;
+            background: rgba(255, 247, 237, 0.7);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -524,6 +533,10 @@
                             <button class="copy-btn" onclick="copyUserId()">📋</button>
                         </div>
                     </div>
+                </div>
+                
+                <div class="tg-connection-status" id="tg-connection-status">
+                    Проверка подключения к Telegram...
                 </div>
                 
                 <div class="balance">
@@ -579,6 +592,7 @@
                 <div>Отладка: кликните по монете</div>
                 <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                 <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
+                <button class="test-button" onclick="resetUser()">Сбросить пользователя</button>
             </div>
         </div>
 
@@ -696,42 +710,65 @@
 
         // Упрощенная проверка Telegram WebApp
         function isTelegramWebAppEnvironment() {
-            // Более точная проверка на Telegram WebApp
-            return (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) || 
-                   (window.TelegramWebApp && window.TelegramWebApp.initData);
+            // Проверяем различные способы определения Telegram WebApp
+            return (
+                (window.Telegram && window.Telegram.WebApp) ||
+                (window.TelegramWebApp) ||
+                (window.location.search.includes('tgWebApp')) ||
+                (window.location.hash.includes('tgWebApp')) ||
+                (navigator.userAgent.includes('Telegram'))
+            );
         }
 
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
             console.log('Получение данных Telegram...');
             
-            // Основной способ через initDataUnsafe
+            // Способ 1: через initDataUnsafe (основной способ)
             if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
                 const user = window.Telegram.WebApp.initDataUnsafe.user;
                 console.log('Данные получены через initDataUnsafe:', user);
                 return user;
             }
             
-            // Альтернативный способ через TelegramWebApp
+            // Способ 2: через инициализацию WebApp
+            if (window.Telegram?.WebApp) {
+                try {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                    
+                    if (window.Telegram.WebApp.initDataUnsafe?.user) {
+                        const user = window.Telegram.WebApp.initDataUnsafe.user;
+                        console.log('Данные получены после инициализации WebApp:', user);
+                        return user;
+                    }
+                } catch (e) {
+                    console.error('Ошибка инициализации WebApp:', e);
+                }
+            }
+            
+            // Способ 3: через параметры URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const tgWebAppData = urlParams.get('tgWebAppData');
+            if (tgWebAppData) {
+                try {
+                    const params = new URLSearchParams(tgWebAppData);
+                    const userParam = params.get('user');
+                    if (userParam) {
+                        const user = JSON.parse(decodeURIComponent(userParam));
+                        console.log('Данные получены из URL параметров:', user);
+                        return user;
+                    }
+                } catch (e) {
+                    console.error('Ошибка парсинга данных из URL:', e);
+                }
+            }
+            
+            // Способ 4: через альтернативный объект
             if (window.TelegramWebApp?.initDataUnsafe?.user) {
                 const user = window.TelegramWebApp.initDataUnsafe.user;
                 console.log('Данные получены через альтернативный объект:', user);
                 return user;
-            }
-            
-            // Попытка получить данные из initData
-            try {
-                if (window.Telegram?.WebApp?.initData) {
-                    const initData = new URLSearchParams(window.Telegram.WebApp.initData);
-                    const userStr = initData.get('user');
-                    if (userStr) {
-                        const user = JSON.parse(decodeURIComponent(userStr));
-                        console.log('Данные получены из initData:', user);
-                        return user;
-                    }
-                }
-            } catch (e) {
-                console.error('Ошибка парсинга initData:', e);
             }
             
             console.log('Данные Telegram не найдены');
@@ -750,6 +787,20 @@
                 modeIndicator.textContent = isTelegramWebApp ? 'Режим: Telegram' : 'Режим: браузер';
                 modeIndicator.style.background = isTelegramWebApp ? 
                     'rgba(76, 175, 80, 0.3)' : 'rgba(251, 146, 60, 0.3)';
+            }
+            
+            // Обновляем статус подключения к Telegram
+            const tgStatus = document.getElementById('tg-connection-status');
+            if (tgStatus) {
+                if (isTelegramWebApp) {
+                    tgStatus.innerHTML = '✅ Подключено к Telegram WebApp';
+                    tgStatus.style.background = 'rgba(220, 252, 231, 0.7)';
+                    tgStatus.style.color = '#166534';
+                } else {
+                    tgStatus.innerHTML = '⚠️ Работает в браузере (без Telegram)';
+                    tgStatus.style.background = 'rgba(254, 249, 195, 0.7)';
+                    tgStatus.style.color = '#ca8a04';
+                }
             }
         }
         
@@ -849,6 +900,34 @@
             // Загружаем сохраненные данные
             loadFromLocal();
             updateUserProfile();
+            
+            // Пытаемся подключиться к облаку
+            setTimeout(() => {
+                checkScriptAvailability().then(isAvailable => {
+                    if (isAvailable) {
+                        loadFromCloud().catch(() => {
+                            showStatus('Используются локальные данные 📱', 'info');
+                        });
+                    } else {
+                        showStatus('Используются локальные данные 📱', 'info');
+                    }
+                });
+            }, 500);
+        }
+        
+        // Сброс пользователя
+        function resetUser() {
+            if (confirm('Вы уверены, что хотите сбросить данные пользователя?')) {
+                localStorage.removeItem('local_user_id');
+                localStorage.removeItem('local_user_name');
+                localStorage.removeItem('local_user_avatar');
+                localStorage.removeItem(`coin_balance_${userId}`);
+                localStorage.removeItem(`coin_user_${userId}`);
+                localStorage.removeItem(`transfer_history_${userId}`);
+                
+                // Перезагружаем страницу
+                location.reload();
+            }
         }
         
         // Навигация по экранам
@@ -916,6 +995,7 @@
                     <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
                     <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
                     <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
+                    <button class="test-button" onclick="resetUser()">Сбросить пользователя</button>
                 `;
             }
         }
@@ -1407,20 +1487,7 @@
             setupCoinClick();
             updateCloudIndicator('offline');
             
-            if (userId) {
-                setTimeout(() => {
-                    checkScriptAvailability().then(isAvailable => {
-                        if (isAvailable) {
-                            loadFromCloud().catch(() => {
-                                showStatus('Используются локальные данные 📱', 'info');
-                            });
-                        } else {
-                            showStatus('Используются локальные данные 📱', 'info');
-                        }
-                    });
-                }, 1000);
-            }
-            
+            // Периодическое сохранение
             setInterval(() => {
                 saveToLocal();
                 if (scriptAvailable && Date.now() - lastCloudSave > 60000 && userId) {
@@ -1432,4 +1499,4 @@
         });
     </script>
 </body>
-                    </html>
+    </html>
