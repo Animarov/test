@@ -722,60 +722,69 @@
 
         // Упрощенная проверка Telegram WebApp
         function isTelegramWebAppEnvironment() {
-            // Проверяем наличие объекта Telegram WebApp
-            const hasTelegramWebApp = window.Telegram && window.Telegram.WebApp;
-            const hasTelegramWebAppAlt = window.TelegramWebApp;
-            
-            // Проверяем параметры URL, которые могут указывать на Telegram
-            const urlParams = new URLSearchParams(window.location.search);
-            const hasTgWebAppData = urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion');
-            
-            // Проверяем user agent
-            const isTelegramUserAgent = navigator.userAgent.includes('Telegram');
-            
-            console.log('Проверка окружения Telegram:', {
-                hasTelegramWebApp,
-                hasTelegramWebAppAlt,
-                hasTgWebAppData,
-                isTelegramUserAgent
-            });
-            
-            return hasTelegramWebApp || hasTelegramWebAppAlt || hasTgWebAppData || isTelegramUserAgent;
+            try {
+                // Проверяем наличие объекта Telegram WebApp
+                const hasTelegramWebApp = window.Telegram && window.Telegram.WebApp;
+                const hasTelegramWebAppAlt = window.TelegramWebApp;
+                
+                // Проверяем параметры URL, которые могут указывать на Telegram
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasTgWebAppData = urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion');
+                
+                // Проверяем user agent
+                const isTelegramUserAgent = navigator.userAgent.includes('Telegram');
+                
+                console.log('Проверка окружения Telegram:', {
+                    hasTelegramWebApp,
+                    hasTelegramWebAppAlt,
+                    hasTgWebAppData,
+                    isTelegramUserAgent
+                });
+                
+                return hasTelegramWebApp || hasTelegramWebAppAlt || hasTgWebAppData || isTelegramUserAgent;
+            } catch (error) {
+                console.error('Ошибка проверки окружения Telegram:', error);
+                return false;
+            }
         }
 
         // Получение данных пользователя из Telegram
         function getTelegramUserData() {
             console.log('Получение данных Telegram...');
             
-            // Способ 1: через initDataUnsafe (основной способ)
-            if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                const user = window.Telegram.WebApp.initDataUnsafe.user;
-                console.log('Данные получены через initDataUnsafe:', user);
-                return user;
-            }
-            
-            // Способ 2: через альтернативный объект
-            if (window.TelegramWebApp?.initDataUnsafe?.user) {
-                const user = window.TelegramWebApp.initDataUnsafe.user;
-                console.log('Данные получены через альтернативный объект:', user);
-                return user;
-            }
-            
-            // Способ 3: через параметры URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const tgWebAppData = urlParams.get('tgWebAppData');
-            if (tgWebAppData) {
-                try {
-                    const params = new URLSearchParams(tgWebAppData);
-                    const userParam = params.get('user');
-                    if (userParam) {
-                        const user = JSON.parse(decodeURIComponent(userParam));
-                        console.log('Данные получены из URL параметров:', user);
-                        return user;
-                    }
-                } catch (e) {
-                    console.error('Ошибка парсинга данных из URL:', e);
+            try {
+                // Способ 1: через initDataUnsafe (основной способ)
+                if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+                    const user = window.Telegram.WebApp.initDataUnsafe.user;
+                    console.log('Данные получены через initDataUnsafe:', user);
+                    return user;
                 }
+                
+                // Способ 2: через альтернативный объект
+                if (window.TelegramWebApp?.initDataUnsafe?.user) {
+                    const user = window.TelegramWebApp.initDataUnsafe.user;
+                    console.log('Данные получены через альтернативный объект:', user);
+                    return user;
+                }
+                
+                // Способ 3: через параметры URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const tgWebAppData = urlParams.get('tgWebAppData');
+                if (tgWebAppData) {
+                    try {
+                        const params = new URLSearchParams(tgWebAppData);
+                        const userParam = params.get('user');
+                        if (userParam) {
+                            const user = JSON.parse(decodeURIComponent(userParam));
+                            console.log('Данные получены из URL параметров:', user);
+                            return user;
+                        }
+                    } catch (e) {
+                        console.error('Ошибка парсинга данных из URL:', e);
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка получения данных Telegram:', error);
             }
             
             console.log('Данные Telegram не найдены');
@@ -916,7 +925,7 @@
             loadFromLocal();
             updateUserProfile();
             
-            // Пытаемся подключиться к облаку
+            // Пытаемся подключиться к облаку (асинхронно, без блокировки интерфейса)
             setTimeout(() => {
                 checkScriptAvailability().then(isAvailable => {
                     if (isAvailable) {
@@ -1517,4 +1526,4 @@
         });
     </script>
 </body>
-    </html>
+                    </html>
