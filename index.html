@@ -6,7 +6,6 @@
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -388,7 +387,6 @@
             color: #a8a29e;
         }
 
-        /* Стили для системы переводов */
         .transfer-form {
             background: rgba(255, 255, 255, 0.7);
             border-radius: 15px;
@@ -604,7 +602,6 @@
             </div>
         </div>
 
-        <!-- Остальные экраны остаются без изменений -->
         <!-- Экран Топ (Рейтинг) -->
         <div id="top-screen" class="screen">
             <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
@@ -710,78 +707,56 @@
         let telegramFirstName = "";
         
         // URL Google Apps Script
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
         let lastCloudSave = 0;
 
         // История переводов
         let transferHistory = [];
 
-        // Флаг завершения инициализации
-        let initializationComplete = false;
-
-        // Упрощенная проверка Telegram WebApp
-        function isTelegramWebAppEnvironment() {
+        // Проверка Telegram WebApp - БЫСТРАЯ ВЕРСИЯ
+        function checkTelegramEnvironment() {
             try {
-                // Проверяем наличие объекта Telegram WebApp
-                if (window.Telegram && window.Telegram.WebApp) return true;
+                // Быстрая проверка основных признаков
+                if (window.Telegram?.WebApp) return true;
                 if (window.TelegramWebApp) return true;
                 
-                // Проверяем параметры URL, которые могут указывать на Telegram
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.has('tgWebAppData') || urlParams.has('tgWebAppVersion')) return true;
                 
-                // Проверяем user agent
                 if (navigator.userAgent.includes('Telegram')) return true;
                 
                 return false;
             } catch (error) {
-                console.error('Ошибка проверки окружения Telegram:', error);
                 return false;
             }
         }
 
-        // Получение данных пользователя из Telegram
+        // Быстрое получение данных пользователя из Telegram
         function getTelegramUserData() {
             try {
-                // Способ 1: через initDataUnsafe (основной способ)
                 if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
                     return window.Telegram.WebApp.initDataUnsafe.user;
                 }
-                
-                // Способ 2: через альтернативный объект
                 if (window.TelegramWebApp?.initDataUnsafe?.user) {
                     return window.TelegramWebApp.initDataUnsafe.user;
                 }
-                
-                // Способ 3: через параметры URL
-                const urlParams = new URLSearchParams(window.location.search);
-                const tgWebAppData = urlParams.get('tgWebAppData');
-                if (tgWebAppData) {
-                    try {
-                        const params = new URLSearchParams(tgWebAppData);
-                        const userParam = params.get('user');
-                        if (userParam) {
-                            return JSON.parse(decodeURIComponent(userParam));
-                        }
-                    } catch (e) {
-                        console.error('Ошибка парсинга данных из URL:', e);
-                    }
-                }
             } catch (error) {
-                console.error('Ошибка получения данных Telegram:', error);
+                console.log('Ошибка получения данных Telegram');
             }
-            
             return null;
         }
 
         // Обновление отображения профиля
         function updateUserProfile() {
-            document.getElementById('user-name').textContent = userName;
-            document.getElementById('user-id').textContent = userId || '-';
-            document.getElementById('user-avatar').src = userAvatar;
+            const nameElement = document.getElementById('user-name');
+            const idElement = document.getElementById('user-id');
+            const avatarElement = document.getElementById('user-avatar');
             
-            // Обновляем индикатор режима
+            if (nameElement) nameElement.textContent = userName;
+            if (idElement) idElement.textContent = userId || '-';
+            if (avatarElement) avatarElement.src = userAvatar;
+            
             const modeIndicator = document.getElementById('mode-indicator');
             if (modeIndicator) {
                 modeIndicator.textContent = isTelegramWebApp ? 'Режим: Telegram' : 'Режим: браузер';
@@ -789,140 +764,113 @@
                     'rgba(76, 175, 80, 0.3)' : 'rgba(251, 146, 60, 0.3)';
             }
             
-            // Обновляем статус подключения к Telegram
             const tgStatus = document.getElementById('tg-connection-status');
             if (tgStatus) {
                 if (isTelegramWebApp) {
-                    tgStatus.innerHTML = '✅ Подключено к Telegram WebApp';
+                    tgStatus.innerHTML = '✅ Подключено к Telegram';
                     tgStatus.style.background = 'rgba(220, 252, 231, 0.7)';
                     tgStatus.style.color = '#166534';
                 } else {
-                    tgStatus.innerHTML = 'ℹ️ Работает в браузере (без Telegram)';
+                    tgStatus.innerHTML = 'ℹ️ Локальный режим';
                     tgStatus.style.background = 'rgba(219, 234, 254, 0.7)';
                     tgStatus.style.color = '#1d4ed8';
                 }
             }
         }
         
-        // Инициализация данных
-        function initUserData() {
-            console.log('Инициализация данных пользователя...');
-            
-            // Обновляем статус
-            document.getElementById('tg-connection-status').innerHTML = '🔍 Проверка окружения...';
-            
-            // Проверяем, находимся ли мы в Telegram WebApp
-            isTelegramWebApp = isTelegramWebAppEnvironment();
-            
-            if (isTelegramWebApp) {
-                console.log('Обнаружена среда Telegram WebApp');
-                document.getElementById('tg-connection-status').innerHTML = '⏳ Загрузка данных Telegram...';
-                
-                try {
-                    // Инициализируем WebApp
-                    if (window.Telegram?.WebApp) {
-                        window.Telegram.WebApp.ready();
-                        window.Telegram.WebApp.expand();
-                    } else if (window.TelegramWebApp) {
-                        window.TelegramWebApp.ready();
-                        window.TelegramWebApp.expand();
-                    }
-                    
-                    // Получаем данные пользователя
-                    const userData = getTelegramUserData();
-                    
-                    if (userData) {
-                        // Успешно получили данные из Telegram
-                        userId = userData.id;
-                        
-                        // Формируем имя пользователя
-                        if (userData.username) {
-                            userName = "@" + userData.username;
-                        } else if (userData.first_name) {
-                            userName = userData.first_name;
-                            if (userData.last_name) {
-                                userName += " " + userData.last_name;
-                            }
-                        } else {
-                            userName = "Пользователь Telegram";
-                        }
-                        
-                        // Устанавливаем аватар
-                        userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                        
-                        telegramUsername = userData.username || "";
-                        telegramFirstName = userData.first_name || "";
-                        
-                        console.log('Данные пользователя загружены:', {
-                            id: userId,
-                            name: userName,
-                            username: telegramUsername
-                        });
-                        
-                        finishInitialization();
-                        showStatus('Данные Telegram загружены!', 'success');
-                        return;
-                    }
-                } catch (e) {
-                    console.error('Ошибка инициализации WebApp:', e);
-                }
-            }
-            
-            // Если не в Telegram или не удалось получить данные - сразу переходим к локальному режиму
-            console.log('Не в среде Telegram WebApp или не удалось получить данные');
-            useLocalMode();
-        }
-        
-        // Использование локального режима
-        function useLocalMode() {
-            // Проверяем, есть ли сохраненные данные
+        // Инициализация локального пользователя
+        function initLocalUser() {
             const savedUserId = localStorage.getItem('local_user_id');
+            
             if (savedUserId) {
                 userId = savedUserId;
                 userName = localStorage.getItem('local_user_name') || "Локальный пользователь";
                 userAvatar = localStorage.getItem('local_user_avatar') || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                
-                console.log('Загружены локальные данные пользователя:', userId);
-                showStatus('Локальные данные загружены', 'info');
             } else {
-                // Создаем нового локального пользователя
                 userId = 'local_' + Math.floor(Math.random() * 1000000);
                 userName = "Локальный пользователь";
                 userAvatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                 
-                // Сохраняем данные локального пользователя
                 localStorage.setItem('local_user_id', userId);
                 localStorage.setItem('local_user_name', userName);
                 localStorage.setItem('local_user_avatar', userAvatar);
-                
-                console.log('Создан новый локальный пользователь:', userId);
-                showStatus('Создан новый аккаунт', 'info');
             }
             
-            finishInitialization();
-        }
-        
-        // Завершение инициализации
-        function finishInitialization() {
-            if (initializationComplete) return;
-            initializationComplete = true;
-            
-            // Загружаем сохраненные данные
             loadFromLocal();
             updateUserProfile();
+            showStatus('Готово к работе!', 'success');
+        }
+        
+        // Основная инициализация
+        function initUserData() {
+            // Сразу показываем, что проверяем
+            const tgStatus = document.getElementById('tg-connection-status');
+            if (tgStatus) tgStatus.innerHTML = '🔍 Быстрая проверка...';
             
-            // Пытаемся подключиться к облаку (асинхронно, без блокировки интерфейса)
-            setTimeout(() => {
-                checkScriptAvailability().then(isAvailable => {
-                    if (isAvailable) {
-                        loadFromCloud().catch(() => {
-                            showStatus('Используются локальные данные 📱', 'info');
-                        });
+            // Быстрая проверка Telegram
+            isTelegramWebApp = checkTelegramEnvironment();
+            
+            if (isTelegramWebApp) {
+                // Пытаемся быстро получить данные Telegram
+                const userData = getTelegramUserData();
+                
+                if (userData && userData.id) {
+                    // Успешно получили данные Telegram
+                    userId = userData.id;
+                    
+                    if (userData.username) {
+                        userName = "@" + userData.username;
+                    } else if (userData.first_name) {
+                        userName = userData.first_name;
+                        if (userData.last_name) {
+                            userName += " " + userData.last_name;
+                        }
                     } else {
-                        showStatus('Используются локальные данные 📱', 'info');
+                        userName = "Пользователь Telegram";
                     }
-                });
-            }, 500);
+                    
+                    userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                    telegramUsername = userData.username || "";
+                    telegramFirstName = userData.first_name || "";
+                    
+                    // Загружаем данные и обновляем интерфейс
+                    loadFromLocal();
+                    updateUserProfile();
+                    
+                    // Пытаемся инициализировать WebApp
+                    try {
+                        if (window.Telegram?.WebApp) {
+                            window.Telegram.WebApp.ready();
+                            window.Telegram.WebApp.expand();
+                        } else if (window.TelegramWebApp) {
+                            window.TelegramWebApp.ready();
+                            window.TelegramWebApp.expand();
+                        }
+                    } catch (e) {
+                        console.log('WebApp инициализация не удалась');
+                    }
+                    
+                    showStatus('Telegram подключен!', 'success');
+                    return;
+                }
+            }
+            
+            // Если Telegram не обнаружен или данные не получены - сразу переходим к локальному режиму
+            initLocalUser();
+        }
+        
+        // Проверка подключения к облаку
+        async function checkCloudConnection() {
+            try {
+                const isAvailable = await checkScriptAvailability();
+                if (isAvailable) {
+                    loadFromCloud().catch(() => {
+                        updateCloudIndicator('offline');
+                    });
+                }
+            } catch (error) {
+                updateCloudIndicator('offline');
+            }
         }
         
         // Сброс пользователя
@@ -936,8 +884,6 @@
                     localStorage.removeItem(`coin_user_${userId}`);
                     localStorage.removeItem(`transfer_history_${userId}`);
                 }
-                
-                // Перезагружаем страницу
                 location.reload();
             }
         }
@@ -983,7 +929,6 @@
             if (balanceElement) {
                 balanceElement.textContent = `${balance} монет`;
             }
-            updateDebugInfo();
         }
         
         // Обновление индикатора облака
@@ -994,64 +939,6 @@
                 indicator.title = status === 'online' ? 'Облако подключено' : 
                                 status === 'offline' ? 'Облако отключено' : 'Загрузка...';
             }
-        }
-        
-        // Отладочная информация
-        function updateDebugInfo() {
-            const debugElement = document.getElementById('debug');
-            if (debugElement) {
-                debugElement.innerHTML = `
-                    <div>Баланс: ${balance} | UserID: ${userId || 'не установлен'}</div>
-                    <div>Имя: ${userName}</div>
-                    <div>Telegram: ${isTelegramWebApp ? '✓' : '✗'}</div>
-                    <div>Облако: ${scriptAvailable ? '✓' : '✗'}</div>
-                    <button class="test-button" onclick="saveToCloud()">Сохранить в облако</button>
-                    <button class="test-button" onclick="loadFromCloud()">Загрузить из облака</button>
-                    <button class="test-button" onclick="resetUser()">Сбросить пользователя</button>
-                `;
-            }
-        }
-        
-        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
-        function setupCoinClick() {
-            const coin = document.getElementById('coin');
-            
-            function handleClick(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                
-                if (!userId) {
-                    showStatus('Данные не загружены', 'warning');
-                    return;
-                }
-                
-                const rect = coin.getBoundingClientRect();
-                const clientX = rect.left + rect.width / 2;
-                const clientY = rect.top + rect.height / 2;
-                
-                createClickAnimation(clientX, clientY);
-                
-                balance++;
-                updateBalanceDisplay();
-                saveToLocal();
-                
-                coin.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    coin.style.transform = 'scale(1)';
-                }, 100);
-                
-                showStatus('+1 монета! 💰', 'success');
-                
-                if (balance % 10 === 0) {
-                    saveToCloud();
-                }
-            }
-            
-            coin.addEventListener('click', handleClick);
-            coin.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                handleClick(e);
-            }, { passive: false });
         }
         
         // Показать статус
@@ -1116,26 +1003,28 @@
                 transferHistory = [];
             }
             updateBalanceDisplay();
-            updateUserProfile();
         }
         
         // Проверка доступности Google Apps Script
         async function checkScriptAvailability() {
             try {
-                const response = await fetch(scriptURL + '?action=test&t=' + Date.now());
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(scriptURL + '?action=test&t=' + Date.now(), {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
                 return response.ok;
             } catch (error) {
-                console.log('Google Apps Script недоступен');
                 return false;
             }
         }
         
         // Сохранение в облако
         async function saveToCloud() {
-            if (!userId) {
-                showStatus('Данные не загружены', 'warning');
-                return;
-            }
+            if (!userId) return;
             
             updateCloudIndicator('loading');
             
@@ -1175,19 +1064,14 @@
                 }
                 
             } catch (error) {
-                console.error('Ошибка сохранения в облако:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Используется локальное хранилище 📱', 'info');
             }
         }
         
         // Загрузка из облака
         async function loadFromCloud() {
-            if (!userId) {
-                showStatus('Данные не загружены', 'warning');
-                return;
-            }
+            if (!userId) return;
             
             updateCloudIndicator('loading');
             
@@ -1215,10 +1099,8 @@
                 }
                 
             } catch (error) {
-                console.error('Ошибка загрузки из облака:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Используются локальные данные 📱', 'info');
             }
         }
         
@@ -1251,7 +1133,6 @@
                 }
                 
             } catch (error) {
-                console.error('Ошибка загрузки рейтинга:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
                 showStatus('Используется локальный рейтинг 📱', 'info');
@@ -1328,17 +1209,13 @@
 
         // СИСТЕМА ПЕРЕВОДОВ
         function copyUserId() {
-            if (!userId) {
-                showStatus('Данные не загружены', 'warning');
-                return;
-            }
+            if (!userId) return;
             
             navigator.clipboard.writeText(userId)
                 .then(() => {
                     showStatus('ID скопирован в буфер обмена! 📋', 'success');
                 })
                 .catch(() => {
-                    // Fallback для старых браузеров
                     const tempInput = document.createElement('input');
                     tempInput.value = userId;
                     document.body.appendChild(tempInput);
@@ -1489,16 +1366,54 @@
 
             transfersList.innerHTML = html;
         }
-        
+
+        // ОБРАБОТЧИК КЛИКА ПО МОНЕТЕ
+        function setupCoinClick() {
+            const coin = document.getElementById('coin');
+            
+            function handleClick(event) {
+                if (!userId) return;
+                
+                const rect = coin.getBoundingClientRect();
+                const clientX = rect.left + rect.width / 2;
+                const clientY = rect.top + rect.height / 2;
+                
+                createClickAnimation(clientX, clientY);
+                
+                balance++;
+                updateBalanceDisplay();
+                saveToLocal();
+                
+                coin.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    coin.style.transform = 'scale(1)';
+                }, 100);
+                
+                showStatus('+1 монета! 💰', 'success');
+                
+                if (balance % 10 === 0) {
+                    saveToCloud();
+                }
+            }
+            
+            coin.addEventListener('click', handleClick);
+            coin.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                handleClick(e);
+            }, { passive: false });
+        }
+
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Загрузка игры...');
+            console.log('Быстрая загрузка игры...');
             
-            // Начинаем инициализацию
+            // Немедленная инициализация
             initUserData();
-            updateBalanceDisplay();
             setupCoinClick();
             updateCloudIndicator('offline');
+            
+            // Асинхронно проверяем облако через 1 секунду
+            setTimeout(checkCloudConnection, 1000);
             
             // Периодическое сохранение
             setInterval(() => {
@@ -1512,4 +1427,4 @@
         });
     </script>
 </body>
-                        </html>
+    </html>
