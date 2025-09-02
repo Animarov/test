@@ -484,6 +484,173 @@
             margin-bottom: 10px;
             line-height: 1.5;
         }
+
+        /* Новые стили для лотереи */
+        .lottery-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
+        
+        .lottery-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            color: #7c2d12;
+            transition: background 0.3s ease;
+        }
+        
+        .lottery-tab.active {
+            background: rgba(251, 146, 60, 0.2);
+        }
+        
+        .lottery-info {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
+        
+        .lottery-timer {
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            color: #ea580c;
+            font-family: monospace;
+        }
+        
+        .lottery-prize {
+            text-align: center;
+            margin: 10px 0;
+            font-weight: bold;
+            color: #c2410c;
+        }
+        
+        .lottery-form {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
+        
+        .lottery-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .lottery-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            border-radius: 10px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .lottery-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+        
+        .lottery-btn:hover {
+            background: #ea580c;
+        }
+        
+        .lottery-btn:disabled {
+            background: #a8a29e;
+            cursor: not-allowed;
+        }
+        
+        .lottery-participants {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .lottery-participants h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #7c2d12;
+        }
+        
+        .participant-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(124, 45, 18, 0.2);
+        }
+        
+        .participant-item:last-child {
+            border-bottom: none;
+        }
+        
+        .participant-chance {
+            font-weight: bold;
+            color: #ea580c;
+        }
+        
+        .lottery-history {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(124, 45, 18, 0.2);
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: rgba(255, 247, 237, 0.5);
+        }
+        
+        .history-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .history-winner {
+            font-weight: bold;
+            color: #166534;
+        }
+        
+        .history-prize {
+            font-weight: bold;
+            color: #c2410c;
+        }
+        
+        .history-date {
+            font-size: 12px;
+            color: #a8a29e;
+        }
     </style>
 </head>
 <body>
@@ -592,7 +759,71 @@
         <div id="games-screen" class="screen">
             <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
             <h2>🎮 Игры</h2>
-            <div class="empty-state">Игры скоро появятся!</div>
+            
+            <div class="menu-row">
+                <button class="menu-btn" onclick="showScreen('lottery-screen')">
+                    <div class="menu-icon">🎰</div>
+                    Лотерея
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('coming-soon-screen')">
+                    <div class="menu-icon">🎯</div>
+                    Скоро
+                </button>
+                
+                <button class="menu-btn" onclick="showScreen('coming-soon-screen')">
+                    <div class="menu-icon">🎲</div>
+                    Скоро
+                </button>
+            </div>
+        </div>
+
+        <div id="coming-soon-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('games-screen')">← Назад</button>
+            <h2>🎮 Скоро</h2>
+            <div class="empty-state">Эта игра скоро появится!</div>
+        </div>
+
+        <div id="lottery-screen" class="screen">
+            <button class="back-btn" onclick="showScreen('games-screen')">← Назад</button>
+            <h2>🎰 Лотерея</h2>
+            
+            <div class="lottery-tabs">
+                <div class="lottery-tab active" onclick="switchLotteryTab('game')">Игра</div>
+                <div class="lottery-tab" onclick="switchLotteryTab('history')">История игр</div>
+            </div>
+            
+            <div id="lottery-game-tab">
+                <div class="lottery-info">
+                    <h3>🎯 Текущая лотерея</h3>
+                    <div class="lottery-timer" id="lottery-timer">05:00</div>
+                    <div class="lottery-prize" id="lottery-prize">Приз: 0.000000000</div>
+                    <p>Игра идет каждые 5 минут. Выигрыш - 90% от всех ставок!</p>
+                </div>
+                
+                <div class="lottery-form">
+                    <div class="lottery-input">
+                        <input type="number" id="lottery-bet" placeholder="Сумма ставки" min="0.000000001" step="0.000000001" value="0.000000001">
+                    </div>
+                    <button class="lottery-btn" onclick="placeLotteryBet()">Сделать ставку</button>
+                </div>
+                
+                <div class="lottery-participants">
+                    <h3>🎲 Участники (<span id="participants-count">0</span>)</h3>
+                    <div id="lottery-participants">
+                        <div class="empty-state">Пока нет участников</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="lottery-history-tab" style="display: none;">
+                <div class="lottery-history">
+                    <h3>📊 История лотерей</h3>
+                    <div id="lottery-history-content">
+                        <div class="empty-state">История игр пуста</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div id="transfer-screen" class="screen">
@@ -661,6 +892,12 @@
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
 
+        // Переменные для лотереи
+        let lotteryTimer = null;
+        let lotteryEndTime = null;
+        let currentLotteryParticipants = [];
+        let lotteryHistory = [];
+
         function formatBalance(amount) {
             let formatted = amount.toFixed(9);
             const parts = formatted.split('.');
@@ -716,7 +953,6 @@
             let userData = null;
             let initDataUnsafe = null;
             
-            // Пробуем разные способы получения данных Telegram
             if (window.Telegram?.WebApp?.initDataUnsafe) {
                 initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
                 console.log('Using Telegram.WebApp.initDataUnsafe');
@@ -732,7 +968,6 @@
                 const telegramId = userData.id;
                 let name = "Гость";
                 
-                // Формируем имя пользователя
                 if (userData.username) {
                     name = "@" + userData.username;
                 } else if (userData.first_name) {
@@ -767,7 +1002,6 @@
                 };
             }
             
-            // Если данные не найдены, пробуем парсить initData
             let initData = '';
             if (window.Telegram?.WebApp?.initData) {
                 initData = window.Telegram.WebApp.initData;
@@ -894,6 +1128,9 @@
                 updateDebugInfo();
                 await loadUserData();
                 userInitialized = true;
+                
+                // Инициализируем лотерею после загрузки пользователя
+                initLottery();
             } else {
                 showScreen('telegram-error-screen');
                 showStatus('Ошибка: Приложение работает только в Telegram', 'error');
@@ -913,6 +1150,8 @@
                     loadLeaderboardFromCloud();
                 } else if (screenId === 'transfer-screen') {
                     loadTransferHistory();
+                } else if (screenId === 'lottery-screen') {
+                    loadLotteryData();
                 }
             }
         }
@@ -1106,7 +1345,6 @@
             updateCloudIndicator('loading');
             
             try {
-                // Сначала получаем текущий баланс
                 const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const getResponse = await fetch(getUrl);
                 const getResult = await getResponse.json();
@@ -1118,7 +1356,6 @@
                 const currentBalance = getResult.balance || 0;
                 const newBalance = currentBalance + amountToAdd;
                 
-                // Затем обновляем баланс
                 const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
@@ -1150,7 +1387,6 @@
                 updateCloudIndicator('offline');
                 showStatus('Ошибка синхронизации с сервером.', 'error');
                 
-                // Локальное обновление баланса (на случай если сервер недоступен)
                 balance += amountToAdd;
                 updateBalanceDisplay();
                 showStatus(`+${formatBalance(amountToAdd)} монет (локально) 💰`, 'warning');
@@ -1381,6 +1617,317 @@
             });
             
             historyElement.innerHTML = html;
+        }
+
+        // Функции для лотереи
+        function initLottery() {
+            // Устанавливаем время окончания лотереи на ближайшие 5 минут
+            const now = new Date();
+            const minutes = now.getMinutes();
+            const nextLotteryMinute = Math.ceil(minutes / 5) * 5;
+            
+            lotteryEndTime = new Date(now);
+            lotteryEndTime.setMinutes(nextLotteryMinute);
+            lotteryEndTime.setSeconds(0);
+            lotteryEndTime.setMilliseconds(0);
+            
+            // Если следующая лотерея в следующем часу
+            if (nextLotteryMinute >= 60) {
+                lotteryEndTime.setHours(lotteryEndTime.getHours() + 1);
+                lotteryEndTime.setMinutes(0);
+            }
+            
+            startLotteryTimer();
+            loadLotteryData();
+        }
+
+        function startLotteryTimer() {
+            if (lotteryTimer) {
+                clearInterval(lotteryTimer);
+            }
+            
+            lotteryTimer = setInterval(updateLotteryTimer, 1000);
+            updateLotteryTimer();
+        }
+
+        function updateLotteryTimer() {
+            if (!lotteryEndTime) return;
+            
+            const now = new Date();
+            const timeLeft = lotteryEndTime - now;
+            
+            if (timeLeft <= 0) {
+                // Лотерея завершена, определяем победителя
+                finishLottery();
+                // Устанавливаем время для следующей лотереи
+                lotteryEndTime = new Date(now.getTime() + 300000); // +5 минут
+                return;
+            }
+            
+            const minutes = Math.floor(timeLeft / 60000);
+            const seconds = Math.floor((timeLeft % 60000) / 1000);
+            
+            const timerElement = document.getElementById('lottery-timer');
+            if (timerElement) {
+                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function switchLotteryTab(tabName) {
+            const tabs = document.querySelectorAll('.lottery-tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            document.getElementById('lottery-game-tab').style.display = 'none';
+            document.getElementById('lottery-history-tab').style.display = 'none';
+            
+            if (tabName === 'game') {
+                document.querySelector('.lottery-tab:nth-child(1)').classList.add('active');
+                document.getElementById('lottery-game-tab').style.display = 'block';
+                loadLotteryParticipants();
+            } else {
+                document.querySelector('.lottery-tab:nth-child(2)').classList.add('active');
+                document.getElementById('lottery-history-tab').style.display = 'block';
+                loadLotteryHistory();
+            }
+        }
+
+        async function loadLotteryData() {
+            if (!userId) return;
+            
+            try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер недоступен');
+                }
+                
+                const url = `${scriptURL}?action=lottery&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success) {
+                    if (result.participants) {
+                        currentLotteryParticipants = result.participants;
+                    }
+                    if (result.prizePool !== undefined) {
+                        updatePrizePool(result.prizePool);
+                    }
+                    if (result.history) {
+                        lotteryHistory = result.history;
+                    }
+                    
+                    loadLotteryParticipants();
+                    
+                } else {
+                    throw new Error(result.error || 'Ошибка загрузки данных лотереи');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных лотереи:', error);
+                // Используем локальные данные для демонстрации
+                loadDemoLotteryData();
+            }
+        }
+
+        function loadDemoLotteryData() {
+            // Демо-данные для тестирования
+            currentLotteryParticipants = [
+                { userId: '12345', username: 'Игрок1', bet: 0.000000010 },
+                { userId: '67890', username: 'Игрок2', bet: 0.000000005 },
+                { userId: userId, username: userName, bet: 0.000000003 }
+            ];
+            
+            updatePrizePool(0.000000018);
+            loadLotteryParticipants();
+        }
+
+        function updatePrizePool(amount) {
+            const prizeElement = document.getElementById('lottery-prize');
+            if (prizeElement) {
+                prizeElement.textContent = `Приз: ${formatBalance(amount * 0.9)}`;
+            }
+        }
+
+        function loadLotteryParticipants() {
+            const participantsElement = document.getElementById('lottery-participants');
+            const countElement = document.getElementById('participants-count');
+            
+            if (!participantsElement || !countElement) return;
+            
+            if (currentLotteryParticipants.length === 0) {
+                participantsElement.innerHTML = '<div class="empty-state">Пока нет участников</div>';
+                countElement.textContent = '0';
+                return;
+            }
+            
+            // Считаем общую сумму ставок
+            const totalBet = currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
+            
+            let html = '';
+            currentLotteryParticipants.forEach(participant => {
+                const chance = totalBet > 0 ? (participant.bet / totalBet * 100).toFixed(1) : 0;
+                html += `
+                    <div class="participant-item">
+                        <span>${participant.username}</span>
+                        <span>
+                            ${formatBalance(participant.bet)} 
+                            <span class="participant-chance">(${chance}%)</span>
+                        </span>
+                    </div>
+                `;
+            });
+            
+            participantsElement.innerHTML = html;
+            countElement.textContent = currentLotteryParticipants.length.toString();
+        }
+
+        function loadLotteryHistory() {
+            const historyElement = document.getElementById('lottery-history-content');
+            
+            if (!historyElement) return;
+            
+            if (lotteryHistory.length === 0) {
+                historyElement.innerHTML = '<div class="empty-state">История игр пуста</div>';
+                return;
+            }
+            
+            let html = '';
+            lotteryHistory.forEach(game => {
+                html += `
+                    <div class="history-item">
+                        <div class="history-winner">🏆 ${game.winnerName}</div>
+                        <div class="history-prize">Выигрыш: ${formatBalance(game.prize)}</div>
+                        <div class="history-date">${new Date(game.timestamp).toLocaleString('ru-RU')}</div>
+                    </div>
+                `;
+            });
+            
+            historyElement.innerHTML = html;
+        }
+
+        async function placeLotteryBet() {
+            if (!userId) {
+                showStatus('Ошибка: пользователь не авторизован', 'error');
+                return;
+            }
+            
+            const betInput = document.getElementById('lottery-bet');
+            const betAmount = parseFloat(betInput.value);
+            
+            if (isNaN(betAmount) || betAmount <= 0) {
+                showStatus('Введите корректную сумму ставки', 'error');
+                return;
+            }
+            
+            if (betAmount > balance) {
+                showStatus('Недостаточно средств', 'error');
+                return;
+            }
+            
+            updateCloudIndicator('loading');
+            
+            try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер временно недоступен');
+                }
+                
+                const formData = new URLSearchParams();
+                formData.append('action', 'lottery-bet');
+                formData.append('userId', userId);
+                formData.append('username', userName);
+                formData.append('bet', betAmount);
+                
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Обновляем баланс
+                    balance -= betAmount;
+                    updateBalanceDisplay();
+                    
+                    // Добавляем участника в список
+                    const existingIndex = currentLotteryParticipants.findIndex(p => p.userId === userId);
+                    if (existingIndex !== -1) {
+                        currentLotteryParticipants[existingIndex].bet += betAmount;
+                    } else {
+                        currentLotteryParticipants.push({
+                            userId: userId,
+                            username: userName,
+                            bet: betAmount
+                        });
+                    }
+                    
+                    // Обновляем призовой фонд
+                    updatePrizePool(result.prizePool || (currentLotteryParticipants.reduce((sum, p) => sum + p.bet, 0)));
+                    
+                    // Обновляем список участников
+                    loadLotteryParticipants();
+                    
+                    showStatus(`Ставка ${formatBalance(betAmount)} принята!`, 'success');
+                    updateCloudIndicator('online');
+                    
+                } else {
+                    throw new Error(result.error || 'Ошибка размещения ставки');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка размещения ставки:', error);
+                showStatus('Ошибка: ' + error.message, 'error');
+                updateCloudIndicator('offline');
+            }
+        }
+
+        function finishLottery() {
+            if (currentLotteryParticipants.length === 0) {
+                showStatus('Лотерея завершена. Не было участников.', 'info');
+                return;
+            }
+            
+            // Выбираем случайного победителя (в реальном приложении это должно делаться на сервере)
+            const totalBet = currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
+            const prize = totalBet * 0.9;
+            
+            // Выбираем победителя (чем больше ставка, тем выше шанс)
+            let random = Math.random() * totalBet;
+            let winner = null;
+            
+            for (const participant of currentLotteryParticipants) {
+                random -= participant.bet;
+                if (random <= 0) {
+                    winner = participant;
+                    break;
+                }
+            }
+            
+            if (winner) {
+                // Добавляем в историю
+                lotteryHistory.unshift({
+                    winnerId: winner.userId,
+                    winnerName: winner.username,
+                    prize: prize,
+                    timestamp: new Date().toISOString(),
+                    participants: currentLotteryParticipants.length
+                });
+                
+                // Сохраняем историю (в реальном приложении это должно быть на сервере)
+                if (lotteryHistory.length > 10) {
+                    lotteryHistory = lotteryHistory.slice(0, 10);
+                }
+                
+                showStatus(`🏆 Победитель лотереи: ${winner.username} (${formatBalance(prize)})`, 'success');
+            }
+            
+            // Очищаем участников текущей лотереи
+            currentLotteryParticipants = [];
+            updatePrizePool(0);
+            loadLotteryParticipants();
         }
         
         document.addEventListener('DOMContentLoaded', function() {
