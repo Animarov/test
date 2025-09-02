@@ -469,6 +469,21 @@
             font-size: 12px;
             color: #a8a29e;
         }
+
+        .telegram-error {
+            text-align: center;
+            padding: 40px 20px;
+            color: #dc2626;
+        }
+
+        .telegram-error h2 {
+            margin-bottom: 15px;
+        }
+
+        .telegram-error p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -617,6 +632,20 @@
             <h2>👥 Рефералы</h2>
             <div class="empty-state">Реферальная система скоро!</div>
         </div>
+
+        <div id="telegram-error-screen" class="screen">
+            <div class="telegram-error">
+                <h2>❌ Ошибка загрузки Telegram</h2>
+                <p>Это приложение работает только внутри Telegram.</p>
+                <p>Пожалуйста, откройте его через Telegram бота.</p>
+                <p>Если проблема persists, попробуйте:</p>
+                <ul style="text-align: left; margin: 15px 0;">
+                    <li>Обновить приложение Telegram</li>
+                    <li>Перезапустить Telegram</li>
+                    <li>Обратиться к поддержке бота</li>
+                </ul>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -759,7 +788,6 @@
                 };
             }
             
-            isTelegramWebApp = false;
             return null;
         }
         
@@ -774,7 +802,7 @@
                 }
                 
                 let attempts = 0;
-                const maxAttempts = 50;
+                const maxAttempts = 10;
                 const checkInterval = setInterval(() => {
                     attempts++;
                     
@@ -801,7 +829,7 @@
                         console.log('Telegram initialization timeout');
                         resolve(null);
                     }
-                }, 100);
+                }, 200);
             });
         }
         
@@ -835,40 +863,11 @@
                 updateUserProfile();
                 updateDebugInfo();
                 await loadUserData();
+                userInitialized = true;
             } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const tgWebAppData = urlParams.get('tgWebAppData');
-                
-                if (tgWebAppData) {
-                    try {
-                        const parsedData = parseInitData(tgWebAppData);
-                        if (parsedData.user) {
-                            userData = parsedData.user;
-                            userId = userData.id;
-                            userName = userData.username ? "@" + userData.username : userData.first_name || "Гость";
-                            userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-                            updateUserProfile();
-                            updateDebugInfo();
-                            await loadUserData();
-                        }
-                    } catch (e) {
-                        console.error('Error parsing tgWebAppData:', e);
-                    }
-                }
-                
-                if (!userData && !userId) {
-                    isTelegramWebApp = false;
-                    userId = 'guest_' + Math.random().toString(36).substr(2, 9);
-                    userName = "Гость";
-                    showStatus('Запущено вне Telegram. Режим гостя.', 'warning');
-                    updateUserProfile();
-                    updateDebugInfo();
-                    
-                    await loadUserData();
-                }
+                showScreen('telegram-error-screen');
+                showStatus('Ошибка: Приложение работает только в Telegram', 'error');
             }
-            
-            userInitialized = true;
         }
         
         function showScreen(screenId) {
@@ -1025,9 +1024,7 @@
                 console.error('Ошибка загрузки данных:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                if (!userInitialized) {
-                    showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
-                }
+                showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
             }
         }
         
@@ -1288,7 +1285,7 @@
                     throw new Error('Сервер недоступен');
                 }
                 
-                const url = `${scriptURL?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const url = `${scriptURL}?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
                 
@@ -1346,4 +1343,4 @@
         });
     </script>
 </body>
-                    </html>
+    </html>
