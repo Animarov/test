@@ -627,6 +627,7 @@
         let isTelegramWebApp = false;
         let telegramUsername = "";
         let telegramFirstName = "";
+        let userInitialized = false;
         
         let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
@@ -773,7 +774,7 @@
                 }
                 
                 let attempts = 0;
-                const maxAttempts = 100;
+                const maxAttempts = 50;
                 const checkInterval = setInterval(() => {
                     attempts++;
                     
@@ -800,7 +801,7 @@
                         console.log('Telegram initialization timeout');
                         resolve(null);
                     }
-                }, 50);
+                }, 100);
             });
         }
         
@@ -811,8 +812,9 @@
         }
         
         async function initUserData() {
-            console.log('Initializing user data...');
+            if (userInitialized) return;
             
+            console.log('Initializing user data...');
             setupCoinClick();
             
             let userData = getTelegramUserData();
@@ -832,7 +834,7 @@
                 console.log('User data loaded:', userData);
                 updateUserProfile();
                 updateDebugInfo();
-                loadUserData();
+                await loadUserData();
             } else {
                 const urlParams = new URLSearchParams(window.location.search);
                 const tgWebAppData = urlParams.get('tgWebAppData');
@@ -847,22 +849,26 @@
                             userAvatar = userData.photo_url || "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                             updateUserProfile();
                             updateDebugInfo();
-                            loadUserData();
+                            await loadUserData();
                         }
                     } catch (e) {
                         console.error('Error parsing tgWebAppData:', e);
                     }
                 }
                 
-                if (!userData) {
+                if (!userData && !userId) {
                     isTelegramWebApp = false;
                     userId = 'guest_' + Math.random().toString(36).substr(2, 9);
                     userName = "Гость";
                     showStatus('Запущено вне Telegram. Режим гостя.', 'warning');
                     updateUserProfile();
                     updateDebugInfo();
+                    
+                    await loadUserData();
                 }
             }
+            
+            userInitialized = true;
         }
         
         function showScreen(screenId) {
@@ -1019,7 +1025,9 @@
                 console.error('Ошибка загрузки данных:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
+                if (!userInitialized) {
+                    showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
+                }
             }
         }
         
@@ -1280,7 +1288,7 @@
                     throw new Error('Сервер недоступен');
                 }
                 
-                const url = `${scriptURL}?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const url = `${scriptURL?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
                 
@@ -1338,4 +1346,4 @@
         });
     </script>
 </body>
-                        </html>
+                    </html>
