@@ -714,54 +714,25 @@
         
         function getTelegramUserData() {
             let userData = null;
+            let initDataUnsafe = null;
             
-            if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                userData = window.Telegram.WebApp.initDataUnsafe.user;
-                console.log('User data from Telegram.WebApp.initDataUnsafe');
-            }
-            else if (window.Telegram?.WebApp?.initData) {
-                try {
-                    const parsedData = parseInitData(window.Telegram.WebApp.initData);
-                    if (parsedData.user) {
-                        userData = parsedData.user;
-                        console.log('User data from Telegram.WebApp.initData');
-                    }
-                } catch (e) {
-                    console.error('Error parsing initData:', e);
-                }
-            }
-            else if (window.TelegramWebApp?.initDataUnsafe?.user) {
-                userData = window.TelegramWebApp.initDataUnsafe.user;
-                console.log('User data from TelegramWebApp.initDataUnsafe');
-            }
-            else {
-                const urlParams = new URLSearchParams(window.location.search);
-                let tgWebAppData = urlParams.get('tgWebAppData') || urlParams.get('tgWebApp');
-                
-                if (!tgWebAppData) {
-                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                    tgWebAppData = hashParams.get('tgWebAppData') || hashParams.get('tgWebApp');
-                }
-                
-                if (tgWebAppData) {
-                    try {
-                        const parsedData = parseInitData(tgWebAppData);
-                        if (parsedData.user) {
-                            userData = parsedData.user;
-                            console.log('User data from URL parameters');
-                        }
-                    } catch (e) {
-                        console.error('Error parsing URL data:', e);
-                    }
-                }
+            // Пробуем разные способы получения данных Telegram
+            if (window.Telegram?.WebApp?.initDataUnsafe) {
+                initDataUnsafe = window.Telegram.WebApp.initDataUnsafe;
+                console.log('Using Telegram.WebApp.initDataUnsafe');
+            } else if (window.TelegramWebApp?.initDataUnsafe) {
+                initDataUnsafe = window.TelegramWebApp.initDataUnsafe;
+                console.log('Using TelegramWebApp.initDataUnsafe');
             }
             
-            if (userData) {
+            if (initDataUnsafe?.user) {
+                userData = initDataUnsafe.user;
                 isTelegramWebApp = true;
                 
                 const telegramId = userData.id;
                 let name = "Гость";
                 
+                // Формируем имя пользователя
                 if (userData.username) {
                     name = "@" + userData.username;
                 } else if (userData.first_name) {
@@ -779,6 +750,14 @@
                     avatar = userData.photo_url;
                 }
                 
+                console.log('Telegram user data:', {
+                    id: telegramId,
+                    name: name,
+                    username: telegramUsername,
+                    firstName: telegramFirstName,
+                    avatar: avatar
+                });
+                
                 return {
                     id: telegramId,
                     name: name,
@@ -786,6 +765,57 @@
                     username: telegramUsername,
                     firstName: telegramFirstName
                 };
+            }
+            
+            // Если данные не найдены, пробуем парсить initData
+            let initData = '';
+            if (window.Telegram?.WebApp?.initData) {
+                initData = window.Telegram.WebApp.initData;
+            } else if (window.TelegramWebApp?.initData) {
+                initData = window.TelegramWebApp.initData;
+            }
+            
+            if (initData) {
+                try {
+                    const params = new URLSearchParams(initData);
+                    const userParam = params.get('user');
+                    if (userParam) {
+                        const user = JSON.parse(decodeURIComponent(userParam));
+                        if (user && user.id) {
+                            isTelegramWebApp = true;
+                            
+                            let name = "Гость";
+                            if (user.username) {
+                                name = "@" + user.username;
+                            } else if (user.first_name) {
+                                name = user.first_name;
+                                if (user.last_name) {
+                                    name += " " + user.last_name;
+                                }
+                            }
+                            
+                            telegramUsername = user.username || "";
+                            telegramFirstName = user.first_name || "";
+                            
+                            let avatar = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+                            if (user.photo_url) {
+                                avatar = user.photo_url;
+                            }
+                            
+                            console.log('Parsed user data from initData:', user);
+                            
+                            return {
+                                id: user.id,
+                                name: name,
+                                avatar: avatar,
+                                username: telegramUsername,
+                                firstName: telegramFirstName
+                            };
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing initData:', e);
+                }
             }
             
             return null;
@@ -1068,13 +1098,31 @@
         }
         
         async function updateBalanceOnServer(amountToAdd) {
-            if (!userId) return;
+            if (!userId) {
+                showStatus('Ошибка: ID пользователя не установлен', 'error');
+                return;
+            }
+            
+            updateCloudIndicator('loading');
             
             try {
+                // Сначала получаем текущий баланс
+                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const getResponse = await fetch(getUrl);
+                const getResult = await getResponse.json();
+                
+                if (!getResult.success) {
+                    throw new Error(getResult.error || 'Ошибка получения баланса');
+                }
+                
+                const currentBalance = getResult.balance || 0;
+                const newBalance = currentBalance + amountToAdd;
+                
+                // Затем обновляем баланс
                 const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
-                formData.append('amountToAdd', amountToAdd);
+                formData.append('balance', newBalance);
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
@@ -1087,12 +1135,11 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    if (result.balance !== undefined) {
-                        balance = result.balance;
-                        updateBalanceDisplay();
-                    }
+                    balance = newBalance;
+                    updateBalanceDisplay();
                     scriptAvailable = true;
                     updateCloudIndicator('online');
+                    showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
                 } else {
                     throw new Error(result.error || 'Ошибка обновления баланса');
                 }
@@ -1102,6 +1149,11 @@
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
                 showStatus('Ошибка синхронизации с сервером.', 'error');
+                
+                // Локальное обновление баланса (на случай если сервер недоступен)
+                balance += amountToAdd;
+                updateBalanceDisplay();
+                showStatus(`+${formatBalance(amountToAdd)} монет (локально) 💰`, 'warning');
             }
         }
         
