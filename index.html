@@ -1723,21 +1723,12 @@
                 
             } catch (error) {
                 console.error('Ошибка загрузки данных лотереи:', error);
-                // Используем локальные данные для демонстрации
-                loadDemoLotteryData();
+                // Очищаем данные при ошибке
+                currentLotteryParticipants = [];
+                lotteryHistory = [];
+                updatePrizePool(0);
+                loadLotteryParticipants();
             }
-        }
-
-        function loadDemoLotteryData() {
-            // Демо-данные для тестирования
-            currentLotteryParticipants = [
-                { userId: '12345', username: 'Игрок1', bet: 0.000000010 },
-                { userId: '67890', username: 'Игрок2', bet: 0.000000005 },
-                { userId: userId, username: userName, bet: 0.000000003 }
-            ];
-            
-            updatePrizePool(0.000000018);
-            loadLotteryParticipants();
         }
 
         function updatePrizePool(amount) {
