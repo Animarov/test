@@ -890,7 +890,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbzk2cZSoBPziORuQl0kEqgLd9SnlxqTd8LLC8TR43C-g46S0RyGxK7L2DnEDYhOIHmfJg/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbzlWNNxoM59czvWO7OOqeG5cW49GsobsUzzmkRcz0r6uHmQFgnzeWLuUqv-aRi2aWw3tQ/exec';
         let scriptAvailable = false;
 
         // Переменные для лотереи
@@ -1857,11 +1857,6 @@
             if (!userId) return;
             
             try {
-                const isAvailable = await checkScriptAvailability();
-                if (!isAvailable) {
-                    throw new Error('Сервер недоступен');
-                }
-                
                 const url = `${scriptURL}?action=lottery&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
@@ -1875,11 +1870,11 @@
                     }
                     if (result.history) {
                         lotteryHistory = result.history;
+                        localData.lottery.history = lotteryHistory;
                     }
                     
                     // Сохраняем данные локально
                     localData.lottery.participants = currentLotteryParticipants;
-                    localData.lottery.history = lotteryHistory;
                     saveLocalData();
                     
                     loadLotteryParticipants();
@@ -1987,11 +1982,6 @@
             updateCloudIndicator('loading');
             
             try {
-                const isAvailable = await checkScriptAvailability();
-                if (!isAvailable) {
-                    throw new Error('Сервер временно недоступен');
-                }
-                
                 const formData = new URLSearchParams();
                 formData.append('action', 'lottery-bet');
                 formData.append('userId', userId);
@@ -2010,32 +2000,12 @@
                 
                 if (result.success) {
                     // Обновляем баланс
-                    balance -= betAmount;
+                    balance = result.newBalance || (balance - betAmount);
                     updateBalanceDisplay();
                     updateLocalUserData();
                     
-                    // Добавляем участника в список
-                    const existingIndex = currentLotteryParticipants.findIndex(p => p.userId === userId);
-                    if (existingIndex !== -1) {
-                        currentLotteryParticipants[existingIndex].bet += betAmount;
-                    } else {
-                        currentLotteryParticipants.push({
-                            userId: userId,
-                            username: userName,
-                            bet: betAmount
-                        });
-                    }
-                    
-                    // Обновляем призовой фонд
-                    const prizePool = calculatePrizePool();
-                    updatePrizePool(prizePool);
-                    
-                    // Сохраняем данные локально
-                    localData.lottery.participants = currentLotteryParticipants;
-                    saveLocalData();
-                    
-                    // Обновляем список участников
-                    loadLotteryParticipants();
+                    // Загружаем обновленные данные лотереи
+                    await loadLotteryData();
                     
                     showStatus(`Ставка ${formatBalance(betAmount)} принята!`, 'success');
                     updateCloudIndicator('online');
@@ -2080,17 +2050,71 @@
             }
         }
 
-        function finishLottery() {
+        async function finishLottery() {
             if (currentLotteryParticipants.length === 0) {
                 showStatus('Лотерея завершена. Не было участников.', 'info');
+                
+                // Все равно очищаем участников
+                currentLotteryParticipants = [];
+                localData.lottery.participants = [];
+                localData.lottery.lastReset = Date.now();
+                saveLocalData();
+                
+                updatePrizePool(0);
+                loadLotteryParticipants();
                 return;
             }
             
-            // Выбираем случайного победителя (в реальном приложении это должно делаться на сервере)
+            try {
+                // Вызываем серверную функцию для завершения лотереи
+                const formData = new URLSearchParams();
+                formData.append('action', 'finish-lottery');
+                
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.winner) {
+                    showStatus(`🏆 Победитель лотереи: ${result.winnerName} (${formatBalance(result.prize)})`, 'success');
+                    
+                    // Если победитель - текущий пользователь, обновляем баланс
+                    if (result.winner.userId === userId) {
+                        balance += result.prize;
+                        updateBalanceDisplay();
+                        updateLocalUserData();
+                        showStatus(`🎉 Вы выиграли ${formatBalance(result.prize)} в лотерее!`, 'success');
+                    }
+                } else {
+                    throw new Error(result.error || 'Ошибка завершения лотереи');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка завершения лотереи:', error);
+                // Локальная эмуляция при ошибке
+                finishLotteryLocally();
+            }
+            
+            // Очищаем участников текущей лотереи
+            currentLotteryParticipants = [];
+            localData.lottery.participants = [];
+            localData.lottery.lastReset = Date.now();
+            saveLocalData();
+            
+            updatePrizePool(0);
+            loadLotteryParticipants();
+        }
+        
+        function finishLotteryLocally() {
             const totalBet = calculatePrizePool();
             const prize = totalBet * 0.9;
             
-            // Выбираем победителя (чем больше ставка, тем выше шанс)
+            // Выбираем случайного победителя
             let random = Math.random() * totalBet;
             let winner = null;
             
@@ -2131,15 +2155,6 @@
                     showStatus(`🎉 Вы выиграли ${formatBalance(prize)} в лотерее!`, 'success');
                 }
             }
-            
-            // Очищаем участников текущей лотереи
-            currentLotteryParticipants = [];
-            localData.lottery.participants = [];
-            localData.lottery.lastReset = Date.now();
-            saveLocalData();
-            
-            updatePrizePool(0);
-            loadLotteryParticipants();
         }
         
         document.addEventListener('DOMContentLoaded', function() {
