@@ -890,7 +890,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbyaNPp9YFYzydCs31ekKD3za1rzV7xRnbgA1OgZqQg4K1PszMOTRM9Bm2qa6Dh6ETVuLw/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbzk2cZSoBPziORuQl0kEqgLd9SnlxqTd8LLC8TR43C-g46S0RyGxK7L2DnEDYhOIHmfJg/exec';
         let scriptAvailable = false;
 
         // Переменные для лотереи
@@ -1383,50 +1383,50 @@
         }
         
         async function createNewUser() {
-            try {
-                const formData = new URLSearchParams();
-                formData.append('action', 'create');
-                formData.append('userId', userId);
-                formData.append('username', userName);
-                formData.append('telegramUsername', telegramUsername);
-                formData.append('firstName', telegramFirstName);
-                formData.append('avatar', userAvatar);
-                formData.append('isTelegram', isTelegramWebApp.toString());
-                
-                const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    balance = 0;
-                    updateBalanceDisplay();
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus('Новый пользователь создан!', 'success');
-                    
-                    // Сохраняем локально
-                    updateLocalUserData();
-                } else {
-                    throw new Error(result.error || 'Ошибка создания пользователя');
-                }
-                
-            } catch (error) {
-                console.error('Ошибка создания пользователя:', error);
-                scriptAvailable = false;
-                updateCloudIndicator('offline');
-                
-                // Создаем пользователя локально
-                balance = 0;
-                updateBalanceDisplay();
-                updateLocalUserData();
-                showStatus('Пользователь создан локально 📱', 'warning');
+          try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'create');
+            formData.append('userId', userId);
+            formData.append('username', userName);
+            formData.append('telegramUsername', telegramUsername);
+            formData.append('firstName', telegramFirstName);
+            formData.append('avatar', userAvatar);
+            formData.append('isTelegram', isTelegramWebApp.toString());
+            
+            const response = await fetch(scriptURL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              balance = 0;
+              updateBalanceDisplay();
+              scriptAvailable = true;
+              updateCloudIndicator('online');
+              showStatus('Новый пользователь создан!', 'success');
+              
+              // Сохраняем локально
+              updateLocalUserData();
+            } else {
+              throw new Error(result.error || 'Ошибка создания пользователя');
             }
+            
+          } catch (error) {
+            console.error('Ошибка создания пользователя:', error);
+            scriptAvailable = false;
+            updateCloudIndicator('offline');
+            
+            // Создаем пользователя локально
+            balance = 0;
+            updateBalanceDisplay();
+            updateLocalUserData();
+            showStatus('Пользователь создан локально 📱', 'warning');
+          }
         }
         
         async function updateBalanceOnServer(amountToAdd) {
