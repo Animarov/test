@@ -25,6 +25,66 @@
             overflow-x: hidden;
             position: relative;
         }
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #ffffff, #fff5e6, #ffedd5, #ffe4bc);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-coin {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffd54f 0%, #f59e0b 100%);
+            border: 6px solid #ffd54f;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .loading-coin-content {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #7c2d12;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        .loading-subtext {
+            font-size: 16px;
+            color: #a8a29e;
+            text-align: center;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
         
         .container {
             max-width: 400px;
@@ -35,6 +95,12 @@
             flex-direction: column;
             z-index: 1;
             position: relative;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .container.visible {
+            opacity: 1;
         }
         
         .header {
@@ -655,7 +721,16 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Экран загрузки -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-coin">
+            <div class="loading-coin-content">₿</div>
+        </div>
+        <div class="loading-text" id="loading-text">Загрузка</div>
+        <div class="loading-subtext" id="loading-subtext">Подключение к серверу...</div>
+    </div>
+
+    <div class="container" id="main-container">
         <div id="main-menu-screen" class="screen active">
             <div class="header">
                 <div class="user-profile" id="user-profile">
@@ -710,12 +785,12 @@
             
             <div class="coin-section">
                 <div class="coin-img" id="coin">
-                    <div class="coin-content">animar</div>
+                    <div class="coin-content">CLICK</div>
                 </div>
             </div>
             
             <div class="status" id="status"></div>
-            <div class="debug-info" id="debug">
+            <div class="debug-info" id="debug" style="display: none;">
                 <div>Отладка: кликните по монете</div>
                 <div>Баланс: <span id="debug-balance">0.000000000</span></div>
                 <div>UserID: <span id="debug-userid">не установлен</span></div>
@@ -890,16 +965,16 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbx2bfk2g7JM9t3aTwvO18DzIvqNM-BSUZrmqH2m7zTi9RGEzOM9fBf2_k7q9t1Ih-TnzQ/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbzk2cZSoBPziORuQl0kEqgLd9SnlxqTd8LLC8TR43C-g46S0RyGxK7L2DnEDYhOIHmfJg/exec';
         let scriptAvailable = false;
-
+    
         // Переменные для лотереи
         let lotteryTimer = null;
         let lotteryEndTime = null;
         let currentLotteryParticipants = [];
         let lotteryHistory = [];
-
-        // Локальное хранилище для эмуляции функций сервера
+    
+        // Локальное хранилище
         const LOCAL_STORAGE_KEY = 'coinClickerData';
         let localData = {
             users: {},
@@ -910,7 +985,77 @@
                 lastReset: Date.now()
             }
         };
-
+    
+        // Анимация загрузки
+        let loadingAnimation = null;
+        let loadingDots = 0;
+    
+        function startLoadingAnimation() {
+            const loadingText = document.getElementById('loading-text');
+            const loadingSubtext = document.getElementById('loading-subtext');
+            
+            if (loadingAnimation) {
+                clearInterval(loadingAnimation);
+            }
+            
+            loadingAnimation = setInterval(() => {
+                loadingDots = (loadingDots % 3) + 1;
+                loadingText.textContent = 'Загрузка' + '.'.repeat(loadingDots);
+                
+                // Меняем подтекст в зависимости от этапа загрузки
+                if (!userId) {
+                    loadingSubtext.textContent = 'Инициализация Telegram...';
+                } else if (!scriptAvailable) {
+                    loadingSubtext.textContent = 'Подключение к серверу...';
+                } else {
+                    loadingSubtext.textContent = 'Загрузка данных...';
+                }
+            }, 500);
+        }
+    
+        function stopLoadingAnimation() {
+            if (loadingAnimation) {
+                clearInterval(loadingAnimation);
+                loadingAnimation = null;
+            }
+        }
+    
+        function showMainContent() {
+            const loadingScreen = document.getElementById('loading-screen');
+            const mainContainer = document.getElementById('main-container');
+            
+            stopLoadingAnimation();
+            
+            loadingScreen.classList.add('hidden');
+            mainContainer.classList.add('visible');
+            
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 500);
+        }
+    
+        function showErrorScreen(message) {
+            stopLoadingAnimation();
+            
+            const loadingText = document.getElementById('loading-text');
+            const loadingSubtext = document.getElementById('loading-subtext');
+            
+            loadingText.textContent = 'Ошибка';
+            loadingSubtext.textContent = message;
+            loadingSubtext.style.color = '#dc2626';
+            
+            // Показываем кнопку повтора
+            const retryButton = document.createElement('button');
+            retryButton.className = 'back-btn';
+            retryButton.style.marginTop = '20px';
+            retryButton.innerHTML = '🔄 Повторить';
+            retryButton.onclick = () => {
+                document.location.reload();
+            };
+            
+            document.getElementById('loading-screen').appendChild(retryButton);
+        }
+    
         // Загрузка данных из localStorage
         function loadLocalData() {
             try {
@@ -918,11 +1063,9 @@
                 if (stored) {
                     localData = JSON.parse(stored);
                     
-                    // Проверяем, нужно ли сбросить лотерею (каждые 5 минут)
                     const now = Date.now();
                     const fiveMinutes = 5 * 60 * 1000;
                     if (now - localData.lottery.lastReset > fiveMinutes) {
-                        // Проводим лотерею и сбрасываем
                         finishLottery();
                         localData.lottery.lastReset = now;
                         saveLocalData();
@@ -932,7 +1075,7 @@
                 console.error('Ошибка загрузки локальных данных:', e);
             }
         }
-
+    
         // Сохранение данных в localStorage
         function saveLocalData() {
             try {
@@ -941,7 +1084,7 @@
                 console.error('Ошибка сохранения локальных данных:', e);
             }
         }
-
+    
         // Обновление данных пользователя в локальном хранилище
         function updateLocalUserData() {
             if (!userId) return;
@@ -958,7 +1101,7 @@
             
             saveLocalData();
         }
-
+    
         function formatBalance(amount) {
             let formatted = amount.toFixed(9);
             const parts = formatted.split('.');
@@ -969,7 +1112,7 @@
             }
             return formatted;
         }
-
+    
         function enhancedTelegramCheck() {
             const checks = [
                 () => window.Telegram?.WebApp?.initDataUnsafe?.user,
@@ -990,26 +1133,7 @@
                 }
             });
         }
-
-        function parseInitData(initData) {
-            const result = {};
-            const params = new URLSearchParams(initData);
-            
-            for (const [key, value] of params) {
-                if (key === 'user') {
-                    try {
-                        const decodedValue = decodeURIComponent(value);
-                        result.user = JSON.parse(decodedValue);
-                    } catch (e) {
-                        console.error('Error parsing user data:', e);
-                    }
-                } else {
-                    result[key] = value;
-                }
-            }
-            return result;
-        }
-        
+    
         function getTelegramUserData() {
             let userData = null;
             let initDataUnsafe = null;
@@ -1168,11 +1292,10 @@
             if (userInitialized) return;
             
             console.log('Initializing user data...');
+            startLoadingAnimation();
             
             // Загружаем локальные данные
             loadLocalData();
-            
-            setupCoinClick();
             
             let userData = getTelegramUserData();
             
@@ -1192,22 +1315,19 @@
                 updateUserProfile();
                 updateDebugInfo();
                 
-                // Проверяем, есть ли пользователь в локальных данных
-                if (localData.users[userId]) {
-                    balance = localData.users[userId].balance;
-                    updateBalanceDisplay();
-                    showStatus('Локальные данные загружены! 📱', 'success');
-                } else {
-                    await loadUserData();
-                }
+                // Загружаем данные пользователя с сервера
+                await loadUserData();
                 
                 userInitialized = true;
                 
                 // Инициализируем лотерею после загрузки пользователя
                 initLottery();
+                
+                // Показываем основной контент
+                showMainContent();
+                
             } else {
-                showScreen('telegram-error-screen');
-                showStatus('Ошибка: Приложение работает только в Telegram', 'error');
+                showErrorScreen('Приложение работает только в Telegram. Откройте его через Telegram бота.');
             }
         }
         
@@ -1453,6 +1573,9 @@
                 formData.append('action', 'update');
                 formData.append('userId', userId);
                 formData.append('balance', newBalance);
+                formData.append('username', userName);
+                formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
@@ -1774,7 +1897,7 @@
             
             historyElement.innerHTML = html;
         }
-
+    
         // Функции для лотереи
         function initLottery() {
             // Загружаем данные лотереи из локального хранилища
@@ -1785,8 +1908,7 @@
             
             // Устанавливаем время окончания лотереи на ближайшие 5 минут
             const now = new Date();
-            const minutes = now.getMinutes();
-            const nextLotteryMinute = Math.ceil(minutes / 5) * 5;
+            const nextLotteryMinute = Math.ceil(now.getMinutes() / 5) * 5;
             
             lotteryEndTime = new Date(now);
             lotteryEndTime.setMinutes(nextLotteryMinute);
@@ -1799,10 +1921,15 @@
                 lotteryEndTime.setMinutes(0);
             }
             
+            // Если установленное время уже прошло, добавляем 5 минут
+            if (lotteryEndTime <= now) {
+                lotteryEndTime.setMinutes(lotteryEndTime.getMinutes() + 5);
+            }
+            
             startLotteryTimer();
             loadLotteryData();
         }
-
+    
         function startLotteryTimer() {
             if (lotteryTimer) {
                 clearInterval(lotteryTimer);
@@ -1811,7 +1938,7 @@
             lotteryTimer = setInterval(updateLotteryTimer, 1000);
             updateLotteryTimer();
         }
-
+    
         function updateLotteryTimer() {
             if (!lotteryEndTime) return;
             
@@ -1821,8 +1948,8 @@
             if (timeLeft <= 0) {
                 // Лотерея завершена, определяем победителя
                 finishLottery();
-                // Устанавливаем время для следующей лотереи
-                lotteryEndTime = new Date(now.getTime() + 300000); // +5 минут
+                // Устанавливаем время для следующей лотереи (через 5 минут)
+                lotteryEndTime = new Date(now.getTime() + 300000);
                 return;
             }
             
@@ -1831,10 +1958,12 @@
             
             const timerElement = document.getElementById('lottery-timer');
             if (timerElement) {
-                timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                // Ограничиваем максимальное время 5 минутами
+                const displayMinutes = Math.min(minutes, 5);
+                timerElement.textContent = `${displayMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             }
         }
-
+    
         function switchLotteryTab(tabName) {
             const tabs = document.querySelectorAll('.lottery-tab');
             tabs.forEach(tab => tab.classList.remove('active'));
@@ -1852,11 +1981,16 @@
                 loadLotteryHistory();
             }
         }
-
+    
         async function loadLotteryData() {
             if (!userId) return;
             
             try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер недоступен');
+                }
+                
                 const url = `${scriptURL}?action=lottery&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
                 const response = await fetch(url);
                 const result = await response.json();
@@ -1870,11 +2004,11 @@
                     }
                     if (result.history) {
                         lotteryHistory = result.history;
-                        localData.lottery.history = lotteryHistory;
                     }
                     
                     // Сохраняем данные локально
                     localData.lottery.participants = currentLotteryParticipants;
+                    localData.lottery.history = lotteryHistory;
                     saveLocalData();
                     
                     loadLotteryParticipants();
@@ -1891,18 +2025,18 @@
                 showStatus('Локальные данные лотереи загружены 📱', 'warning');
             }
         }
-
+    
         function calculatePrizePool() {
             return currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
         }
-
+    
         function updatePrizePool(amount) {
             const prizeElement = document.getElementById('lottery-prize');
             if (prizeElement) {
                 prizeElement.textContent = `Приз: ${formatBalance(amount * 0.9)}`;
             }
         }
-
+    
         function loadLotteryParticipants() {
             const participantsElement = document.getElementById('lottery-participants');
             const countElement = document.getElementById('participants-count');
@@ -1935,7 +2069,7 @@
             participantsElement.innerHTML = html;
             countElement.textContent = currentLotteryParticipants.length.toString();
         }
-
+    
         function loadLotteryHistory() {
             const historyElement = document.getElementById('lottery-history-content');
             
@@ -1959,7 +2093,7 @@
             
             historyElement.innerHTML = html;
         }
-
+    
         async function placeLotteryBet() {
             if (!userId) {
                 showStatus('Ошибка: пользователь не авторизован', 'error');
@@ -1982,6 +2116,11 @@
             updateCloudIndicator('loading');
             
             try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер временно недоступен');
+                }
+                
                 const formData = new URLSearchParams();
                 formData.append('action', 'lottery-bet');
                 formData.append('userId', userId);
@@ -2049,7 +2188,7 @@
                 updateCloudIndicator('offline');
             }
         }
-
+    
         async function finishLottery() {
             if (currentLotteryParticipants.length === 0) {
                 showStatus('Лотерея завершена. Не было участников.', 'info');
@@ -2109,7 +2248,7 @@
             updatePrizePool(0);
             loadLotteryParticipants();
         }
-        
+    
         function finishLotteryLocally() {
             const totalBet = calculatePrizePool();
             const prize = totalBet * 0.9;
@@ -2160,10 +2299,9 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
+            // Запускаем процесс инициализации
             initUserData();
-            updateBalanceDisplay();
-            updateCloudIndicator('offline');
-            updateUserProfile();
+            setupCoinClick();
             
             console.log('Игра загружена!');
         });
