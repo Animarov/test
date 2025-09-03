@@ -6,6 +6,7 @@
     <title>Coin Clicker</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        /* Стили остаются без изменений */
         * {
             margin: 0;
             padding: 0;
@@ -709,7 +710,7 @@
             
             <div class="coin-section">
                 <div class="coin-img" id="coin">
-                    <div class="coin-content">CLICK</div>
+                    <div class="coin-content">CLICK!</div>
                 </div>
             </div>
             
@@ -889,7 +890,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbyn9OFQ4rScE8mw6yNSG4oO0wNOSCddOZvkMGRqt9tkhHXrWo2iNtbA1cZbAIa612eg_Q/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbzYWZHZDC86sdEm2_moT6saH4vHC5xvh_jXhXUhic2iNPN_fdc1OaSsG_hX7ATOKFVCxQ/exec';
         let scriptAvailable = false;
 
         // Переменные для лотереи
@@ -897,6 +898,66 @@
         let lotteryEndTime = null;
         let currentLotteryParticipants = [];
         let lotteryHistory = [];
+
+        // Локальное хранилище для эмуляции функций сервера
+        const LOCAL_STORAGE_KEY = 'coinClickerData';
+        let localData = {
+            users: {},
+            transfers: [],
+            lottery: {
+                participants: [],
+                history: [],
+                lastReset: Date.now()
+            }
+        };
+
+        // Загрузка данных из localStorage
+        function loadLocalData() {
+            try {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (stored) {
+                    localData = JSON.parse(stored);
+                    
+                    // Проверяем, нужно ли сбросить лотерею (каждые 5 минут)
+                    const now = Date.now();
+                    const fiveMinutes = 5 * 60 * 1000;
+                    if (now - localData.lottery.lastReset > fiveMinutes) {
+                        // Проводим лотерею и сбрасываем
+                        finishLottery();
+                        localData.lottery.lastReset = now;
+                        saveLocalData();
+                    }
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки локальных данных:', e);
+            }
+        }
+
+        // Сохранение данных в localStorage
+        function saveLocalData() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localData));
+            } catch (e) {
+                console.error('Ошибка сохранения локальных данных:', e);
+            }
+        }
+
+        // Обновление данных пользователя в локальном хранилище
+        function updateLocalUserData() {
+            if (!userId) return;
+            
+            localData.users[userId] = {
+                userId: userId,
+                username: userName,
+                telegramUsername: telegramUsername,
+                firstName: telegramFirstName,
+                avatar: userAvatar,
+                balance: balance,
+                lastUpdate: new Date().toISOString()
+            };
+            
+            saveLocalData();
+        }
 
         function formatBalance(amount) {
             let formatted = amount.toFixed(9);
@@ -1107,6 +1168,10 @@
             if (userInitialized) return;
             
             console.log('Initializing user data...');
+            
+            // Загружаем локальные данные
+            loadLocalData();
+            
             setupCoinClick();
             
             let userData = getTelegramUserData();
@@ -1126,7 +1191,16 @@
                 console.log('User data loaded:', userData);
                 updateUserProfile();
                 updateDebugInfo();
-                await loadUserData();
+                
+                // Проверяем, есть ли пользователь в локальных данных
+                if (localData.users[userId]) {
+                    balance = localData.users[userId].balance;
+                    updateBalanceDisplay();
+                    showStatus('Локальные данные загружены! 📱', 'success');
+                } else {
+                    await loadUserData();
+                }
+                
                 userInitialized = true;
                 
                 // Инициализируем лотерею после загрузки пользователя
@@ -1281,6 +1355,9 @@
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                     showStatus('Данные загружены из облака! ☁️', 'success');
+                    
+                    // Сохраняем данные локально
+                    updateLocalUserData();
                 } else {
                     if (result.error === 'User not found') {
                         await createNewUser();
@@ -1293,7 +1370,15 @@
                 console.error('Ошибка загрузки данных:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка загрузки данных. Попробуйте позже.', 'error');
+                
+                // Используем локальные данные при ошибке
+                if (localData.users[userId]) {
+                    balance = localData.users[userId].balance;
+                    updateBalanceDisplay();
+                    showStatus('Используются локальные данные 📱', 'warning');
+                } else {
+                    await createNewUser();
+                }
             }
         }
         
@@ -1324,6 +1409,9 @@
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                     showStatus('Новый пользователь создан!', 'success');
+                    
+                    // Сохраняем локально
+                    updateLocalUserData();
                 } else {
                     throw new Error(result.error || 'Ошибка создания пользователя');
                 }
@@ -1332,7 +1420,12 @@
                 console.error('Ошибка создания пользователя:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка создания пользователя.', 'error');
+                
+                // Создаем пользователя локально
+                balance = 0;
+                updateBalanceDisplay();
+                updateLocalUserData();
+                showStatus('Пользователь создан локально 📱', 'warning');
             }
         }
         
@@ -1377,6 +1470,9 @@
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                     showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
+                    
+                    // Обновляем локальные данные
+                    updateLocalUserData();
                 } else {
                     throw new Error(result.error || 'Ошибка обновления баланса');
                 }
@@ -1385,10 +1481,11 @@
                 console.error('Ошибка обновления баланса:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка синхронизации с сервером.', 'error');
                 
+                // Обновляем локально
                 balance += amountToAdd;
                 updateBalanceDisplay();
+                updateLocalUserData();
                 showStatus(`+${formatBalance(amountToAdd)} монет (локально) 💰`, 'warning');
             }
         }
@@ -1423,7 +1520,15 @@
                 console.error('Ошибка загрузки рейтинга:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                showStatus('Ошибка загрузки рейтинга.', 'error');
+                
+                // Используем локальные данные для рейтинга
+                const localLeaderboard = Object.values(localData.users)
+                    .sort((a, b) => b.balance - a.balance)
+                    .slice(0, 20);
+                
+                displayLeaderboard(localLeaderboard);
+                displayUserRank(localLeaderboard);
+                showStatus('Локальный рейтинг загружен 📱', 'warning');
             }
         }
         
@@ -1508,6 +1613,11 @@
                 return;
             }
             
+            if (amount > balance) {
+                showStatus('Недостаточно средств', 'error');
+                return;
+            }
+            
             updateCloudIndicator('loading');
             
             try {
@@ -1543,6 +1653,21 @@
                     
                     document.getElementById('recipient-id').value = '';
                     
+                    // Добавляем в историю переводов
+                    const transferRecord = {
+                        fromUserId: userId,
+                        toUserId: recipientId,
+                        amount: amount,
+                        timestamp: new Date().toISOString(),
+                        type: 'out'
+                    };
+                    
+                    localData.transfers.unshift(transferRecord);
+                    if (localData.transfers.length > 50) {
+                        localData.transfers = localData.transfers.slice(0, 50);
+                    }
+                    
+                    saveLocalData();
                     loadTransferHistory();
                     
                 } else {
@@ -1551,8 +1676,33 @@
                 
             } catch (error) {
                 console.error('Ошибка перевода:', error);
-                showStatus('Ошибка перевода: ' + error.message, 'error');
+                
+                // Эмулируем перевод локально
+                balance -= amount;
+                updateBalanceDisplay();
+                updateLocalUserData();
+                
+                // Добавляем в истории переводов
+                const transferRecord = {
+                    fromUserId: userId,
+                    toUserId: recipientId,
+                    amount: amount,
+                    timestamp: new Date().toISOString(),
+                    type: 'out'
+                };
+                
+                localData.transfers.unshift(transferRecord);
+                if (localData.transfers.length > 50) {
+                    localData.transfers = localData.transfers.slice(0, 50);
+                }
+                
+                saveLocalData();
+                
+                showStatus(`Перевод ${formatBalance(amount)} пользователю ${recipientId} выполнен (локально)!`, 'warning');
                 updateCloudIndicator('offline');
+                
+                document.getElementById('recipient-id').value = '';
+                loadTransferHistory();
             }
         }
         
@@ -1585,7 +1735,13 @@
                 
             } catch (error) {
                 console.error('Ошибка загрузки истории:', error);
-                historyElement.innerHTML = '<div class="empty-state">Ошибка загрузки истории</div>';
+                
+                // Используем локальную историю
+                const userTransfers = localData.transfers.filter(t => 
+                    t.fromUserId === userId || t.toUserId === userId
+                );
+                
+                displayTransferHistory(userTransfers);
             }
         }
         
@@ -1600,9 +1756,9 @@
             
             let html = '';
             transfers.forEach(transfer => {
-                const amountClass = transfer.type === 'out' ? 'transfer-out' : 'transfer-in';
-                const direction = transfer.type === 'out' ? '→' : '←';
-                const target = transfer.type === 'out' ? transfer.toUserId : transfer.fromUserId;
+                const amountClass = transfer.fromUserId === userId ? 'transfer-out' : 'transfer-in';
+                const direction = transfer.fromUserId === userId ? '→' : '←';
+                const target = transfer.fromUserId === userId ? transfer.toUserId : transfer.fromUserId;
                 const date = new Date(transfer.timestamp).toLocaleString('ru-RU');
                 
                 html += `
@@ -1621,6 +1777,12 @@
 
         // Функции для лотереи
         function initLottery() {
+            // Загружаем данные лотереи из локального хранилища
+            if (localData.lottery) {
+                currentLotteryParticipants = localData.lottery.participants || [];
+                lotteryHistory = localData.lottery.history || [];
+            }
+            
             // Устанавливаем время окончания лотереи на ближайшие 5 минут
             const now = new Date();
             const minutes = now.getMinutes();
@@ -1715,6 +1877,11 @@
                         lotteryHistory = result.history;
                     }
                     
+                    // Сохраняем данные локально
+                    localData.lottery.participants = currentLotteryParticipants;
+                    localData.lottery.history = lotteryHistory;
+                    saveLocalData();
+                    
                     loadLotteryParticipants();
                     
                 } else {
@@ -1723,12 +1890,15 @@
                 
             } catch (error) {
                 console.error('Ошибка загрузки данных лотереи:', error);
-                // Очищаем данные при ошибке
-                currentLotteryParticipants = [];
-                lotteryHistory = [];
-                updatePrizePool(0);
+                // Используем локальные данные при ошибке
+                updatePrizePool(calculatePrizePool());
                 loadLotteryParticipants();
+                showStatus('Локальные данные лотереи загружены 📱', 'warning');
             }
+        }
+
+        function calculatePrizePool() {
+            return currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
         }
 
         function updatePrizePool(amount) {
@@ -1751,7 +1921,7 @@
             }
             
             // Считаем общую сумму ставок
-            const totalBet = currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
+            const totalBet = calculatePrizePool();
             
             let html = '';
             currentLotteryParticipants.forEach(participant => {
@@ -1842,6 +2012,7 @@
                     // Обновляем баланс
                     balance -= betAmount;
                     updateBalanceDisplay();
+                    updateLocalUserData();
                     
                     // Добавляем участника в список
                     const existingIndex = currentLotteryParticipants.findIndex(p => p.userId === userId);
@@ -1856,7 +2027,12 @@
                     }
                     
                     // Обновляем призовой фонд
-                    updatePrizePool(result.prizePool || (currentLotteryParticipants.reduce((sum, p) => sum + p.bet, 0)));
+                    const prizePool = calculatePrizePool();
+                    updatePrizePool(prizePool);
+                    
+                    // Сохраняем данные локально
+                    localData.lottery.participants = currentLotteryParticipants;
+                    saveLocalData();
                     
                     // Обновляем список участников
                     loadLotteryParticipants();
@@ -1870,7 +2046,36 @@
                 
             } catch (error) {
                 console.error('Ошибка размещения ставки:', error);
-                showStatus('Ошибка: ' + error.message, 'error');
+                
+                // Эмулируем ставку локально
+                balance -= betAmount;
+                updateBalanceDisplay();
+                updateLocalUserData();
+                
+                // Добавляем участника в список
+                const existingIndex = currentLotteryParticipants.findIndex(p => p.userId === userId);
+                if (existingIndex !== -1) {
+                    currentLotteryParticipants[existingIndex].bet += betAmount;
+                } else {
+                    currentLotteryParticipants.push({
+                        userId: userId,
+                        username: userName,
+                        bet: betAmount
+                    });
+                }
+                
+                // Обновляем призовой фонд
+                const prizePool = calculatePrizePool();
+                updatePrizePool(prizePool);
+                
+                // Сохраняем данные локально
+                localData.lottery.participants = currentLotteryParticipants;
+                saveLocalData();
+                
+                // Обновляем список участников
+                loadLotteryParticipants();
+                
+                showStatus(`Ставка ${formatBalance(betAmount)} принята (локально)!`, 'warning');
                 updateCloudIndicator('offline');
             }
         }
@@ -1882,7 +2087,7 @@
             }
             
             // Выбираем случайного победителя (в реальном приложении это должно делаться на сервере)
-            const totalBet = currentLotteryParticipants.reduce((sum, participant) => sum + participant.bet, 0);
+            const totalBet = calculatePrizePool();
             const prize = totalBet * 0.9;
             
             // Выбираем победителя (чем больше ставка, тем выше шанс)
@@ -1899,24 +2104,40 @@
             
             if (winner) {
                 // Добавляем в историю
-                lotteryHistory.unshift({
+                const historyItem = {
                     winnerId: winner.userId,
                     winnerName: winner.username,
                     prize: prize,
                     timestamp: new Date().toISOString(),
                     participants: currentLotteryParticipants.length
-                });
+                };
                 
-                // Сохраняем историю (в реальном приложении это должно быть на сервере)
+                lotteryHistory.unshift(historyItem);
+                
+                // Сохраняем историю
                 if (lotteryHistory.length > 10) {
                     lotteryHistory = lotteryHistory.slice(0, 10);
                 }
                 
+                localData.lottery.history = lotteryHistory;
+                
                 showStatus(`🏆 Победитель лотереи: ${winner.username} (${formatBalance(prize)})`, 'success');
+                
+                // Если победитель - текущий пользователь, добавляем выигрыш к балансу
+                if (winner.userId === userId) {
+                    balance += prize;
+                    updateBalanceDisplay();
+                    updateLocalUserData();
+                    showStatus(`🎉 Вы выиграли ${formatBalance(prize)} в лотерее!`, 'success');
+                }
             }
             
             // Очищаем участников текущей лотереи
             currentLotteryParticipants = [];
+            localData.lottery.participants = [];
+            localData.lottery.lastReset = Date.now();
+            saveLocalData();
+            
             updatePrizePool(0);
             loadLotteryParticipants();
         }
@@ -1933,4 +2154,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
