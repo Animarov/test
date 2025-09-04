@@ -718,8 +718,111 @@
             font-size: 12px;
             color: #a8a29e;
         }
+        .upgrades-container {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .upgrade-item {
+            background: rgba(255, 247, 237, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 2px solid rgba(251, 146, 60, 0.2);
+            transition: transform 0.2s ease;
+        }
+        
+        .upgrade-item:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 237, 213, 0.8);
+        }
+        
+        .upgrade-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .upgrade-name {
+            font-weight: bold;
+            color: #7c2d12;
+            font-size: 16px;
+        }
+        
+        .upgrade-owned {
+            background: rgba(251, 146, 60, 0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #7c2d12;
+        }
+        
+        .upgrade-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .upgrade-bonus {
+            color: #166534;
+            font-weight: bold;
+        }
+        
+        .upgrade-price {
+            color: #c2410c;
+            font-weight: bold;
+        }
+        
+        .upgrade-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+        
+        .upgrade-btn:hover {
+            background: #ea580c;
+        }
+        
+        .upgrade-btn:disabled {
+            background: #a8a29e;
+            cursor: not-allowed;
+        }
+        
+        .click-power-info {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: center;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+            font-weight: bold;
+            color: #7c2d12;
+        }
+        
+        .click-power-value {
+            color: #c2410c;
+            font-size: 18px;
+            margin-top: 5px;
+        }
     </style>
 </head>
+
 <body>
     <!-- Экран загрузки -->
     <div id="loading-screen" class="loading-screen">
@@ -828,8 +931,15 @@
 
         <div id="shop-screen" class="screen">
             <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
-            <h2>🛒 Магазин</h2>
-            <div class="empty-state">Магазин скоро откроется!</div>
+            <h2>🛒 Магазин улучшений</h2>
+            
+            <div class="upgrades-container" id="upgrades-container">
+                <div class="loading">Загрузка улучшений...</div>
+            </div>
+            <div class="click-power-info">
+                <div>Текущая сила клика:</div>
+                <div class="click-power-value" id="click-power-value">+0.000000001</div>
+            </div>
         </div>
 
         <div id="games-screen" class="screen">
@@ -985,7 +1095,219 @@
                 lastReset: Date.now()
             }
         };
-    
+        // Система улучшений
+        const upgrades = [
+            {
+                id: 'mouse_avito',
+                name: 'Мышь с Авито',
+                description: 'Базовая мышка для начинающих',
+                basePrice: 0.000000064,
+                baseBonus: 0.000000001,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_dns',
+                name: 'Мышь с DNS',
+                description: 'Игровая мышка из DNS',
+                basePrice: 0.000001024,
+                baseBonus: 0.000000008,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_macro',
+                name: 'Мышь с макросами',
+                description: 'Мышка с программируемыми кнопками',
+                basePrice: 0.000016384,
+                baseBonus: 0.000000064,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_programmer',
+                name: 'Мышь программиста',
+                description: 'Для тех, кто пишет код днями напролет',
+                basePrice: 0.000262144,
+                baseBonus: 0.000000512,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_gamer',
+                name: 'Мышь про игрока',
+                description: 'Игровая мышка с подсветкой RGB',
+                basePrice: 0.004194304,
+                baseBonus: 0.000004096,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_hacker',
+                name: 'Мышь хакера',
+                description: 'Мышка для настоящих киберпанков',
+                basePrice: 0.067108864,
+                baseBonus: 0.000032768,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_champion',
+                name: 'Мышь чемпиона',
+                description: 'Профессиональная игровая мышь',
+                basePrice: 1.073741824,
+                baseBonus: 0.000262144,
+                owned: 0,
+                priceMultiplier: 1.6
+            },
+            {
+                id: 'mouse_admin',
+                name: 'Мышь админа',
+                description: 'Легендарная мышь системного администратора',
+                basePrice: 17.179869184,
+                baseBonus: 0.002097152,
+                owned: 0,
+                priceMultiplier: 1.6
+            }
+        ];
+
+        let clickPower = 0.000000001;
+        let userUpgrades = {};
+
+        // Функции для улучшений
+        function loadUpgrades() {
+            // Загружаем улучшения из локального хранилища
+            try {
+                const savedUpgrades = localStorage.getItem('userUpgrades');
+                if (savedUpgrades) {
+                    userUpgrades = JSON.parse(savedUpgrades);
+                    
+                    // Обновляем объект upgrades
+                    upgrades.forEach(upgrade => {
+                        if (userUpgrades[upgrade.id]) {
+                            upgrade.owned = userUpgrades[upgrade.id].owned || 0;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки улучшений:', e);
+            }
+            
+            calculateClickPower();
+            renderUpgrades();
+        }
+
+        function saveUpgrades() {
+            try {
+                // Сохраняем текущее состояние улучшений
+                const upgradesToSave = {};
+                upgrades.forEach(upgrade => {
+                    upgradesToSave[upgrade.id] = {
+                        owned: upgrade.owned
+                    };
+                });
+                
+                localStorage.setItem('userUpgrades', JSON.stringify(upgradesToSave));
+            } catch (e) {
+                console.error('Ошибка сохранения улучшений:', e);
+            }
+        }
+
+        function calculateClickPower() {
+            let totalPower = 0.000000001; // Базовая сила клика
+            
+            upgrades.forEach(upgrade => {
+                totalPower += upgrade.owned * upgrade.baseBonus;
+            });
+            
+            clickPower = totalPower;
+            updateClickPowerDisplay();
+            return totalPower;
+        }
+
+        function updateClickPowerDisplay() {
+            const element = document.getElementById('click-power-value');
+            if (element) {
+                element.textContent = `+${formatBalance(clickPower)}`;
+            }
+        }
+
+        function getUpgradePrice(upgrade) {
+            return upgrade.basePrice * Math.pow(upgrade.priceMultiplier, upgrade.owned);
+        }
+
+        function formatUpgradePrice(price) {
+            if (price >= 1) {
+                return price.toFixed(2);
+            } else {
+                return formatBalance(price);
+            }
+        }
+
+        function renderUpgrades() {
+            const container = document.getElementById('upgrades-container');
+            if (!container) return;
+            
+            let html = '';
+            
+            upgrades.forEach(upgrade => {
+                const price = getUpgradePrice(upgrade);
+                const canAfford = balance >= price;
+                
+                html += `
+                    <div class="upgrade-item">
+                        <div class="upgrade-header">
+                            <div class="upgrade-name">${upgrade.name}</div>
+                            <div class="upgrade-owned">${upgrade.owned} шт.</div>
+                        </div>
+                        
+                        <div class="upgrade-stats">
+                            <div class="upgrade-bonus">+${formatBalance(upgrade.baseBonus)}/клик</div>
+                            <div class="upgrade-price">${formatUpgradePrice(price)}</div>
+                        </div>
+                        
+                        <button class="upgrade-btn" onclick="buyUpgrade('${upgrade.id}')" 
+                                ${canAfford ? '' : 'disabled'}>
+                            ${canAfford ? 'Купить' : 'Недостаточно средств'}
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function buyUpgrade(upgradeId) {
+            const upgrade = upgrades.find(u => u.id === upgradeId);
+            if (!upgrade) return;
+            
+            const price = getUpgradePrice(upgrade);
+            
+            if (balance >= price) {
+                // Списание средств
+                balance -= price;
+                updateBalanceDisplay();
+                
+                // Увеличиваем количество улучшений
+                upgrade.owned++;
+                
+                // Пересчитываем силу клика
+                calculateClickPower();
+                
+                // Сохраняем изменения
+                saveUpgrades();
+                updateLocalUserData();
+                
+                // Обновляем отображение
+                renderUpgrades();
+                
+                showStatus(`Куплено: ${upgrade.name}!
+Сила клика: +${formatBalance(clickPower)}`, 'success');
+            } else {
+                showStatus('Недостаточно средств для покупки', 'error');
+            }
+        }
+
         // Анимация загрузки
         let loadingAnimation = null;
         let loadingDots = 0;
@@ -1063,6 +1385,22 @@
                 if (stored) {
                     localData = JSON.parse(stored);
                     
+                    // Восстанавливаем улучшения из локальных данных
+                    if (localData.users[userId] && localData.users[userId].upgrades) {
+                        userUpgrades = localData.users[userId].upgrades;
+                        
+                        // Обновляем объект upgrades
+                        upgrades.forEach(upgrade => {
+                            if (userUpgrades[upgrade.id]) {
+                                upgrade.owned = userUpgrades[upgrade.id].owned || 0;
+                            }
+                        });
+                    }
+                    
+                    if (localData.users[userId] && localData.users[userId].clickPower) {
+                        clickPower = localData.users[userId].clickPower;
+                    }
+                    
                     const now = Date.now();
                     const fiveMinutes = 5 * 60 * 1000;
                     if (now - localData.lottery.lastReset > fiveMinutes) {
@@ -1073,6 +1411,30 @@
                 }
             } catch (e) {
                 console.error('Ошибка загрузки локальных данных:', e);
+            }
+        }
+
+        // Добавляем обновление отображения силы клика при показе экрана магазина
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                
+                if (screenId === 'top-screen') {
+                    loadLeaderboardFromCloud();
+                } else if (screenId === 'transfer-screen') {
+                    loadTransferHistory();
+                } else if (screenId === 'lottery-screen') {
+                    loadLotteryData();
+                } else if (screenId === 'shop-screen') {
+                    // Обновляем магазин при открытии
+                    renderUpgrades();
+                    updateClickPowerDisplay();
+                }
             }
         }
     
@@ -1096,6 +1458,8 @@
                 firstName: telegramFirstName,
                 avatar: userAvatar,
                 balance: balance,
+                clickPower: clickPower,
+                upgrades: userUpgrades,
                 lastUpdate: new Date().toISOString()
             };
             
@@ -1297,6 +1661,9 @@
             // Загружаем локальные данные
             loadLocalData();
             
+            // Загружаем улучшения
+            loadUpgrades();
+            
             let userData = getTelegramUserData();
             
             if (!userData) {
@@ -1409,14 +1776,14 @@
                 
                 createClickAnimation(clientX, clientY);
                 
-                updateBalanceOnServer(0.000000001);
+                updateBalanceOnServer(clickPower);
                 
                 coin.style.transform = 'scale(0.95)';
                 setTimeout(() => {
                     coin.style.transform = 'scale(1)';
                 }, 100);
                 
-                showStatus('+0.000000001 монета! 💰', 'success');
+                showStatus(`+${formatBalance(clickPower)} монет! 💰`, 'success');
             }
             
             coin.addEventListener('click', handleClick);
