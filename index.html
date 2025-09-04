@@ -1075,7 +1075,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbzk2cZSoBPziORuQl0kEqgLd9SnlxqTd8LLC8TR43C-g46S0RyGxK7L2DnEDYhOIHmfJg/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbyArbzlqxqkLG2si1FCV7k4x9XrkcU2pI6VWzCIba6gn-ep6v3s7ehXAIg57JCFPbKrrg/exec';
         let scriptAvailable = false;
     
         // Переменные для лотереи
@@ -1922,6 +1922,15 @@
                 return;
             }
             
+            // Мгновенно обновляем баланс локально
+            balance += amountToAdd;
+            updateBalanceDisplay();
+            updateLocalUserData();
+            
+            // Показываем статус сразу
+            showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
+            
+            // Асинхронно обновляем на сервере (без ожидания)
             updateCloudIndicator('loading');
             
             try {
@@ -1944,39 +1953,31 @@
                 formData.append('telegramUsername', telegramUsername);
                 formData.append('firstName', telegramFirstName);
                 
-                const response = await fetch(scriptURL, {
+                // Отправляем запрос без ожидания ответа
+                fetch(scriptURL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: formData
+                }).then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        scriptAvailable = true;
+                        updateCloudIndicator('online');
+                    } else {
+                        throw new Error(result.error || 'Ошибка обновления баланса');
+                    }
+                }).catch(error => {
+                    console.error('Ошибка обновления баланса:', error);
+                    scriptAvailable = false;
+                    updateCloudIndicator('offline');
                 });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    balance = newBalance;
-                    updateBalanceDisplay();
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
-                    
-                    // Обновляем локальные данные
-                    updateLocalUserData();
-                } else {
-                    throw new Error(result.error || 'Ошибка обновления баланса');
-                }
                 
             } catch (error) {
                 console.error('Ошибка обновления баланса:', error);
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
-                
-                // Обновляем локально
-                balance += amountToAdd;
-                updateBalanceDisplay();
-                updateLocalUserData();
-                showStatus(`+${formatBalance(amountToAdd)} монет (локально) 💰`, 'warning');
             }
         }
         
