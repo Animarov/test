@@ -1292,81 +1292,75 @@
             container.innerHTML = html;
         }
 
+
         function canAfford(price) {
-            // Используем точное сравнение с допуском
-            const tolerance = 1e-12; // Допуск для сравнения чисел с плавающей запятой
-            return Number(balance) + tolerance >= Number(price);
+        // Используем точное сравнение с допуском
+        const tolerance = 1e-12; // Допуск для сравнения чисел с плавающей запятой
+        return Number(balance) + tolerance >= Number(price);
         }
 
-        async function buyUpgrade(upgradeId) {
-            const upgrade = upgrades.find(u => u.id === upgradeId);
-            if (!upgrade) return;
+        function buyUpgrade(upgradeId) {
+        const upgrade = upgrades.find(u => u.id === upgradeId);
+        if (!upgrade) return;
+        
+        const price = getUpgradePrice(upgrade);
+        
+        // Используем функцию canAfford для точного сравнения
+        if (canAfford(price)) {
+            // Списание средств
+            balance -= price;
+            updateBalanceDisplay();
             
-            const price = getUpgradePrice(upgrade);
+            // Увеличиваем количество улучшений
+            upgrade.owned++;
             
-            // Используем функцию canAfford для точного сравнения
-            if (canAfford(price)) {
-                // Сначала обновляем баланс на сервере
-                const success = await updateBalanceOnServer(-price, true);
-                
-                if (success) {
-                    // Увеличиваем количество улучшений
-                    upgrade.owned++;
-                    
-                    // Сохраняем улучшение на сервере
-                    await saveUpgradeToServer(upgradeId, upgrade.owned);
-                    
-                    // Пересчитываем силу клика
-                    calculateClickPower();
-                    
-                    // Сохраняем изменения локально
-                    saveUpgrades();
-                    updateLocalUserData();
-                    
-                    // Обновляем отображение
-                    renderUpgrades();
-                    
-                    showStatus(`Куплено: ${upgrade.name}!
-            Сила клика: +${formatBalance(clickPower)}`, 'success');
-                } else {
-                    showStatus('Ошибка при покупке улучшения', 'error');
-                }
-            } else {
-                showStatus('Недостаточно средств для покупки', 'error');
-            }
+            // Сохраняем улучшение на сервере
+            saveUpgradeToServer(upgradeId, upgrade.owned);
+            
+            // Пересчитываем силу клика
+            calculateClickPower();
+            
+            // Сохраняем изменения локально
+            saveUpgrades();
+            updateLocalUserData();
+            
+            // Обновляем отображение
+            renderUpgrades();
+            
+            showStatus(`Куплено: ${upgrade.name}!
+        Сила клика: +${formatBalance(clickPower)}`, 'success');
+        } else {
+            showStatus('Недостаточно средств для покупки', 'error');
+        }
         }
 
         async function saveUpgradeToServer(upgradeId, count) {
-            if (!userId) return;
+        if (!userId) return;
+        
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'update-upgrade');
+            formData.append('userId', userId);
+            formData.append('upgradeId', upgradeId);
+            formData.append('count', count);
             
-            try {
-                const formData = new URLSearchParams();
-                formData.append('action', 'update-upgrade');
-                formData.append('userId', userId);
-                formData.append('upgradeId', upgradeId);
-                formData.append('count', count);
-                
-                const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    console.error('Ошибка сохранения улучшения на сервере:', result.error);
-                    return false;
-                }
-                return true;
-            } catch (error) {
-                console.error('Ошибка отправки улучшения на сервер:', error);
-                return false;
+            const response = await fetch(scriptURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+            console.error('Ошибка сохранения улучшения на сервере:', result.error);
             }
+        } catch (error) {
+            console.error('Ошибка отправки улучшения на сервер:', error);
         }
-
+        }
         // Анимация загрузки
         let loadingAnimation = null;
         let loadingDots = 0;
@@ -1473,6 +1467,30 @@
             }
         }
 
+        // Добавляем обновление отображения силы клика при показе экрана магазина
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                
+                if (screenId === 'top-screen') {
+                    loadLeaderboardFromCloud();
+                } else if (screenId === 'transfer-screen') {
+                    loadTransferHistory();
+                } else if (screenId === 'lottery-screen') {
+                    loadLotteryData();
+                } else if (screenId === 'shop-screen') {
+                    // Обновляем магазин при открытии
+                    renderUpgrades();
+                    updateClickPowerDisplay();
+                }
+            }
+        }
+    
         // Сохранение данных в localStorage
         function saveLocalData() {
             try {
@@ -1748,10 +1766,6 @@
                     loadTransferHistory();
                 } else if (screenId === 'lottery-screen') {
                     loadLotteryData();
-                } else if (screenId === 'shop-screen') {
-                    // Обновляем магазин при открытии
-                    renderUpgrades();
-                    updateClickPowerDisplay();
                 }
             }
         }
@@ -1865,7 +1879,7 @@
             try {
                 const isAvailable = await checkScriptAvailability();
                 if (!isAvailable) {
-                    throw new Error('Google Apps Script недоступен');
+                throw new Error('Google Apps Script недоступен');
                 }
                 
                 const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
@@ -1873,26 +1887,26 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    if (result.balance !== undefined) {
-                        balance = result.balance;
-                        updateBalanceDisplay();
-                    }
-                    
-                    // Загружаем улучшения с сервера
-                    await loadUpgradesFromServer();
-                    
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus('Данные загружены из облака! ☁️', 'success');
-                    
-                    // Сохраняем данные локально
-                    updateLocalUserData();
+                if (result.balance !== undefined) {
+                    balance = result.balance;
+                    updateBalanceDisplay();
+                }
+                
+                // Загружаем улучшения с сервера
+                await loadUpgradesFromServer();
+                
+                scriptAvailable = true;
+                updateCloudIndicator('online');
+                showStatus('Данные загружены из облака! ☁️', 'success');
+                
+                // Сохраняем данные локально
+                updateLocalUserData();
                 } else {
-                    if (result.error === 'User not found') {
-                        await createNewUser();
-                    } else {
-                        throw new Error(result.error || 'Ошибка загрузки данных');
-                    }
+                if (result.error === 'User not found') {
+                    await createNewUser();
+                } else {
+                    throw new Error(result.error || 'Ошибка загрузки данных');
+                }
                 }
                 
             } catch (error) {
@@ -1902,16 +1916,16 @@
                 
                 // Используем локальные данные при ошибке
                 if (localData.users[userId]) {
-                    balance = localData.users[userId].balance;
-                    updateBalanceDisplay();
-                    showStatus('Используются локальные данные 📱', 'warning');
+                balance = localData.users[userId].balance;
+                updateBalanceDisplay();
+                showStatus('Используются локальные данные 📱', 'warning');
                 } else {
-                    await createNewUser();
+                await createNewUser();
                 }
             }
-        }
+            }
 
-        async function loadUpgradesFromServer() {
+            async function loadUpgradesFromServer() {
             if (!userId) return;
             
             try {
@@ -1920,20 +1934,20 @@
                 const result = await response.json();
                 
                 if (result.success && result.upgrades) {
-                    // Обновляем локальные данные улучшений
-                    upgrades.forEach(upgrade => {
-                        if (result.upgrades[upgrade.id] !== undefined) {
-                            upgrade.owned = result.upgrades[upgrade.id];
-                        }
-                    });
-                    
-                    calculateClickPower();
-                    renderUpgrades();
+                // Обновляем локальные данные улучшений
+                upgrades.forEach(upgrade => {
+                    if (result.upgrades[upgrade.id] !== undefined) {
+                    upgrade.owned = result.upgrades[upgrade.id];
+                    }
+                });
+                
+                calculateClickPower();
+                renderUpgrades();
                 }
             } catch (error) {
                 console.error('Ошибка загрузки улучшений:', error);
             }
-        }
+            }
         
         // Новая функция для отправки обновления на сервер
         async function sendBalanceUpdateToServer() {
@@ -1985,7 +1999,6 @@
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                     showStatus('Баланс синхронизирован с облаком! ☁️', 'success');
-                    return true;
                 } else {
                     throw new Error(result.error || 'Ошибка обновления баланса');
                 }
@@ -2001,7 +2014,6 @@
                         sendBalanceUpdateToServer();
                     }
                 }, 5000);
-                return false;
             }
         }
 
@@ -2026,30 +2038,30 @@
                 formData.append('balance', balance);
                 
                 const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    // Создаем запись улучшений для нового пользователя
-                    await saveUpgradeToServer('mouse_avito', 0);
-                    
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus('Новый пользователь создан!', 'success');
-                    
-                    // Сбрасываем ожидающие обновления
-                    pendingBalanceUpdate = 0;
-                    clickCounter = 0;
-                    lastServerUpdate = Date.now();
-                    
+                // Создаем запись улучшений для нового пользователя
+                await saveUpgradeToServer('mouse_avito', 0);
+                
+                scriptAvailable = true;
+                updateCloudIndicator('online');
+                showStatus('Новый пользователь создан!', 'success');
+                
+                // Сбрасываем ожидающие обновления
+                pendingBalanceUpdate = 0;
+                clickCounter = 0;
+                lastServerUpdate = Date.now();
+                
                 } else {
-                    throw new Error(result.error || 'Ошибка создания пользователя');
+                throw new Error(result.error || 'Ошибка создания пользователя');
                 }
                 
             } catch (error) {
@@ -2061,51 +2073,31 @@
                 updateLocalUserData();
                 showStatus('Пользователь создан локально 📱', 'warning');
             }
-        }
+            }
         
-        async function updateBalanceOnServer(amountToAdd, isImmediate = false) {
+        async function updateBalanceOnServer(amountToAdd) {
             if (!userId) {
                 showStatus('Ошибка: ID пользователя не установлен', 'error');
-                return false;
+                return;
             }
             
             // Мгновенно обновляем баланс локально
             balance += amountToAdd;
+            pendingBalanceUpdate += amountToAdd;
+            clickCounter++;
+            updateBalanceDisplay();
+            updateLocalUserData();
             
-            if (isImmediate) {
-                // Для покупок улучшений сразу отправляем на сервер
-                pendingBalanceUpdate += amountToAdd;
-                const success = await sendBalanceUpdateToServer();
-                if (success) {
-                    updateBalanceDisplay();
-                    updateLocalUserData();
-                    return true;
-                } else {
-                    // Откатываем изменения при ошибке
-                    balance -= amountToAdd;
-                    pendingBalanceUpdate -= amountToAdd;
-                    updateBalanceDisplay();
-                    return false;
-                }
-            } else {
-                // Для кликов используем пакетную отправку
-                pendingBalanceUpdate += amountToAdd;
-                clickCounter++;
-                updateBalanceDisplay();
-                updateLocalUserData();
-                
-                // Показываем статус сразу
-                showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
-                
-                // Проверяем условия для отправки на сервер
-                const now = Date.now();
-                const shouldUpdate = clickCounter >= CLICKS_BEFORE_UPDATE || 
-                                    (now - lastServerUpdate) >= BATCH_UPDATE_DELAY;
-                
-                if (shouldUpdate && pendingBalanceUpdate > 0) {
-                    await sendBalanceUpdateToServer();
-                }
-                return true;
+            // Показываем статус сразу
+            showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
+            
+            // Проверяем условия для отправки на сервер
+            const now = Date.now();
+            const shouldUpdate = clickCounter >= CLICKS_BEFORE_UPDATE || 
+                                (now - lastServerUpdate) >= BATCH_UPDATE_DELAY;
+            
+            if (shouldUpdate && pendingBalanceUpdate > 0) {
+                await sendBalanceUpdateToServer();
             }
         }
         
@@ -2469,7 +2461,7 @@
             
             if (tabName === 'game') {
                 document.querySelector('.lottery-tab:nth-child(1)').classList.add('active');
-                document.getElementById('lottery-game-tab').style.display = 'block');
+                document.getElementById('lottery-game-tab').style.display = 'block';
                 loadLotteryParticipants();
             } else {
                 document.querySelector('.lottery-tab:nth-child(2)').classList.add('active');
