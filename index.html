@@ -1075,9 +1075,14 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbyArbzlqxqkLG2si1FCV7k4x9XrkcU2pI6VWzCIba6gn-ep6v3s7ehXAIg57JCFPbKrrg/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbxnokJQqlxoosCrWfvkqV2MvbuZKPCsahtFRHG8zCIkWh_BwoliiWH_MaZuuURPEqfOvA/exec';
         let scriptAvailable = false;
     
+        let pendingBalanceUpdate = 0;
+        let lastServerUpdate = 0;
+        let clickCounter = 0;
+        const BATCH_UPDATE_DELAY = 2000; // 2 секунды
+        const CLICKS_BEFORE_UPDATE = 5; // Каждые 5 кликов
         // Переменные для лотереи
         let lotteryTimer = null;
         let lotteryEndTime = null;
@@ -1869,51 +1874,127 @@
             }
         }
         
-        async function createNewUser() {
-          try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'create');
-            formData.append('userId', userId);
-            formData.append('username', userName);
-            formData.append('telegramUsername', telegramUsername);
-            formData.append('firstName', telegramFirstName);
-            formData.append('avatar', userAvatar);
-            formData.append('isTelegram', isTelegramWebApp.toString());
+        // Новая функция для отправки обновления на сервер
+        async function sendBalanceUpdateToServer() {
+            if (pendingBalanceUpdate === 0) return;
             
-            const response = await fetch(scriptURL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-              },
-              body: formData
-            });
+            updateCloudIndicator('loading');
             
-            const result = await response.json();
-            
-            if (result.success) {
-              balance = 0;
-              updateBalanceDisplay();
-              scriptAvailable = true;
-              updateCloudIndicator('online');
-              showStatus('Новый пользователь создан!', 'success');
-              
-              // Сохраняем локально
-              updateLocalUserData();
-            } else {
-              throw new Error(result.error || 'Ошибка создания пользователя');
+            try {
+                const isAvailable = await checkScriptAvailability();
+                if (!isAvailable) {
+                    throw new Error('Сервер временно недоступен');
+                }
+                
+                // Получаем текущий баланс с сервера
+                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const getResponse = await fetch(getUrl);
+                const getResult = await getResponse.json();
+                
+                if (!getResult.success) {
+                    throw new Error(getResult.error || 'Ошибка получения баланса');
+                }
+                
+                const currentBalance = getResult.balance || 0;
+                const newBalance = currentBalance + pendingBalanceUpdate;
+                
+                const formData = new URLSearchParams();
+                formData.append('action', 'update');
+                formData.append('userId', userId);
+                formData.append('balance', newBalance);
+                formData.append('username', userName);
+                formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
+                
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Сбрасываем счетчики после успешной отправки
+                    pendingBalanceUpdate = 0;
+                    clickCounter = 0;
+                    lastServerUpdate = Date.now();
+                    scriptAvailable = true;
+                    updateCloudIndicator('online');
+                    showStatus('Баланс синхронизирован с облаком! ☁️', 'success');
+                } else {
+                    throw new Error(result.error || 'Ошибка обновления баланса');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка обновления баланса:', error);
+                scriptAvailable = false;
+                updateCloudIndicator('offline');
+                
+                // Планируем повторную попытку через 5 секунд
+                setTimeout(() => {
+                    if (pendingBalanceUpdate > 0) {
+                        sendBalanceUpdateToServer();
+                    }
+                }, 5000);
             }
-            
-          } catch (error) {
-            console.error('Ошибка создания пользователя:', error);
-            scriptAvailable = false;
-            updateCloudIndicator('offline');
-            
-            // Создаем пользователя локально
-            balance = 0;
-            updateBalanceDisplay();
-            updateLocalUserData();
-            showStatus('Пользователь создан локально 📱', 'warning');
-          }
+        }
+
+        // Добавьте интервал для принудительной синхронизации
+        setInterval(() => {
+            if (pendingBalanceUpdate > 0) {
+                sendBalanceUpdateToServer();
+            }
+        }, BATCH_UPDATE_DELAY);
+
+        // Также обновите функцию createNewUser для правильной инициализации
+        async function createNewUser() {
+            try {
+                const formData = new URLSearchParams();
+                formData.append('action', 'create');
+                formData.append('userId', userId);
+                formData.append('username', userName);
+                formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
+                formData.append('avatar', userAvatar);
+                formData.append('isTelegram', isTelegramWebApp.toString());
+                formData.append('balance', balance); // Отправляем текущий баланс
+                
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    scriptAvailable = true;
+                    updateCloudIndicator('online');
+                    showStatus('Новый пользователь создан!', 'success');
+                    
+                    // Сбрасываем ожидающие обновления
+                    pendingBalanceUpdate = 0;
+                    clickCounter = 0;
+                    lastServerUpdate = Date.now();
+                    
+                } else {
+                    throw new Error(result.error || 'Ошибка создания пользователя');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка создания пользователя:', error);
+                scriptAvailable = false;
+                updateCloudIndicator('offline');
+                
+                // Создаем пользователя локально
+                updateLocalUserData();
+                showStatus('Пользователь создан локально 📱', 'warning');
+            }
         }
         
         async function updateBalanceOnServer(amountToAdd) {
@@ -1924,60 +2005,21 @@
             
             // Мгновенно обновляем баланс локально
             balance += amountToAdd;
+            pendingBalanceUpdate += amountToAdd;
+            clickCounter++;
             updateBalanceDisplay();
             updateLocalUserData();
             
             // Показываем статус сразу
             showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
             
-            // Асинхронно обновляем на сервере (без ожидания)
-            updateCloudIndicator('loading');
+            // Проверяем условия для отправки на сервер
+            const now = Date.now();
+            const shouldUpdate = clickCounter >= CLICKS_BEFORE_UPDATE || 
+                                (now - lastServerUpdate) >= BATCH_UPDATE_DELAY;
             
-            try {
-                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const getResponse = await fetch(getUrl);
-                const getResult = await getResponse.json();
-                
-                if (!getResult.success) {
-                    throw new Error(getResult.error || 'Ошибка получения баланса');
-                }
-                
-                const currentBalance = getResult.balance || 0;
-                const newBalance = currentBalance + amountToAdd;
-                
-                const formData = new URLSearchParams();
-                formData.append('action', 'update');
-                formData.append('userId', userId);
-                formData.append('balance', newBalance);
-                formData.append('username', userName);
-                formData.append('telegramUsername', telegramUsername);
-                formData.append('firstName', telegramFirstName);
-                
-                // Отправляем запрос без ожидания ответа
-                fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                }).then(response => response.json())
-                .then(result => {
-                    if (result.success) {
-                        scriptAvailable = true;
-                        updateCloudIndicator('online');
-                    } else {
-                        throw new Error(result.error || 'Ошибка обновления баланса');
-                    }
-                }).catch(error => {
-                    console.error('Ошибка обновления баланса:', error);
-                    scriptAvailable = false;
-                    updateCloudIndicator('offline');
-                });
-                
-            } catch (error) {
-                console.error('Ошибка обновления баланса:', error);
-                scriptAvailable = false;
-                updateCloudIndicator('offline');
+            if (shouldUpdate && pendingBalanceUpdate > 0) {
+                await sendBalanceUpdateToServer();
             }
         }
         
