@@ -820,6 +820,13 @@
             font-size: 18px;
             margin-top: 5px;
         }
+
+        .upgrade-description {
+            font-size: 12px;
+            color: #a8a29e;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
     </style>
 </head>
 
@@ -1242,11 +1249,11 @@
         }
 
         function formatUpgradePrice(price) {
-            if (price >= 1) {
-                return price.toFixed(2);
-            } else {
-                return formatBalance(price);
+            // Для очень маленьких чисел используем научную нотацию
+            if (price < 0.000001) {
+                return price.toExponential(2).replace('e', 'E');
             }
+            return formatBalance(price);
         }
 
         function renderUpgrades() {
@@ -1257,7 +1264,8 @@
             
             upgrades.forEach(upgrade => {
                 const price = getUpgradePrice(upgrade);
-                const canAfford = balance >= price;
+                // Исправляем сравнение: используем Number для точного сравнения
+                const canAfford = Number(balance) >= Number(price);
                 
                 html += `
                     <div class="upgrade-item">
@@ -1266,9 +1274,11 @@
                             <div class="upgrade-owned">${upgrade.owned} шт.</div>
                         </div>
                         
+                        <div class="upgrade-description">${upgrade.description}</div>
+                        
                         <div class="upgrade-stats">
                             <div class="upgrade-bonus">+${formatBalance(upgrade.baseBonus)}/клик</div>
-                            <div class="upgrade-price">${formatUpgradePrice(price)}</div>
+                            <div class="upgrade-price">Цена: ${formatUpgradePrice(price)}</div>
                         </div>
                         
                         <button class="upgrade-btn" onclick="buyUpgrade('${upgrade.id}')" 
@@ -1282,13 +1292,15 @@
             container.innerHTML = html;
         }
 
+
         function buyUpgrade(upgradeId) {
             const upgrade = upgrades.find(u => u.id === upgradeId);
             if (!upgrade) return;
             
             const price = getUpgradePrice(upgrade);
             
-            if (balance >= price) {
+            // Исправляем сравнение: используем Number для точного сравнения
+            if (Number(balance) >= Number(price)) {
                 // Списание средств
                 balance -= price;
                 updateBalanceDisplay();
