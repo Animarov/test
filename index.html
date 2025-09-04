@@ -2029,24 +2029,50 @@
         
         // Новая функция для отправки обновления на сервер
         async function sendBalanceUpdateToServer() {
-            if (pendingBalanceUpdate === 0) return;
+            console.log('sendBalanceUpdateToServer called, pending:', pendingBalanceUpdate);
+            
+            if (pendingBalanceUpdate === 0) {
+                console.log('No pending updates');
+                return;
+            }
             
             updateCloudIndicator('loading');
             
             try {
                 const isAvailable = await checkScriptAvailability();
                 if (!isAvailable) {
+                    console.log('Server not available');
                     throw new Error('Сервер временно недоступен');
                 }
+                
+                // Получаем текущий баланс с сервера
+                console.log('Getting current balance from server...');
+                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const getResponse = await fetch(getUrl);
+                const getResult = await getResponse.json();
+                
+                console.log('Server response:', getResult);
+                
+                if (!getResult.success) {
+                    throw new Error(getResult.error || 'Ошибка получения баланса');
+                }
+                
+                const currentServerBalance = getResult.balance || 0;
+                const newServerBalance = currentServerBalance + pendingBalanceUpdate;
+                
+                console.log('Current server balance:', currentServerBalance);
+                console.log('Pending update:', pendingBalanceUpdate);
+                console.log('New server balance:', newServerBalance);
                 
                 const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
-                formData.append('balance', balance); // Отправляем текущий баланс
+                formData.append('balance', newServerBalance);
                 formData.append('username', userName);
                 formData.append('telegramUsername', telegramUsername);
                 formData.append('firstName', telegramFirstName);
                 
+                console.log('Sending update to server...');
                 const response = await fetch(scriptURL, {
                     method: 'POST',
                     headers: {
@@ -2056,6 +2082,7 @@
                 });
                 
                 const result = await response.json();
+                console.log('Update response:', result);
                 
                 if (result.success) {
                     // Сбрасываем счетчики после успешной отправки
@@ -2065,6 +2092,13 @@
                     scriptAvailable = true;
                     updateCloudIndicator('online');
                     showStatus('Баланс синхронизирован с облаком! ☁️', 'success');
+                    
+                    // Обновляем локальный баланс с серверного значения
+                    if (result.newBalance !== undefined) {
+                        balance = result.newBalance;
+                        updateBalanceDisplay();
+                        console.log('Local balance updated from server:', balance);
+                    }
                 } else {
                     throw new Error(result.error || 'Ошибка обновления баланса');
                 }
@@ -2077,6 +2111,7 @@
                 // Планируем повторную попытку через 5 секунд
                 setTimeout(() => {
                     if (pendingBalanceUpdate !== 0) {
+                        console.log('Retrying sendBalanceUpdateToServer...');
                         sendBalanceUpdateToServer();
                     }
                 }, 5000);
@@ -2154,10 +2189,8 @@
             updateBalanceDisplay();
             updateLocalUserData();
             
-            // Показываем статус сразу (только для положительных значений)
-            if (amountToAdd > 0) {
-                showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
-            }
+            // Показываем статус сразу
+            showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
             
             // Проверяем условия для отправки на сервер
             const now = Date.now();
