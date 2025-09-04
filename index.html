@@ -2042,7 +2042,7 @@
                 const formData = new URLSearchParams();
                 formData.append('action', 'update');
                 formData.append('userId', userId);
-                formData.append('balanceChange', pendingBalanceUpdate); // Изменяем на balanceChange
+                formData.append('balance', balance); // Отправляем текущий баланс
                 formData.append('username', userName);
                 formData.append('telegramUsername', telegramUsername);
                 formData.append('firstName', telegramFirstName);
@@ -2064,12 +2064,7 @@
                     lastServerUpdate = Date.now();
                     scriptAvailable = true;
                     updateCloudIndicator('online');
-                    
-                    // Обновляем баланс с сервера
-                    if (result.newBalance !== undefined) {
-                        balance = result.newBalance;
-                        updateBalanceDisplay();
-                    }
+                    showStatus('Баланс синхронизирован с облаком! ☁️', 'success');
                 } else {
                     throw new Error(result.error || 'Ошибка обновления баланса');
                 }
@@ -2152,24 +2147,19 @@
                 return;
             }
             
-            // Для кликов по монете - накапливаем изменения
+            // Мгновенно обновляем баланс локально
+            balance += amountToAdd;
+            pendingBalanceUpdate += amountToAdd;
+            clickCounter++;
+            updateBalanceDisplay();
+            updateLocalUserData();
+            
+            // Показываем статус сразу (только для положительных значений)
             if (amountToAdd > 0) {
-                balance += amountToAdd;
-                pendingBalanceUpdate += amountToAdd;
-                clickCounter++;
-                updateBalanceDisplay();
-                updateLocalUserData();
-                
-                // Показываем статус сразу
                 showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
             }
-            // Для покупок (отрицательные значения) - сразу отправляем
-            else if (amountToAdd < 0) {
-                pendingBalanceUpdate += amountToAdd;
-                await sendBalanceUpdateToServer();
-            }
             
-            // Проверяем условия для отправки на сервер (только для положительных изменений)
+            // Проверяем условия для отправки на сервер
             const now = Date.now();
             const shouldUpdate = clickCounter >= CLICKS_BEFORE_UPDATE || 
                                 (now - lastServerUpdate) >= BATCH_UPDATE_DELAY;
