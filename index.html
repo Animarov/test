@@ -1299,39 +1299,42 @@
         return Number(balance) + tolerance >= Number(price);
         }
 
-        function buyUpgrade(upgradeId) {
-        const upgrade = upgrades.find(u => u.id === upgradeId);
-        if (!upgrade) return;
-        
-        const price = getUpgradePrice(upgrade);
-        
-        // Используем функцию canAfford для точного сравнения
-        if (canAfford(price)) {
-            // Списание средств
-            balance -= price;
-            updateBalanceDisplay();
+        async function buyUpgrade(upgradeId) {
+            const upgrade = upgrades.find(u => u.id === upgradeId);
+            if (!upgrade) return;
             
-            // Увеличиваем количество улучшений
-            upgrade.owned++;
+            const price = getUpgradePrice(upgrade);
             
-            // Сохраняем улучшение на сервере
-            saveUpgradeToServer(upgradeId, upgrade.owned);
-            
-            // Пересчитываем силу клика
-            calculateClickPower();
-            
-            // Сохраняем изменения локально
-            saveUpgrades();
-            updateLocalUserData();
-            
-            // Обновляем отображение
-            renderUpgrades();
-            
-            showStatus(`Куплено: ${upgrade.name}!
+            // Используем функцию canAfford для точного сравнения
+            if (canAfford(price)) {
+                // Списание средств
+                balance -= price;
+                updateBalanceDisplay();
+                
+                // Увеличиваем количество улучшений
+                upgrade.owned++;
+                
+                // Сохраняем улучшение на сервере
+                await saveUpgradeToServer(upgradeId, upgrade.owned);
+                
+                // ОБНОВЛЯЕМ БАЛАНС НА СЕРВЕРЕ
+                await updateBalanceOnServer(-price); // Отправляем отрицательное значение
+                
+                // Пересчитываем силу клика
+                calculateClickPower();
+                
+                // Сохраняем изменения локально
+                saveUpgrades();
+                updateLocalUserData();
+                
+                // Обновляем отображение
+                renderUpgrades();
+                
+                showStatus(`Куплено: ${upgrade.name}!
         Сила клика: +${formatBalance(clickPower)}`, 'success');
-        } else {
-            showStatus('Недостаточно средств для покупки', 'error');
-        }
+            } else {
+                showStatus('Недостаточно средств для покупки', 'error');
+            }
         }
 
         async function saveUpgradeToServer(upgradeId, count) {
@@ -2081,22 +2084,28 @@
                 return;
             }
             
-            // Мгновенно обновляем баланс локально
-            balance += amountToAdd;
-            pendingBalanceUpdate += amountToAdd;
-            clickCounter++;
-            updateBalanceDisplay();
-            updateLocalUserData();
-            
-            // Показываем статус сразу
-            showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
+            // Мгновенно обновляем баланс локально (только для положительных значений)
+            if (amountToAdd > 0) {
+                balance += amountToAdd;
+                pendingBalanceUpdate += amountToAdd;
+                clickCounter++;
+                updateBalanceDisplay();
+                updateLocalUserData();
+                
+                // Показываем статус сразу (только для положительных значений)
+                showStatus(`+${formatBalance(amountToAdd)} монет! 💰`, 'success');
+            } else {
+                // Для отрицательных значений (покупок) сразу отправляем на сервер
+                pendingBalanceUpdate += amountToAdd;
+                await sendBalanceUpdateToServer();
+            }
             
             // Проверяем условия для отправки на сервер
             const now = Date.now();
             const shouldUpdate = clickCounter >= CLICKS_BEFORE_UPDATE || 
                                 (now - lastServerUpdate) >= BATCH_UPDATE_DELAY;
             
-            if (shouldUpdate && pendingBalanceUpdate > 0) {
+            if (shouldUpdate && pendingBalanceUpdate !== 0) {
                 await sendBalanceUpdateToServer();
             }
         }
