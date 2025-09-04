@@ -837,7 +837,7 @@
             <div class="loading-coin-content">₿</div>
         </div>
         <div class="loading-text" id="loading-text">Загрузка</div>
-        <div class="loading-subtext" id="loading-subtext">Инициализация...</div>
+        <div class="loading-subtext" id="loading-subtext">Подключение к серверу...</div>
     </div>
 
     <div class="container" id="main-container">
@@ -1082,7 +1082,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbxFnOApf_I3yGapBqH4wZAkrCCwXeR9ZW538Nwyb_iJKEYQrvs_2fv5nXBVM_C1vm089Q/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbwe0YtIIlACLIsXQ-eMUWgwLJLmMGFSbGmRgUrsIPjzcQ8oEownLIn5ws5znh_l_BSvcw/exec';
         let scriptAvailable = false;
     
         let pendingBalanceUpdate = 0;
@@ -1650,7 +1650,7 @@
                 }
                 
                 let attempts = 0;
-                const maxAttempts = 5; // Уменьшено количество попыток
+                const maxAttempts = 10;
                 const checkInterval = setInterval(() => {
                     attempts++;
                     
@@ -1677,7 +1677,7 @@
                         console.log('Telegram initialization timeout');
                         resolve(null);
                     }
-                }, 300); // Увеличен интервал проверки
+                }, 200);
             });
         }
         
@@ -1693,7 +1693,12 @@
             console.log('Initializing user data...');
             startLoadingAnimation();
             
-            // Сначала пытаемся получить данные Telegram
+            // Загружаем локальные данные
+            loadLocalData();
+            
+            // Загружаем улучшения
+            loadUpgrades();
+            
             let userData = getTelegramUserData();
             
             if (!userData) {
@@ -1712,43 +1717,19 @@
                 updateUserProfile();
                 updateDebugInfo();
                 
-                // Загружаем локальные данные
-                loadLocalData();
-                
-                // Загружаем улучшения
-                loadUpgrades();
+                // Загружаем данные пользователя с сервера
+                await loadUserData();
                 
                 userInitialized = true;
                 
+                // Инициализируем лотерею после загрузки пользователя
+                initLottery();
+                
                 // Показываем основной контент
                 showMainContent();
-                
-                // Пытаемся подключиться к серверу в фоновом режиме
-                setTimeout(() => {
-                    loadUserData();
-                }, 1000);
                 
             } else {
-                // Если Telegram не доступен, создаем тестового пользователя
-                userId = 'test_' + Math.random().toString(36).substr(2, 9);
-                userName = 'Тестовый пользователь';
-                userAvatar = 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
-                
-                updateUserProfile();
-                updateDebugInfo();
-                
-                // Загружаем локальные данные
-                loadLocalData();
-                
-                // Загружаем улучшения
-                loadUpgrades();
-                
-                userInitialized = true;
-                
-                // Показываем основной контент
-                showMainContent();
-                
-                showStatus('Режим тестирования (Telegram не обнаружен)', 'warning');
+                showErrorScreen('Приложение работает только в Telegram. Откройте его через Telegram бота.');
             }
         }
         
@@ -1868,10 +1849,7 @@
         
         async function checkScriptAvailability() {
             try {
-                const response = await fetch(scriptURL + '?action=test&t=' + Date.now(), {
-                    method: 'HEAD',
-                    timeout: 5000 // Таймаут 5 секунд
-                });
+                const response = await fetch(scriptURL + '?action=test&t=' + Date.now());
                 return response.ok;
             } catch (error) {
                 console.log('Google Apps Script недоступен');
@@ -1891,7 +1869,7 @@
                 }
                 
                 const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const response = await fetch(url, {timeout: 10000});
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -1938,7 +1916,7 @@
             
             try {
                 const url = `${scriptURL}?action=get-upgrades&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const response = await fetch(url, {timeout: 10000});
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success && result.upgrades) {
@@ -1971,7 +1949,7 @@
                 
                 // Получаем текущий баланс с сервера
                 const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const getResponse = await fetch(getUrl, {timeout: 10000});
+                const getResponse = await fetch(getUrl);
                 const getResult = await getResponse.json();
                 
                 if (!getResult.success) {
@@ -1994,8 +1972,7 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData,
-                    timeout: 10000
+                    body: formData
                 });
                 
                 const result = await response.json();
@@ -2053,8 +2030,7 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData,
-                    timeout: 10000
+                    body: formData
                 });
                 
                 const result = await response.json();
@@ -2147,7 +2123,7 @@
                 }
                 
                 const url = `${scriptURL}?action=leaderboard&t=${Date.now()}`;
-                const response = await fetch(url, {timeout: 10000});
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success && result.leaderboard) {
@@ -2280,8 +2256,7 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData,
-                    timeout: 10000
+                    body: formData
                 });
                 
                 const result = await response.json();
@@ -2368,7 +2343,7 @@
                 }
                 
                 const url = `${scriptURL}?action=transfers&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const response = await fetch(url, {timeout: 10000});
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success && result.transfers) {
@@ -2494,7 +2469,7 @@
             
             if (tabName === 'game') {
                 document.querySelector('.lottery-tab:nth-child(1)').classList.add('active');
-                document.getElementById('lottery-game-tab').style.display = 'block';
+                document.getElementById('lottery-game-tab').style.display = 'block');
                 loadLotteryParticipants();
             } else {
                 document.querySelector('.lottery-tab:nth-child(2)').classList.add('active');
@@ -2513,7 +2488,7 @@
                 }
                 
                 const url = `${scriptURL}?action=lottery&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const response = await fetch(url, {timeout: 10000});
+                const response = await fetch(url);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -2653,8 +2628,7 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData,
-                    timeout: 10000
+                    body: formData
                 });
                 
                 const result = await response.json();
@@ -2736,8 +2710,7 @@
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    body: formData,
-                    timeout: 10000
+                    body: formData
                 });
                 
                 const result = await response.json();
@@ -2762,7 +2735,7 @@
                 finishLotteryLocally();
             }
             
-            // Очищаем участников текуной лотереи
+            // Очищаем участников текущей лотереи
             currentLotteryParticipants = [];
             localData.lottery.participants = [];
             localData.lottery.lastReset = Date.now();
