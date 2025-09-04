@@ -1082,7 +1082,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbxnokJQqlxoosCrWfvkqV2MvbuZKPCsahtFRHG8zCIkWh_BwoliiWH_MaZuuURPEqfOvA/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbxgwB34gVI3i4kTqqdzXJN9gFh_P-5JF40roOIZEch_f1EzDTEFbnmoCp6Q1nd82sSN/exec';
         let scriptAvailable = false;
     
         let pendingBalanceUpdate = 0;
@@ -1293,38 +1293,74 @@
         }
 
 
-        function buyUpgrade(upgradeId) {
-            const upgrade = upgrades.find(u => u.id === upgradeId);
-            if (!upgrade) return;
-            
-            const price = getUpgradePrice(upgrade);
-            
-            // Исправляем сравнение: используем Number для точного сравнения
-            if (Number(balance) >= Number(price)) {
-                // Списание средств
-                balance -= price;
-                updateBalanceDisplay();
-                
-                // Увеличиваем количество улучшений
-                upgrade.owned++;
-                
-                // Пересчитываем силу клика
-                calculateClickPower();
-                
-                // Сохраняем изменения
-                saveUpgrades();
-                updateLocalUserData();
-                
-                // Обновляем отображение
-                renderUpgrades();
-                
-                showStatus(`Куплено: ${upgrade.name}!
-Сила клика: +${formatBalance(clickPower)}`, 'success');
-            } else {
-                showStatus('Недостаточно средств для покупки', 'error');
-            }
+        function canAfford(price) {
+        // Используем точное сравнение с допуском
+        const tolerance = 1e-12; // Допуск для сравнения чисел с плавающей запятой
+        return Number(balance) + tolerance >= Number(price);
         }
 
+        function buyUpgrade(upgradeId) {
+        const upgrade = upgrades.find(u => u.id === upgradeId);
+        if (!upgrade) return;
+        
+        const price = getUpgradePrice(upgrade);
+        
+        // Используем функцию canAfford для точного сравнения
+        if (canAfford(price)) {
+            // Списание средств
+            balance -= price;
+            updateBalanceDisplay();
+            
+            // Увеличиваем количество улучшений
+            upgrade.owned++;
+            
+            // Сохраняем улучшение на сервере
+            saveUpgradeToServer(upgradeId, upgrade.owned);
+            
+            // Пересчитываем силу клика
+            calculateClickPower();
+            
+            // Сохраняем изменения локально
+            saveUpgrades();
+            updateLocalUserData();
+            
+            // Обновляем отображение
+            renderUpgrades();
+            
+            showStatus(`Куплено: ${upgrade.name}!
+        Сила клика: +${formatBalance(clickPower)}`, 'success');
+        } else {
+            showStatus('Недостаточно средств для покупки', 'error');
+        }
+        }
+
+        async function saveUpgradeToServer(upgradeId, count) {
+        if (!userId) return;
+        
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'update-upgrade');
+            formData.append('userId', userId);
+            formData.append('upgradeId', upgradeId);
+            formData.append('count', count);
+            
+            const response = await fetch(scriptURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+            console.error('Ошибка сохранения улучшения на сервере:', result.error);
+            }
+        } catch (error) {
+            console.error('Ошибка отправки улучшения на сервер:', error);
+        }
+        }
         // Анимация загрузки
         let loadingAnimation = null;
         let loadingDots = 0;
@@ -1843,7 +1879,7 @@
             try {
                 const isAvailable = await checkScriptAvailability();
                 if (!isAvailable) {
-                    throw new Error('Google Apps Script недоступен');
+                throw new Error('Google Apps Script недоступен');
                 }
                 
                 const url = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
@@ -1851,23 +1887,26 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    if (result.balance !== undefined) {
-                        balance = result.balance;
-                        updateBalanceDisplay();
-                    }
-                    
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus('Данные загружены из облака! ☁️', 'success');
-                    
-                    // Сохраняем данные локально
-                    updateLocalUserData();
+                if (result.balance !== undefined) {
+                    balance = result.balance;
+                    updateBalanceDisplay();
+                }
+                
+                // Загружаем улучшения с сервера
+                await loadUpgradesFromServer();
+                
+                scriptAvailable = true;
+                updateCloudIndicator('online');
+                showStatus('Данные загружены из облака! ☁️', 'success');
+                
+                // Сохраняем данные локально
+                updateLocalUserData();
                 } else {
-                    if (result.error === 'User not found') {
-                        await createNewUser();
-                    } else {
-                        throw new Error(result.error || 'Ошибка загрузки данных');
-                    }
+                if (result.error === 'User not found') {
+                    await createNewUser();
+                } else {
+                    throw new Error(result.error || 'Ошибка загрузки данных');
+                }
                 }
                 
             } catch (error) {
@@ -1877,14 +1916,38 @@
                 
                 // Используем локальные данные при ошибке
                 if (localData.users[userId]) {
-                    balance = localData.users[userId].balance;
-                    updateBalanceDisplay();
-                    showStatus('Используются локальные данные 📱', 'warning');
+                balance = localData.users[userId].balance;
+                updateBalanceDisplay();
+                showStatus('Используются локальные данные 📱', 'warning');
                 } else {
-                    await createNewUser();
+                await createNewUser();
                 }
             }
-        }
+            }
+
+            async function loadUpgradesFromServer() {
+            if (!userId) return;
+            
+            try {
+                const url = `${scriptURL}?action=get-upgrades&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                
+                if (result.success && result.upgrades) {
+                // Обновляем локальные данные улучшений
+                upgrades.forEach(upgrade => {
+                    if (result.upgrades[upgrade.id] !== undefined) {
+                    upgrade.owned = result.upgrades[upgrade.id];
+                    }
+                });
+                
+                calculateClickPower();
+                renderUpgrades();
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки улучшений:', error);
+            }
+            }
         
         // Новая функция для отправки обновления на сервер
         async function sendBalanceUpdateToServer() {
@@ -1972,30 +2035,33 @@
                 formData.append('firstName', telegramFirstName);
                 formData.append('avatar', userAvatar);
                 formData.append('isTelegram', isTelegramWebApp.toString());
-                formData.append('balance', balance); // Отправляем текущий баланс
+                formData.append('balance', balance);
                 
                 const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: formData
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    scriptAvailable = true;
-                    updateCloudIndicator('online');
-                    showStatus('Новый пользователь создан!', 'success');
-                    
-                    // Сбрасываем ожидающие обновления
-                    pendingBalanceUpdate = 0;
-                    clickCounter = 0;
-                    lastServerUpdate = Date.now();
-                    
+                // Создаем запись улучшений для нового пользователя
+                await saveUpgradeToServer('mouse_avito', 0);
+                
+                scriptAvailable = true;
+                updateCloudIndicator('online');
+                showStatus('Новый пользователь создан!', 'success');
+                
+                // Сбрасываем ожидающие обновления
+                pendingBalanceUpdate = 0;
+                clickCounter = 0;
+                lastServerUpdate = Date.now();
+                
                 } else {
-                    throw new Error(result.error || 'Ошибка создания пользователя');
+                throw new Error(result.error || 'Ошибка создания пользователя');
                 }
                 
             } catch (error) {
@@ -2007,7 +2073,7 @@
                 updateLocalUserData();
                 showStatus('Пользователь создан локально 📱', 'warning');
             }
-        }
+            }
         
         async function updateBalanceOnServer(amountToAdd) {
             if (!userId) {
