@@ -1197,7 +1197,7 @@
         let telegramFirstName = "";
         let userInitialized = false;
         
-        let scriptURL = 'https://script.google.com/macros/s/AKfycbxZvmcJaHNVtpPizBjWJ9JfPwAm7bZKkN2Pw3c0-7fytn-dSB8FvLcODPrKXS8MBHcerg/exec';
+        let scriptURL = 'https://script.google.com/macros/s/AKfycbxoVAujzCQ-FZps2IKZOK6ErzsNTIwPNyx_GcIscJAOgf1TFP_IyNFoAB9m57Pyj0F7BQ/exec';
         let scriptAvailable = false;
     
         let pendingBalanceUpdate = 0;
@@ -1238,64 +1238,37 @@
                     throw new Error('Сервер временно недоступен');
                 }
                 
-                // Получаем текущий баланс с сервера для проверки
-                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
-                const getResponse = await fetch(getUrl);
-                const getResult = await getResponse.json();
+                // Используем существующее действие 'update' вместо 'update-balance'
+                const formData = new URLSearchParams();
+                formData.append('action', 'update');
+                formData.append('userId', userId);
+                formData.append('balance', balance);
+                formData.append('username', userName);
+                formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
                 
-                if (!getResult.success) {
-                    throw new Error(getResult.error || 'Ошибка получения баланса с сервера');
-                }
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
                 
-                const serverBalance = getResult.balance || 0;
-                const localBalance = balance;
+                const result = await response.json();
                 
-                console.log('Server balance:', serverBalance, 'Local balance:', localBalance);
-                
-                // Если балансы отличаются, обновляем серверный
-                if (Math.abs(serverBalance - localBalance) > 1e-12) {
-                    const formData = new URLSearchParams();
-                    formData.append('action', 'update-balance');
-                    formData.append('userId', userId);
-                    formData.append('balance', localBalance);
-                    formData.append('username', userName);
-                    formData.append('telegramUsername', telegramUsername);
-                    formData.append('firstName', telegramFirstName);
+                if (result.success) {
+                    // Сбрасываем ожидающие обновления
+                    pendingBalanceUpdate = 0;
+                    clickCounter = 0;
+                    lastServerUpdate = Date.now();
                     
-                    const response = await fetch(scriptURL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
-                        body: formData
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        // Сбрасываем ожидающие обновления
-                        pendingBalanceUpdate = 0;
-                        clickCounter = 0;
-                        lastServerUpdate = Date.now();
-                        
-                        scriptAvailable = true;
-                        updateCloudIndicator('online');
-                        showStatus('Баланс успешно сохранен на сервере! ☁️', 'success');
-                        
-                        // Обновляем локальный баланс с серверного значения (на случай округления)
-                        if (result.newBalance !== undefined) {
-                            balance = result.newBalance;
-                            updateBalanceDisplay();
-                        }
-                        
-                    } else {
-                        throw new Error(result.error || 'Ошибка сохранения баланса');
-                    }
-                } else {
-                    // Балансы уже синхронизированы
                     scriptAvailable = true;
                     updateCloudIndicator('online');
-                    showStatus('Баланс уже синхронизирован с сервером! ✅', 'success');
+                    showStatus('Баланс успешно сохранен на сервере! ☁️', 'success');
+                    
+                } else {
+                    throw new Error(result.error || 'Ошибка сохранения баланса');
                 }
                 
             } catch (error) {
