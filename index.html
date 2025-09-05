@@ -32,24 +32,13 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 0;
+            z-index: 1488;
             overflow: hidden;
         }
         
         .leaf {
-            position: absolute;
-            top: -100px;
-            width: 30px;
-            height: 30px;
-            pointer-events: none;
-            z-index: 0;
-            opacity: 0.7;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            animation: 
-                fall linear infinite,
-                sway ease-in-out infinite;
+            background-image: url('https://i.postimg.cc/w7dszFQk/photo-2025-08-30-12-22-24.jpg');
+            border-radius: 50%;
         }
         
         /* Разные типы листьев */
@@ -68,7 +57,7 @@
         /* Анимация падения */
         @keyframes fall {
             0% {
-                transform: translateX(0) translateY(-100px) rotate(0deg);
+                transform: translateY(-100px) rotate(0deg);
                 opacity: 0;
             }
             10% {
@@ -78,7 +67,7 @@
                 opacity: 0.6;
             }
             100% {
-                transform: translateX(var(--end-x)) translateY(100vh) rotate(var(--end-rotate));
+                transform: translateY(100vh) rotate(var(--end-rotate));
                 opacity: 0;
             }
         }
@@ -2986,52 +2975,47 @@
                 document.body.appendChild(leavesContainer);
             }
             
-            const leafTypes = ['maple', 'oak', 'aspen'];
-            
             // Создаем листья
             for (let i = 0; i < 15; i++) {
-                createLeaf(leavesContainer, leafTypes);
+                createLeaf(leavesContainer);
             }
             
             // Периодически добавляем новые листья
             setInterval(() => {
                 const currentLeaves = document.querySelectorAll('.leaf');
                 if (currentLeaves.length < 20) {
-                    createLeaf(leavesContainer, leafTypes);
+                    createLeaf(leavesContainer);
                 }
             }, 3000);
         }
         
-        function createLeaf(container, leafTypes) {
+        function createLeaf(container) {
             const leaf = document.createElement('div');
             leaf.className = 'leaf';
             
-            // Случайный тип листа
-            const leafType = leafTypes[Math.floor(Math.random() * leafTypes.length)];
-            leaf.classList.add(leafType);
-            
             // Случайные параметры анимации
-            const size = 20 + Math.random() * 20;
+            const size = 30 + Math.random() * 40; // Больший разброс размеров
             const startX = Math.random() * 100;
             const endX = (Math.random() - 0.5) * 200;
-            const fallDuration = 8 + Math.random() * 12;
-            const swayDuration = 2 + Math.random() * 3;
-            const animationDelay = Math.random() * 5;
-            const endRotate = (Math.random() - 0.5) * 360;
+            const fallDuration = 10 + Math.random() * 15; // Более медленное падение
+            const swayDuration = 3 + Math.random() * 4;
+            const animationDelay = Math.random() * 8;
+            const endRotate = (Math.random() - 0.5) * 720; // Больше вращения
             
-            // Устанавливаем CSS переменные для анимации
-            leaf.style.setProperty('--end-x', endX + 'px');
-            leaf.style.setProperty('--end-rotate', endRotate + 'deg');
+            // Устанавливаем размер и позицию
             leaf.style.width = size + 'px';
             leaf.style.height = size + 'px';
-            leaf.style.opacity = (0.3 + Math.random() * 0.4).toString();
             leaf.style.left = startX + 'vw';
+            leaf.style.opacity = (0.4 + Math.random() * 0.4).toString();
             
             // Устанавливаем анимацию через style
             leaf.style.animation = `
                 fall ${fallDuration}s linear ${animationDelay}s infinite,
                 sway ${swayDuration}s ease-in-out ${animationDelay}s infinite
             `;
+            
+            // Добавляем немного тени для лучшего визуального эффекта
+            leaf.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3)';
             
             container.appendChild(leaf);
             
