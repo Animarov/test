@@ -2978,12 +2978,15 @@
         });
         // Функция для создания падающих листьев
         function createFallingLeaves() {
-            const leafTypes = ['maple', 'oak', 'aspen'];
+            // Создаем контейнер для листьев, если его еще нет
+            let leavesContainer = document.querySelector('.leaves-container');
+            if (!leavesContainer) {
+                leavesContainer = document.createElement('div');
+                leavesContainer.className = 'leaves-container';
+                document.body.appendChild(leavesContainer);
+            }
             
-            // Создаем контейнер для листьев
-            const leavesContainer = document.createElement('div');
-            leavesContainer.className = 'leaves-container';
-            document.body.appendChild(leavesContainer);
+            const leafTypes = ['maple', 'oak', 'aspen'];
             
             // Создаем листья
             for (let i = 0; i < 15; i++) {
@@ -2992,7 +2995,8 @@
             
             // Периодически добавляем новые листья
             setInterval(() => {
-                if (document.querySelectorAll('.leaf').length < 20) {
+                const currentLeaves = document.querySelectorAll('.leaf');
+                if (currentLeaves.length < 20) {
                     createLeaf(leavesContainer, leafTypes);
                 }
             }, 3000);
@@ -3018,15 +3022,16 @@
             // Устанавливаем CSS переменные для анимации
             leaf.style.setProperty('--end-x', endX + 'px');
             leaf.style.setProperty('--end-rotate', endRotate + 'deg');
-            leaf.style.setProperty('--fall-duration', fallDuration + 's');
-            leaf.style.setProperty('--sway-duration', swayDuration + 's');
-            leaf.style.setProperty('--animation-delay', animationDelay + 's');
-            
-            // Устанавливаем позицию и размер
-            leaf.style.left = startX + 'vw';
             leaf.style.width = size + 'px';
             leaf.style.height = size + 'px';
             leaf.style.opacity = (0.3 + Math.random() * 0.4).toString();
+            leaf.style.left = startX + 'vw';
+            
+            // Устанавливаем анимацию через style
+            leaf.style.animation = `
+                fall ${fallDuration}s linear ${animationDelay}s infinite,
+                sway ${swayDuration}s ease-in-out ${animationDelay}s infinite
+            `;
             
             container.appendChild(leaf);
             
@@ -3038,9 +3043,10 @@
             }, (fallDuration + animationDelay) * 1000);
         }
         
-        // Запускаем анимацию листьев после загрузки
-        document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(createFallingLeaves, 1000);
+        // Запускаем анимацию листьев после полной загрузки страницы
+        window.addEventListener('load', function() {
+            // Небольшая задержка для уверенности, что все загружено
+            setTimeout(createFallingLeaves, 500);
         });
     </script>
 </body>
