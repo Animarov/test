@@ -951,79 +951,80 @@
 
     <div class="container" id="main-container">
         <div id="main-menu-screen" class="screen active">
-            <div class="header">
-                <div class="user-profile" id="user-profile">
-                    <img class="user-profile-avatar" id="user-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
-                    <div class="user-profile-info">
-                        <div class="user-profile-name" id="user-name">Загрузка Telegram...</div>
-                        <div class="user-profile-id">ID: <span id="user-id">-</span></div>
-                    </div>
-                </div>
-                
-                <div class="balance">
-                    <div class="balance-header">
-                        <div class="balance-label">
-                            Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span>
-                        </div>
-                        <button class="save-balance-btn" onclick="saveBalanceToServer()" title="Сохранить текущий баланс на сервере">
-                            💾 Сохранить
-                        </button>
-                    </div>
-                    <div class="balance-amount" id="balance">0.000000000</div>
-                </div>
-            
-            <div class="main-menu">
-                <div class="menu-row">
-                    <button class="menu-btn" onclick="showScreen('top-screen')">
-                        <div class="menu-icon">🏆</div>
-                        Топ
-                    </button>
-                    
-                    <button class="menu-btn" onclick="showScreen('shop-screen')">
-                        <div class="menu-icon">🛒</div>
-                        Магазин
-                    </button>
-                    
-                    <button class="menu-btn" onclick="showScreen('games-screen')">
-                        <div class="menu-icon">🎮</div>
-                        Игры
-                    </button>
-                </div>
-                
-                <div class="menu-row">
-                    <button class="menu-btn" onclick="showScreen('transfer-screen')">
-                        <div class="menu-icon">↗️</div>
-                        Перевести
-                    </button>
-                    
-                    <button class="menu-btn" onclick="showScreen('catalog-screen')">
-                        <div class="menu-icon">📦</div>
-                        Каталог
-                    </button>
-                    
-                    <button class="menu-btn" onclick="showScreen('referrals-screen')">
-                        <div class="menu-icon">👥</div>
-                        Рефералы
-                    </button>
-                </div>
-            </div>
-            
-            <div class="coin-section">
-                <div class="coin-img" id="coin">
-                    <div class="coin-content">    </div>
-                </div>
-            </div>
-            
-            <div class="status" id="status"></div>
-            <div class="debug-info" id="debug" style="display: none;">
-                <div>Отладка: кликните по монете</div>
-                <div>Баланс: <span id="debug-balance">0.000000000</span></div>
-                <div>UserID: <span id="debug-userid">не установлен</span></div>
-                <div>Имя: <span id="debug-username">-</span></div>
-                <div>Telegram: <span id="debug-telegram">✗</span></div>
-                <div>Облако: <span id="debug-cloud">✗</span></div>
+    <div class="header">
+        <div class="user-profile" id="user-profile">
+            <img class="user-profile-avatar" id="user-avatar" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+            <div class="user-profile-info">
+                <div class="user-profile-name" id="user-name">Загрузка Telegram...</div>
+                <div class="user-profile-id">ID: <span id="user-id">-</span></div>
             </div>
         </div>
+        
+        <div class="balance">
+            <div class="balance-header">
+                <div class="balance-label">
+                    Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span>
+                </div>
+                <button class="save-balance-btn" onclick="saveBalanceToServer()" title="Сохранить текущий баланс на сервере">
+                    💾 Сохранить
+                </button>
+            </div>
+            <div class="balance-amount" id="balance">0.000000000</div>
+        </div>
+    </div> <!-- Закрываем div.header здесь -->
+    
+    <div class="main-menu">
+        <div class="menu-row">
+            <button class="menu-btn" onclick="showScreen('top-screen')">
+                <div class="menu-icon">🏆</div>
+                Топ
+            </button>
+            
+            <button class="menu-btn" onclick="showScreen('shop-screen')">
+                <div class="menu-icon">🛒</div>
+                Магазин
+            </button>
+            
+            <button class="menu-btn" onclick="showScreen('games-screen')">
+                <div class="menu-icon">🎮</div>
+                Игры
+            </button>
+        </div>
+        
+        <div class="menu-row">
+            <button class="menu-btn" onclick="showScreen('transfer-screen')">
+                <div class="menu-icon">↗️</div>
+                Перевести
+            </button>
+            
+            <button class="menu-btn" onclick="showScreen('catalog-screen')">
+                <div class="menu-icon">📦</div>
+                Каталог
+            </button>
+            
+            <button class="menu-btn" onclick="showScreen('referrals-screen')">
+                <div class="menu-icon">👥</div>
+                Рефералы
+            </button>
+        </div>
+    </div>
+    
+    <div class="coin-section">
+        <div class="coin-img" id="coin">
+            <div class="coin-content">    </div>
+        </div>
+    </div>
+    
+    <div class="status" id="status"></div>
+    <div class="debug-info" id="debug" style="display: none;">
+        <div>Отладка: кликните по монете</div>
+        <div>Баланс: <span id="debug-balance">0.000000000</span></div>
+        <div>UserID: <span id="debug-userid">не установлен</span></div>
+        <div>Имя: <span id="debug-username">-</span></div>
+        <div>Telegram: <span id="debug-telegram">✗</span></div>
+        <div>Облако: <span id="debug-cloud">✗</span></div>
+    </div>
+</div>
 
         <div id="top-screen" class="screen">
             <button class="back-btn" onclick="showScreen('main-menu-screen')">← Назад</button>
