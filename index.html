@@ -308,7 +308,14 @@
             font-size: 18px;
             margin-bottom: 6px;
         }
-        
+        .menu-icon-img {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            border: 2px solid rgba(251, 146, 60, 0.3);
+        }
         .coin-section {
             margin-top: auto;
             padding: 20px 0;
@@ -994,39 +1001,39 @@
     </div> <!-- Закрываем div.header здесь -->
     
     <div class="main-menu">
-        <div class="menu-row">
-            <button class="menu-btn" onclick="showScreen('top-screen')">
-                <div class="menu-icon">🏆</div>
-                Топ
-            </button>
-            
-            <button class="menu-btn" onclick="showScreen('shop-screen')">
-                <div class="menu-icon">🛒</div>
-                Магазин
-            </button>
-            
-            <button class="menu-btn" onclick="showScreen('games-screen')">
-                <div class="menu-icon">🎮</div>
-                Игры
-            </button>
-        </div>
+    <div class="menu-row">
+        <button class="menu-btn" onclick="showScreen('top-screen')">
+            <img src="https://i.postimg.cc/SRWT258M/Picsart-25-09-05-23-39-54-713.jpg" class="menu-icon-img" alt="Топ">
+            Топ
+        </button>
         
-        <div class="menu-row">
-            <button class="menu-btn" onclick="showScreen('transfer-screen')">
-                <div class="menu-icon">↗️</div>
-                Перевести
-            </button>
-            
-            <button class="menu-btn" onclick="showScreen('catalog-screen')">
-                <div class="menu-icon">📦</div>
-                Каталог
-            </button>
-            
-            <button class="menu-btn" onclick="showScreen('referrals-screen')">
-                <div class="menu-icon">👥</div>
-                Рефералы
-            </button>
-        </div>
+        <button class="menu-btn" onclick="showScreen('shop-screen')">
+            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=🛒" class="menu-icon-img" alt="Магазин">
+            Магазин
+        </button>
+        
+        <button class="menu-btn" onclick="showScreen('games-screen')">
+            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=🎮" class="menu-icon-img" alt="Игры">
+            Игры
+        </button>
+    </div>
+    
+    <div class="menu-row">
+        <button class="menu-btn" onclick="showScreen('transfer-screen')">
+            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=↗️" class="menu-icon-img" alt="Перевести">
+            Перевести
+        </button>
+        
+        <button class="menu-btn" onclick="showScreen('catalog-screen')">
+            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=📦" class="menu-icon-img" alt="Каталог">
+            Каталог
+        </button>
+        
+        <button class="menu-btn" onclick="showScreen('referrals-screen')">
+            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=👥" class="menu-icon-img" alt="Рефералы">
+            Рефералы
+        </button>
+    </div>
     </div>
     
     <div class="coin-section">
