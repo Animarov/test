@@ -292,6 +292,8 @@
             min-height: 65px;
             backdrop-filter: blur(10px);
             box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
         }
         
         .menu-btn:hover {
@@ -299,7 +301,32 @@
             transform: translateY(-1px);
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
         }
-        
+        .menu-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        .menu-btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .menu-btn-text {
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
         .menu-btn:active {
             transform: translateY(0);
         }
@@ -1002,36 +1029,48 @@
     
     <div class="main-menu">
     <div class="menu-row">
-        <button class="menu-btn" onclick="showScreen('top-screen')">
-            <img src="https://i.postimg.cc/SRWT258M/Picsart-25-09-05-23-39-54-713.jpg" class="menu-icon-img" alt="Топ">
-            Топ
+        <button class="menu-btn" onclick="showScreen('top-screen')" style="--bg-image: url('https://i.postimg.cc/SRWT258M/Picsart-25-09-05-23-39-54-713.jpg')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">🏆</div>
+                <div class="menu-btn-text">Топ</div>
+            </div>
         </button>
         
-        <button class="menu-btn" onclick="showScreen('shop-screen')">
-            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=🛒" class="menu-icon-img" alt="Магазин">
-            Магазин
+        <button class="menu-btn" onclick="showScreen('shop-screen')" style="--bg-image: url('https://via.placeholder.com/150/ffd54f/7c2d12?text=Магазин')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">🛒</div>
+                <div class="menu-btn-text">Магазин</div>
+            </div>
         </button>
         
-        <button class="menu-btn" onclick="showScreen('games-screen')">
-            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=🎮" class="menu-icon-img" alt="Игры">
-            Игры
+        <button class="menu-btn" onclick="showScreen('games-screen')" style="--bg-image: url('https://via.placeholder.com/150/ffd54f/7c2d12?text=Игры')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">🎮</div>
+                <div class="menu-btn-text">Игры</div>
+            </div>
         </button>
     </div>
     
     <div class="menu-row">
-        <button class="menu-btn" onclick="showScreen('transfer-screen')">
-            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=↗️" class="menu-icon-img" alt="Перевести">
-            Перевести
+        <button class="menu-btn" onclick="showScreen('transfer-screen')" style="--bg-image: url('https://via.placeholder.com/150/ffd54f/7c2d12?text=Перевод')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">↗️</div>
+                <div class="menu-btn-text">Перевести</div>
+            </div>
         </button>
         
-        <button class="menu-btn" onclick="showScreen('catalog-screen')">
-            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=📦" class="menu-icon-img" alt="Каталог">
-            Каталог
+        <button class="menu-btn" onclick="showScreen('catalog-screen')" style="--bg-image: url('https://via.placeholder.com/150/ffd54f/7c2d12?text=Каталог')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">📦</div>
+                <div class="menu-btn-text">Каталог</div>
+            </div>
         </button>
         
-        <button class="menu-btn" onclick="showScreen('referrals-screen')">
-            <img src="https://via.placeholder.com/32/ffd54f/7c2d12?text=👥" class="menu-icon-img" alt="Рефералы">
-            Рефералы
+        <button class="menu-btn" onclick="showScreen('referrals-screen')" style="--bg-image: url('https://via.placeholder.com/150/ffd54f/7c2d12?text=Рефералы')">
+            <div class="menu-btn-content">
+                <div class="menu-icon">👥</div>
+                <div class="menu-btn-text">Рефералы</div>
+            </div>
         </button>
     </div>
     </div>
