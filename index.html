@@ -211,7 +211,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
         
         .balance {
@@ -228,7 +228,7 @@
         }
         
         .balance-label {
-            font-size: 18px;
+            font-size: 16px;
             color: #ea580c;
             margin-bottom: 5px;
         }
@@ -960,15 +960,17 @@
                     </div>
                 </div>
                 
-                <div class="balance">
-                    <div class="balance-label">Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span></div>
+                <<div class="balance">
+                    <div class="balance-header">
+                        <div class="balance-label">
+                            Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span>
+                        </div>
                         <button class="save-balance-btn" onclick="saveBalanceToServer()" title="Сохранить текущий баланс на сервере">
                             💾 Сохранить
                         </button>
                     </div>
                     <div class="balance-amount" id="balance">0.000000000</div>
                 </div>
-            </div>
             
             <div class="main-menu">
                 <div class="menu-row">
@@ -1236,36 +1238,64 @@
                     throw new Error('Сервер временно недоступен');
                 }
                 
-                const formData = new URLSearchParams();
-                formData.append('action', 'update-balance');
-                formData.append('userId', userId);
-                formData.append('balance', balance);
-                formData.append('username', userName);
-                formData.append('telegramUsername', telegramUsername);
-                formData.append('firstName', telegramFirstName);
+                // Получаем текущий баланс с сервера для проверки
+                const getUrl = `${scriptURL}?action=get&userId=${encodeURIComponent(userId)}&t=${Date.now()}`;
+                const getResponse = await fetch(getUrl);
+                const getResult = await getResponse.json();
                 
-                const response = await fetch(scriptURL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: formData
-                });
+                if (!getResult.success) {
+                    throw new Error(getResult.error || 'Ошибка получения баланса с сервера');
+                }
                 
-                const result = await response.json();
+                const serverBalance = getResult.balance || 0;
+                const localBalance = balance;
                 
-                if (result.success) {
-                    // Сбрасываем ожидающие обновления
-                    pendingBalanceUpdate = 0;
-                    clickCounter = 0;
-                    lastServerUpdate = Date.now();
+                console.log('Server balance:', serverBalance, 'Local balance:', localBalance);
+                
+                // Если балансы отличаются, обновляем серверный
+                if (Math.abs(serverBalance - localBalance) > 1e-12) {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'update-balance');
+                    formData.append('userId', userId);
+                    formData.append('balance', localBalance);
+                    formData.append('username', userName);
+                    formData.append('telegramUsername', telegramUsername);
+                    formData.append('firstName', telegramFirstName);
                     
+                    const response = await fetch(scriptURL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Сбрасываем ожидающие обновления
+                        pendingBalanceUpdate = 0;
+                        clickCounter = 0;
+                        lastServerUpdate = Date.now();
+                        
+                        scriptAvailable = true;
+                        updateCloudIndicator('online');
+                        showStatus('Баланс успешно сохранен на сервере! ☁️', 'success');
+                        
+                        // Обновляем локальный баланс с серверного значения (на случай округления)
+                        if (result.newBalance !== undefined) {
+                            balance = result.newBalance;
+                            updateBalanceDisplay();
+                        }
+                        
+                    } else {
+                        throw new Error(result.error || 'Ошибка сохранения баланса');
+                    }
+                } else {
+                    // Балансы уже синхронизированы
                     scriptAvailable = true;
                     updateCloudIndicator('online');
-                    showStatus('Баланс успешно сохранен на сервере! ☁️', 'success');
-                    
-                } else {
-                    throw new Error(result.error || 'Ошибка сохранения баланса');
+                    showStatus('Баланс уже синхронизирован с сервером! ✅', 'success');
                 }
                 
             } catch (error) {
