@@ -195,8 +195,27 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
+            position: relative;
+            overflow: hidden;
         }
-        
+        .save-cooldown {
+            background: rgba(251, 146, 60, 0.3) !important;
+            cursor: not-allowed !important;
+        }
+        .cooldown-timer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(251, 146, 60, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #7c2d12;
+        }
         .save-balance-btn:hover {
             background: rgba(255, 237, 213, 0.8);
             transform: translateY(-1px);
@@ -965,7 +984,7 @@
                 <div class="balance-label">
                     Ваш счёт: <span id="cloud-indicator" class="cloud-status cloud-offline" title="Статус облака"></span>
                 </div>
-                <button class="save-balance-btn" onclick="saveBalanceToServer()" title="Сохранить текущий баланс на сервере">
+                <button class="save-balance-btn" id="save-balance-btn" onclick="startSaveCooldown()" title="Сохранить текущий баланс на сервере">
                     💾 Сохранить
                 </button>
             </div>
@@ -1223,10 +1242,107 @@
                 lastReset: Date.now()
             }
         };
+
+        // Добавьте эти переменные
+        let saveCooldown = 0;
+        let cooldownInterval = null;
+        const SAVE_COOLDOWN_TIME = 20000; // 20 секунд
+        
+        // Добавьте эти функции
+        function startSaveCooldown() {
+            if (saveCooldown > 0) return;
+            
+            // Запускаем сохранение
+            saveBalanceToServer();
+            
+            // Устанавливаем кулдаун
+            saveCooldown = SAVE_COOLDOWN_TIME;
+            const saveBtn = document.getElementById('save-balance-btn');
+            saveBtn.classList.add('save-cooldown');
+            saveBtn.disabled = true;
+            
+            // Создаем элемент таймера
+            const timerElement = document.createElement('div');
+            timerElement.className = 'cooldown-timer';
+            timerElement.id = 'cooldown-timer';
+            saveBtn.appendChild(timerElement);
+            
+            // Запускаем таймер
+            cooldownInterval = setInterval(updateCooldownTimer, 1000);
+            updateCooldownTimer();
+            
+            // Сохраняем время последнего нажатия
+            localStorage.setItem('lastSaveAttempt', Date.now().toString());
+        }
+        
+        function updateCooldownTimer() {
+            if (saveCooldown <= 0) {
+                clearInterval(cooldownInterval);
+                resetCooldown();
+                return;
+            }
+            
+            const seconds = Math.ceil(saveCooldown / 1000);
+            const timerElement = document.getElementById('cooldown-timer');
+            if (timerElement) {
+                timerElement.textContent = `${seconds}s`;
+            }
+            
+            saveCooldown -= 1000;
+        }
+        
+        function resetCooldown() {
+            const saveBtn = document.getElementById('save-balance-btn');
+            const timerElement = document.getElementById('cooldown-timer');
+            
+            if (timerElement) {
+                timerElement.remove();
+            }
+            
+            saveBtn.classList.remove('save-cooldown');
+            saveBtn.disabled = false;
+            saveCooldown = 0;
+        }
+        
+        function checkSaveCooldownOnLoad() {
+            const lastSaveAttempt = localStorage.getItem('lastSaveAttempt');
+            if (!lastSaveAttempt) return;
+            
+            const now = Date.now();
+            const timeSinceLastAttempt = now - parseInt(lastSaveAttempt);
+            
+            if (timeSinceLastAttempt < SAVE_COOLDOWN_TIME) {
+                // Продолжаем кулдаун
+                saveCooldown = SAVE_COOLDOWN_TIME - timeSinceLastAttempt;
+                startCooldownVisual();
+            } else {
+                // Очищаем старые данные
+                localStorage.removeItem('lastSaveAttempt');
+            }
+        }
+        
+        function startCooldownVisual() {
+            const saveBtn = document.getElementById('save-balance-btn');
+            saveBtn.classList.add('save-cooldown');
+            saveBtn.disabled = true;
+            
+            const timerElement = document.createElement('div');
+            timerElement.className = 'cooldown-timer';
+            timerElement.id = 'cooldown-timer';
+            saveBtn.appendChild(timerElement);
+            
+            cooldownInterval = setInterval(updateCooldownTimer, 1000);
+        }
+        
         // Добавляем функцию сохранения баланса на сервер
         async function saveBalanceToServer() {
             if (!userId) {
                 showStatus('Ошибка: пользователь не авторизован', 'error');
+                return;
+            }
+            
+            if (saveCooldown > 0) {
+                showStatus('Подождите перед повторным сохранением', 'warning');
                 return;
             }
             
@@ -1277,6 +1393,10 @@
                 scriptAvailable = false;
                 updateCloudIndicator('offline');
                 showStatus('Ошибка сохранения баланса: ' + error.message, 'error');
+                
+                // Сбрасываем кулдаун при ошибке
+                resetCooldown();
+                localStorage.removeItem('lastSaveAttempt');
             }
         }
         
@@ -3064,6 +3184,9 @@
             // Запускаем процесс инициализации
             initUserData();
             setupCoinClick();
+            
+            // Проверяем кулдаун сохранения
+            setTimeout(checkSaveCooldownOnLoad, 1000);
             
             console.log('Игра загружена!');
         });
