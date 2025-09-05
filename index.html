@@ -3006,7 +3006,21 @@
             // Случайные параметры для равномерного распределения по всему экрану
             const size = 30 + Math.random() * 40;
             const startX = (Math.random() * 100); // От 0% до 100% - равномерно по всему экрану
-            const endX = (Math.random() - 0.5) * 100; // Случайное смещение влево/вправо
+            
+            // Случайное направление падения (влево, вправо или почти прямо)
+            const direction = Math.random();
+            let endX;
+            if (direction < 0.33) {
+                // Падение влево
+                endX = - (20 + Math.random() * 80);
+            } else if (direction < 0.66) {
+                // Падение вправо
+                endX = 20 + Math.random() * 80;
+            } else {
+                // Почти прямое падение
+                endX = (Math.random() - 0.5) * 40;
+            }
+            
             const fallDuration = 6 + Math.random() * 8;
             const animationDelay = Math.random() * 2;
             const endRotate = (Math.random() - 0.5) * 720;
@@ -3029,7 +3043,7 @@
             
             // Устанавливаем анимацию
             leaf.style.animation = `
-                fall ${fallDuration}s ease-in ${animationDelay}s infinite
+                fall ${fallDuration}s ease-in ${animationDelay}s forwards
             `;
             
             // Добавляем тень
@@ -3050,12 +3064,16 @@
                     if (leaf.parentNode === container) {
                         // Сохраняем текущую позицию для плавного исчезновения
                         const rect = leaf.getBoundingClientRect();
-                        const currentY = rect.top + window.scrollY;
-                        const currentX = rect.left + window.scrollX;
-                        const currentRotate = parseInt(getComputedStyle(leaf).transform.split(',')[3] || 0) * (180/Math.PI);
+                        const currentY = rect.top;
+                        const currentX = rect.left;
                         
-                        leaf.style.setProperty('--current-y', (currentY - window.scrollY) + 'px');
-                        leaf.style.setProperty('--current-x', (currentX - window.scrollX) + 'px');
+                        // Получаем текущее вращение из transform
+                        const style = window.getComputedStyle(leaf);
+                        const matrix = new DOMMatrixReadOnly(style.transform);
+                        const currentRotate = Math.atan2(matrix.b, matrix.a) * (180/Math.PI);
+                        
+                        leaf.style.setProperty('--current-y', currentY + 'px');
+                        leaf.style.setProperty('--current-x', currentX + 'px');
                         leaf.style.setProperty('--current-rotate', currentRotate + 'deg');
                         
                         // Останавливаем основную анимацию и запускаем быструю
