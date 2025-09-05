@@ -2982,14 +2982,14 @@
             document.body.appendChild(leavesContainer);
             
             // Создаем больше листьев сразу
-            for (let i = 0; i < 30; i++) {
+            for (let i = 0; i < 25; i++) {
                 createLeaf(leavesContainer);
             }
             
             // Добавляем новые листья чаще
             setInterval(() => {
                 const currentLeaves = document.querySelectorAll('.leaf');
-                if (currentLeaves.length < 40) {
+                if (currentLeaves.length < 30) {
                     createLeaf(leavesContainer);
                 }
             }, 800);
@@ -3015,10 +3015,10 @@
                 endX = - (20 + Math.random() * 80);
             } else if (direction < 0.66) {
                 // Падение вправо
-                endX = 200 + Math.random() * 80;
+                endX = 200 + Math.random() * 85;
             } else {
                 // Почти прямое падение
-                endX = (Math.random() - 0.5) * 40;
+                endX = (Math.random() - 0.5) * 60;
             }
             
             const fallDuration = 6 + Math.random() * 8;
@@ -3116,7 +3116,7 @@
             setTimeout(createFallingLeaves, 500);
             
             // Добавляем периодические "вспышки" листьев
-            setInterval(createLeafBurst, 2500);
+            setInterval(createLeafBurst, 3500);
         });
         
         // Перезапускаем при изменении размера окна
