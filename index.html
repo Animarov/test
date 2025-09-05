@@ -1195,8 +1195,10 @@
             
             // Проверяем cooldown
             if (now - lastSyncTime < SYNC_COOLDOWN) {
-                setTimeout(processSyncQueue, SYNC_COOLDOWN - (now - lastSyncTime));
-                isSyncing = false;
+                setTimeout(() => {
+                    isSyncing = false;
+                    processSyncQueue();
+                }, SYNC_COOLDOWN - (now - lastSyncTime));
                 return;
             }
             
@@ -1206,10 +1208,12 @@
             try {
                 await syncBalanceToServer(amountToSync);
                 lastSyncTime = Date.now();
+                showStatus('Данные синхронизированы с облаком! ☁️', 'success');
             } catch (error) {
                 console.error('Ошибка синхронизации:', error);
                 // Возвращаем сумму обратно в очередь при ошибке
                 pendingSyncQueue.push(amountToSync);
+                showStatus('Ошибка синхронизации. Данные сохранены локально.', 'error');
             } finally {
                 isSyncing = false;
                 
@@ -1239,6 +1243,7 @@
                 formData.append('timestamp', Date.now());
                 formData.append('username', userName);
                 formData.append('telegramUsername', telegramUsername);
+                formData.append('firstName', telegramFirstName);
                 
                 const response = await fetch(scriptURL, {
                     method: 'POST',
@@ -1355,6 +1360,16 @@
         let clickPower = 0.000000001;
         let userUpgrades = {};
 
+        async function testServerConnection() {
+            try {
+                const response = await fetch(scriptURL + '?action=test&t=' + Date.now());
+                const result = await response.json();
+                return result.success === true;
+            } catch (error) {
+                console.log('Сервер недоступен:', error);
+                return false;
+            }
+        }
         // Функции для улучшений
         function loadUpgrades() {
             // Загружаем улучшения из локального хранилища
@@ -2128,6 +2143,24 @@
                 return false;
             }
         }
+
+        async function checkConnection() {
+            const isConnected = await testServerConnection();
+            if (isConnected) {
+                updateCloudIndicator('online');
+                scriptAvailable = true;
+                
+                // Если есть ожидающие синхронизации, пытаемся их отправить
+                if (pendingSyncQueue.length > 0) {
+                    processSyncQueue();
+                }
+            } else {
+                updateCloudIndicator('offline');
+                scriptAvailable = false;
+            }
+            
+            return isConnected;
+        }
         
         async function loadUserData() {
             if (!userId) return;
@@ -2135,7 +2168,7 @@
             updateCloudIndicator('loading');
             
             try {
-                const isAvailable = await checkScriptAvailability();
+                const isAvailable = await testServerConnection();
                 if (!isAvailable) {
                     throw new Error('Google Apps Script недоступен');
                 }
@@ -2383,12 +2416,10 @@
             // Добавляем в очередь синхронизации
             pendingSyncQueue.push(amountToAdd);
             
-            // Запускаем обработку очереди, если накопилась достаточная сумма
-            if (pendingSyncQueue.reduce((sum, amount) => sum + amount, 0) >= MIN_SYNC_AMOUNT) {
-                processSyncQueue();
-            }
+            // Запускаем обработку очереди немедленно
+            processSyncQueue();
             
-            // Также планируем фоновую синхронизацию каждые 5 секунд
+            // Также планируем фоновую синхронизацию
             scheduleBackgroundSync();
         }
         
@@ -3109,7 +3140,15 @@
                 }
             }
         }
+        // Периодическая проверка соединения каждые 30 секунд
+        setInterval(checkConnection, 30000);
         
+        // Проверка соединения при возвращении на вкладку
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                checkConnection();
+            }
+        });
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Загрузка игры...');
             
