@@ -42,55 +42,48 @@
             pointer-events: none;
             z-index: 1488;
             opacity: 0.7;
-            background-size: cover; /* Изменено с contain на cover */
+            background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
             border-radius: 50%;
         }
         
         /* Используем ваше изображение для листьев */
-        .leaf {
+        .leaf.type1 {
             background-image: url('https://i.postimg.cc/w7dszFQk/photo-2025-08-30-12-22-24.jpg');
+        }
+        
+        .leaf.type2 {
+            background-image: url('https://i.postimg.cc/B8Yqv5Pb/photo-2025-08-30-12-22-24.jpg');
+        }
+        
+        .leaf.type3 {
+            background-image: url('https://i.postimg.cc/PPPFGWTK/photo-2025-08-30-12-22-24.jpg');
         }
         
         /* Анимация падения */
         @keyframes fall {
             0% {
-                transform: translateY(-100px) translateX(var(--start-x)) rotate(0deg);
+                transform: translateY(-100px) translateX(var(--start-x)) rotate(0deg) scale(var(--start-scale));
                 opacity: 0;
             }
             10% {
-                opacity: 0.8;
+                opacity: 0.9;
             }
             90% {
-                opacity: 0.6;
+                opacity: 0.7;
             }
             100% {
-                transform: translateY(100vh) translateX(var(--end-x)) rotate(var(--end-rotate));
+                transform: translateY(100vh) translateX(var(--end-x)) rotate(var(--end-rotate)) scale(var(--end-scale));
                 opacity: 0;
-            }
-        }
-        
-        @keyframes sway {
-            0%, 100% {
-                transform: translateX(0) rotate(0deg);
-            }
-            25% {
-                transform: translateX(-15px) rotate(-5deg);
-            }
-            50% {
-                transform: translateX(10px) rotate(3deg);
-            }
-            75% {
-                transform: translateX(-8px) rotate(-2deg);
             }
         }
         
         /* Адаптивность для мобильных устройств */
         @media (max-width: 768px) {
             .leaf {
-                width: 30px;
-                height: 30px;
+                width: 25px;
+                height: 25px;
             }
         }
         .loading-screen {
@@ -2966,7 +2959,6 @@
         });
         // Функция для создания падающих листьев
         function createFallingLeaves() {
-            // Удаляем старый контейнер если есть
             const oldContainer = document.querySelector('.leaves-container');
             if (oldContainer) {
                 oldContainer.remove();
@@ -2978,68 +2970,96 @@
             document.body.appendChild(leavesContainer);
             
             // Создаем листья
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 30; i++) {
                 createLeaf(leavesContainer);
             }
             
             // Периодически добавляем новые листья
             setInterval(() => {
                 const currentLeaves = document.querySelectorAll('.leaf');
-                if (currentLeaves.length < 25) {
+                if (currentLeaves.length < 40) {
                     createLeaf(leavesContainer);
                 }
-            }, 2000);
+            }, 600);
         }
         
         function createLeaf(container) {
             const leaf = document.createElement('div');
             leaf.className = 'leaf';
             
+            // Случайный тип листа (1, 2 или 3)
+            const leafType = Math.floor(Math.random() * 3) + 1;
+            leaf.classList.add('type' + leafType);
+            
             // Случайные параметры
-            const size = 40 + Math.random() * 30;
-            const startX = (Math.random() * 100) - 10; // От -10% до 110% для выхода за границы
-            const endX = (Math.random() - 0.5) * 100;
-            const fallDuration = 8 + Math.random() * 10;
-            const animationDelay = Math.random() * 5;
-            const endRotate = (Math.random() - 0.5) * 360;
+            const size = 30 + Math.random() * 40;
+            const startX = (Math.random() * 120) - 10; // От -10% до 110%
+            const endX = (Math.random() - 0.5) * 150; // Больше разброс по X
+            const fallDuration = 5 + Math.random() * 8; // Быстрее падение
+            const animationDelay = Math.random() * 3; // Меньшая задержка
+            const endRotate = (Math.random() - 0.5) * 720;
+            
+            // Добавляем scaling для большего разнообразия
+            const startScale = 0.7 + Math.random() * 0.6;
+            const endScale = 0.8 + Math.random() * 0.4;
             
             // Устанавливаем CSS переменные
             leaf.style.setProperty('--start-x', startX + 'vw');
             leaf.style.setProperty('--end-x', endX + 'px');
             leaf.style.setProperty('--end-rotate', endRotate + 'deg');
+            leaf.style.setProperty('--start-scale', startScale);
+            leaf.style.setProperty('--end-scale', endScale);
             
             // Устанавливаем размер и стили
             leaf.style.width = size + 'px';
             leaf.style.height = size + 'px';
-            leaf.style.left = '0'; // Убираем left из стиля, используем transform в анимации
-            leaf.style.opacity = (0.4 + Math.random() * 0.4).toString();
+            leaf.style.opacity = (0.5 + Math.random() * 0.4).toString();
             
             // Устанавливаем анимацию
             leaf.style.animation = `
-                fall ${fallDuration}s linear ${animationDelay}s infinite
+                fall ${fallDuration}s ease-in ${animationDelay}s infinite
             `;
             
             // Добавляем тень
-            leaf.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+            leaf.style.boxShadow = '0 4px 20px rgba(0,0,0,0.4)';
+            
+            // Случайное мерцание
+            if (Math.random() > 0.7) {
+                leaf.style.filter = 'brightness(1.2)';
+            }
             
             container.appendChild(leaf);
             
             // Удаляем лист после завершения анимации
+            const removeTime = (fallDuration + animationDelay) * 1000 + 1000;
             setTimeout(() => {
                 if (leaf.parentNode === container) {
                     container.removeChild(leaf);
                 }
-            }, (fallDuration + animationDelay) * 1000);
+            }, removeTime);
+        }
+        
+        // Функция для массового создания листьев
+        function createLeafBurst() {
+            const container = document.querySelector('.leaves-container');
+            if (!container) return;
+            
+            for (let i = 0; i < 10; i++) {
+                createLeaf(container);
+            }
         }
         
         // Запускаем когда DOM полностью загружен
         document.addEventListener('DOMContentLoaded', function() {
-            setTimeout(createFallingLeaves, 1000);
+            setTimeout(createFallingLeaves, 500);
+            
+            // Добавляем периодические "вспышки" листьев
+            setInterval(createLeafBurst, 3000);
         });
         
         // Перезапускаем при изменении размера окна
         window.addEventListener('resize', function() {
-            setTimeout(createFallingLeaves, 500);
+            setTimeout(createFallingLeaves, 300);
         });
     </script>
 </body>
